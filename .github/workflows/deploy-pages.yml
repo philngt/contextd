@@ -34,6 +34,26 @@ jobs:
           mkdir -p _site
           cp -R onboarding _site/onboarding
           cp -R release _site/release
+          cp onboarding/index.en.html _site/index.html
+          cp onboarding/index.html _site/index.vi.html
+          cp onboarding/install.en.html _site/install.html
+          cp onboarding/install.html _site/install.vi.html
+          cp README.md _site/README.md
+          cp QUICKSTART.md _site/QUICKSTART.md
+          cat > _site/index.html <<'EOF'
+          <!doctype html>
+          <html lang="en">
+          <head>
+            <meta charset="utf-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1" />
+            <title>Workspace Wiki</title>
+            <meta http-equiv="refresh" content="0; url=./onboarding/index.en.html" />
+          </head>
+          <body>
+            <p>Redirecting to <a href="./onboarding/index.en.html">onboarding</a>...</p>
+          </body>
+          </html>
+          EOF
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
