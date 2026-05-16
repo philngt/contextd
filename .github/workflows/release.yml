@@ -94,9 +94,9 @@ jobs:
           EOF
           perl -pi -e "s#__ZIP_URL__#${ZIP_URL}#g; s#__REPO__#${{ github.repository }}#g; s#__TAG__#${TAG}#g" release/install.sh
 
-          cat > release/install.ps1 <<EOF
+          cat > release/install.ps1 <<'EOF'
           $ErrorActionPreference = 'Stop'
-          $zipUrl = '${ZIP_URL}'
+          $zipUrl = '__ZIP_URL__'
           $tmpDir = Join-Path $env:TEMP ("wiki-install-" + [guid]::NewGuid().ToString("N"))
           $zipPath = Join-Path $tmpDir "wiki-template.zip"
           $extractDir = Join-Path $tmpDir "extract"
@@ -117,8 +117,8 @@ jobs:
             New-Item -ItemType Directory -Path $claudeDir -Force | Out-Null
             $metaPath = Join-Path $claudeDir "wiki-install-meta.json"
             $meta = [ordered]@{
-              repo = '${{ github.repository }}'
-              release_tag = '${TAG}'
+              repo = '__REPO__'
+              release_tag = '__TAG__'
               installed_at_utc = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
               installer = 'install.ps1'
             }
@@ -126,11 +126,12 @@ jobs:
 
             Write-Host "Done. Verify: type $env:USERPROFILE\.claude\wiki-global.json"
             Write-Host "Version meta: type $env:USERPROFILE\.claude\wiki-install-meta.json"
-            Write-Host "Installed tag: ${TAG}"
+            Write-Host "Installed tag: __TAG__"
           } finally {
             if (Test-Path $tmpDir) { Remove-Item -Recurse -Force $tmpDir }
           }
           EOF
+          perl -pi -e "s#__ZIP_URL__#${ZIP_URL}#g; s#__REPO__#${{ github.repository }}#g; s#__TAG__#${TAG}#g" release/install.ps1
 
           chmod +x release/install.sh
 
