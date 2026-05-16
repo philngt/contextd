@@ -1,7 +1,7 @@
 # Workspace Wiki
-> **Vietnamese:** [Onboarding (VI)](onboarding/index.html) · [Install Guide (VI)](onboarding/install.html)
+> **Vietnamese:** [Onboarding (VI)](https://tanphuc16797.github.io/workspace-wiki/onboarding/index.html) · [Install Guide (VI)](https://tanphuc16797.github.io/workspace-wiki/onboarding/install.html)
 
-> **English:** [Onboarding (EN)](onboarding/index.en.html) · [Install Guide (EN)](onboarding/install.en.html)
+> **English:** [Onboarding (EN)](https://tanphuc16797.github.io/workspace-wiki/onboarding/index.en.html) · [Install Guide (EN)](https://tanphuc16797.github.io/workspace-wiki/onboarding/install.en.html)
 
 > **Quick start:** New to this repo? Go straight to [QUICKSTART.md](QUICKSTART.md) — from `git clone` to your first `/use-wiki` in about 5 minutes.
 
