@@ -1,0 +1,42 @@
+evid_id: "2026-05-08-engine-bootstrap-wiki-template"
+source_type: "code"
+code_variant: "agentic-engine"
+origin: "engine:wiki-template@2064d55"
+label: "bootstrap-wiki-template"
+fetched_at: "2026-05-08T00:00:00+07:00"
+fetched_by: "lechihieu.ict@gmail.com"
+sha256: "c00b1cf5456c93c0ee63adefca431d2d02a2986232fceeef675f9a3f7d285bb9"
+raw_filename: "raw.md"
+raw_size_bytes: 26062
+normalized: false
+workspace_at_ingest: "wiki"
+
+# Code-specific — single-repo mode
+git_sha: "unmanaged-2064d55e2bd25900333b26deedc3a26205708fd9f0ba8d38a5b3827b59f160d0"
+git_branch: "unmanaged"
+code_scope:
+  - "agents/**/*.md"
+  - ".claude/commands/**/*.md"
+  - ".claude/agents/**/*.md"
+  - "templates/**"
+  - "README.md"
+  - "CLAUDE.md"
+code_repo_path: "d:/tool/wiki-template/"
+
+# Bundle mode (not used)
+code_repos: null
+include_docs: null
+
+related_files:
+  - "platform/patterns/"
+  - "platform/contracts/"
+  - "patterns-index.md"
+related_domains: []
+related_projects: []
+
+notes: |
+  Variant: agentic-engine.
+  Repo not under git — git_sha is unmanaged hash (sha256 of sorted file path+content manifest cho scope hiện tại).
+  Configs not analyzed (--allow-configs not set).
+  Redacted: secrets in configs (none found — Section 3 skipped), contributor emails (none — no git history).
+  First evidence ingested into workspace "wiki" — _index.md created.

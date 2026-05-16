@@ -1,0 +1,25 @@
+name: pack-optimize
+version: 0.1.0
+description: Performance optimization pack — metric baseline, bottleneck profiling, safe optimization, and regression guarding.
+
+components:
+  - performance-profiling
+  - bottleneck-analysis
+  - optimization-safety
+  - regression-guard
+
+keywords:
+  performance-profiling: [profiling, baseline metric, p95, throughput, latency]
+  bottleneck-analysis: [bottleneck, hotspot, root cause, flamegraph]
+  optimization-safety: [optimization, tuning, performance fix, safe rollout]
+  regression-guard: [regression guard, before after, benchmark, perf test]
+
+files:
+  constraints: agents/constraints.md
+  coding_rules: agents/coding-rules.md
+  validator_rules: agents/pipeline/validator-rules.md
+  validator_script: scripts/rules.py
+  retrieval_map: agents/pipeline/retrieval-map.md
+  prompt_overrides: agents/pipeline/prompt-overrides.md
+
+conflicts_with: []

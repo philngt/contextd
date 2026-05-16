@@ -1,0 +1,25 @@
+name: pack-web-api
+version: 1.0.0
+description: REST/GraphQL/gRPC API patterns — input validation, error shape, idempotency, auth boundary, no info leak
+
+components:
+  - rest
+  - graphql
+  - grpc
+  - api
+
+keywords:
+  rest: [rest, endpoint, "@RestController", "@GetMapping", "@PostMapping", "@PutMapping", "@DeleteMapping", "@RequestMapping", route, controller]
+  graphql: [graphql, resolver, schema, query, mutation]
+  grpc: [grpc, protobuf, ".proto", stub]
+  api: [api, middleware, "@Valid", "@RequestBody", openapi, swagger]
+
+files:
+  constraints: agents/constraints.md
+  coding_rules: agents/coding-rules.md
+  validator_rules: agents/pipeline/validator-rules.md
+  validator_script: scripts/rules.py
+  retrieval_map: agents/pipeline/retrieval-map.md
+  prompt_overrides: agents/pipeline/prompt-overrides.md
+
+conflicts_with: []

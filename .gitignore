@@ -1,0 +1,24 @@
+# Per-machine pipeline trace logs (observability)
+# Schema: agents/pipeline/observability.md
+.claude/runs/
+
+# Per-codebase context written by wiki-context-selector (regenerated each task)
+.claude/context/
+
+# Manual evaluation results (per-workspace scorecards — chứa data nội bộ)
+workspaces/*/eval/results/*
+!workspaces/*/eval/results/.gitkeep
+
+# Repetition detector — raw prompt log có thể chứa info nhạy cảm.
+# Schema: agents/pipeline/repetition-detection.md
+# clusters.json + suppressions.json CÓ thể commit (chỉ token + id).
+workspaces/*/.observations/prompts.jsonl
+workspaces/*/.observations/*.lock
+
+# Release artifacts — built by scripts/package-release.sh
+# Distribute via GitHub Releases / S3 / file server, không commit binary
+release/*
+!release/install.sh
+!release/install.ps1
+
+.DS_Store

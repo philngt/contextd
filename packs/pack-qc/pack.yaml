@@ -1,0 +1,25 @@
+name: pack-qc
+version: 0.1.0
+description: Quality control pack — test design/execution, defect triage, regression coverage, and release quality gates.
+
+components:
+  - test-case-design
+  - test-execution
+  - defect-triage
+  - regression-plan
+
+keywords:
+  test-case-design: [test case, test design, testcase, scenario coverage, boundary test]
+  test-execution: [test execution, smoke test, sanity test, test run, test result]
+  defect-triage: [bug triage, defect triage, severity, priority, reproduce steps, bug report]
+  regression-plan: [regression, regression plan, release readiness, quality gate, go no-go]
+
+files:
+  constraints: agents/constraints.md
+  coding_rules: agents/coding-rules.md
+  validator_rules: agents/pipeline/validator-rules.md
+  validator_script: scripts/rules.py
+  retrieval_map: agents/pipeline/retrieval-map.md
+  prompt_overrides: agents/pipeline/prompt-overrides.md
+
+conflicts_with: []

@@ -1,0 +1,23 @@
+name: pack-event-driven
+version: 1.0.0
+description: Kafka, MQTT, and event-driven backend patterns (DLQ, offset commit, idempotent consumer, batch processing)
+
+components:
+  - kafka
+  - mqtt
+  - batch
+
+keywords:
+  kafka: [kafka, consumer, producer, topic, offset, dlq, partition, "@KafkaListener", broker]
+  mqtt: [mqtt, publish, subscribe, gateway, "topic format"]
+  batch: [batch, chunk, bulk, poll, "max.poll.records"]
+
+files:
+  constraints: agents/constraints.md
+  coding_rules: agents/coding-rules.md
+  validator_rules: agents/pipeline/validator-rules.md
+  validator_script: scripts/rules.py
+  retrieval_map: agents/pipeline/retrieval-map.md
+  prompt_overrides: agents/pipeline/prompt-overrides.md
+
+conflicts_with: []

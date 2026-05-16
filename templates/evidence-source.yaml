@@ -1,0 +1,56 @@
+# Template — evidence/sources/{evid-id}/source.yaml
+# Mỗi evidence set khi /evidence-ingest sẽ ghi 1 file YAML này.
+# Mọi field bắt buộc trừ những field đánh dấu (optional).
+
+evid_id: "2026-05-04-paste-PROJ-1234"        # Format: {YYYY-MM-DD}-{src}-{slug}
+source_type: "paste"                          # mcp | api | paste | code
+origin: "user_paste"                          # paste: "user_paste"; api: full URL; mcp: "{server}.{tool}"; code: "code:{repo-name}@{sha7}"; bundle: "platform-bundle:{label}@{date}"
+label: "PROJ-1234 timeout config change"      # Mô tả ngắn user cung cấp khi ingest
+fetched_at: "2026-05-04T10:23:00+07:00"      # ISO8601 với timezone
+fetched_by: "lechihieu.ict@gmail.com"        # Email user (từ env hoặc git config)
+sha256: "a1b2c3..."                          # SHA256 của raw.{ext}, dùng để dedupe
+raw_filename: "raw.json"                      # Tên file raw (ext theo content-type). Với source_type=code: luôn "raw.md"
+raw_size_bytes: 4821
+normalized: true                              # true nếu có raw.normalized.md
+workspace_at_ingest: "example-surgery"        # CRITICAL: workspace lúc ingest. Apply phải khớp.
+
+# Code-specific — single-repo mode (source_type=code, --ref)
+# Xem agents/pipeline/code-snapshot-conventions.md
+code_variant: code  # code (default, runtime codebase) | agentic-engine (markdown-heavy: slash commands, sub-agents, prompt templates).
+                    # Vắng mặt → code. Xem code-snapshot-conventions.md Section 12.
+git_sha:        # full SHA của HEAD lúc snapshot — KHÔNG để null khi source_type=code (trừ agentic-engine không git → "unmanaged-{sha256-of-tree-manifest}")
+git_branch:     # branch tại thời điểm snapshot (vd "main"). agentic-engine không git → "unmanaged"
+code_scope:     # paths/globs included trong snapshot (relative tới repo root)
+  - "src/main/java/**"
+  - "pom.xml"
+  - "src/main/resources/**"
+code_repo_path: # absolute hoặc relative path từ <cwd> tới repo (audit chỉ — không follow ngược)
+
+# Code-specific — bundle mode (source_type=code, --bundle)
+# Thay thế cho code_repo_path/code_scope khi phân tích nhiều repo cùng lúc.
+# Xem agents/pipeline/code-snapshot-conventions.md Section 11.
+code_repos:           # list — điền khi bundle mode; null khi single-repo
+  # - name: "core-framework"          # project name (auto-detect hoặc từ bundle.yaml)
+  #   path: "/abs/path/to/core"       # absolute path lúc snapshot (audit chỉ)
+  #   role: "framework"               # framework | shared-lib | application | sample | plugin | engine
+  #   variant: code                   # code (default) | agentic-engine — per-repo discriminator
+  #   git_sha: "abc123...40chars"     # full SHA — bắt buộc mỗi repo (hoặc "unmanaged-{...}" cho agentic-engine không git)
+  #   git_branch: "main"
+  #   scope: ["src/main/**", "build.gradle"]  # empty = dùng default heuristic theo variant
+
+include_docs:         # optional docs đi kèm bundle
+  # - path: "/abs/path/to/architecture.md"
+  #   type: "architecture"            # architecture | openapi | confluence-export | readme | other
+  #   label: "Platform Architecture Overview"
+
+# Optional — chỉ điền nếu biết
+related_files:                                # File wiki dự đoán sẽ bị tác động
+  - "projects/surgery-service/services/kafka-consumer.md"
+  - "platform/contracts/mqtt-topic-contract.md"
+related_domains:                              # Domain trong {ws}/domains/
+  - "surgery"
+related_projects:
+  - "surgery-service"
+
+notes: |                                      # Optional — context user muốn note thêm
+  Multi-line free text.

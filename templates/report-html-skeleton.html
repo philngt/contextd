@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<!--
+  Skeleton dùng cho /wiki-report. Self-contained: KHÔNG có external CSS/JS/font/CDN.
+  Agent điền nội dung vào các placeholder {{...}}. Mọi placeholder PHẢI được thay
+  trước khi ghi file. Nếu không có data cho 1 section, agent ghi
+  '<p class="nodata">No data in this workspace.</p>' thay vì xóa section.
+-->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Technical Report — {{WORKSPACE}} — {{DATE}}</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#1f2328;background:#fff;line-height:1.55}
+  body{display:flex;min-height:100vh}
+  nav.sidebar{width:260px;flex:0 0 260px;background:#f6f8fa;border-right:1px solid #d0d7de;padding:24px 16px;position:sticky;top:0;height:100vh;overflow-y:auto}
+  nav.sidebar h1{font-size:14px;text-transform:uppercase;letter-spacing:.05em;color:#57606a;margin:0 0 12px}
+  nav.sidebar ul{list-style:none;padding:0;margin:0 0 16px}
+  nav.sidebar li{margin:2px 0}
+  nav.sidebar a{display:block;padding:6px 10px;border-radius:6px;color:#1f2328;text-decoration:none;font-size:14px}
+  nav.sidebar a:hover{background:#eaeef2}
+  nav.sidebar a.active{background:#0969da;color:#fff;font-weight:600}
+  nav.sidebar ul ul{margin:2px 0 6px 14px;padding-left:8px;border-left:1px solid #d0d7de}
+  nav.sidebar ul ul a{font-size:13px;color:#57606a;padding:3px 8px}
+  main{flex:1;padding:32px 48px;max-width:980px}
+  main header.report-head{border-bottom:1px solid #d0d7de;padding-bottom:16px;margin-bottom:24px}
+  main header.report-head h1{margin:0 0 6px;font-size:28px}
+  main header.report-head .meta{color:#57606a;font-size:14px}
+  section.report-section{margin:48px 0;scroll-margin-top:24px}
+  section.report-section > h2{font-size:24px;border-bottom:1px solid #d0d7de;padding-bottom:6px;margin-top:0}
+  section.report-section > h3{font-size:18px;margin-top:32px;color:#1f2328}
+  section.report-section > h4{font-size:15px;margin-top:20px;color:#57606a;text-transform:uppercase;letter-spacing:.04em}
+  p{margin:8px 0 12px}
+  ul,ol{padding-left:24px;margin:8px 0 12px}
+  li{margin:3px 0}
+  table{border-collapse:collapse;margin:12px 0;width:100%;font-size:14px}
+  th,td{border:1px solid #d0d7de;padding:8px 12px;text-align:left;vertical-align:top}
+  th{background:#f6f8fa;font-weight:600}
+  pre{background:#f6f8fa;border:1px solid #d0d7de;border-radius:6px;padding:12px 16px;overflow-x:auto;font-size:13px;line-height:1.5;margin:12px 0}
+  code{font-family:"SF Mono",Menlo,Consolas,monospace;font-size:13px;background:#eaeef2;padding:1px 5px;border-radius:3px}
+  pre code{background:transparent;padding:0;font-size:13px}
+  blockquote{border-left:3px solid #d0d7de;margin:12px 0;padding:4px 0 4px 16px;color:#57606a}
+  a.cite{display:inline-block;font-size:11px;color:#0969da;text-decoration:none;margin-left:6px;padding:1px 6px;border:1px solid #d0d7de;border-radius:10px;background:#fff;vertical-align:middle}
+  a.cite:hover{background:#eaeef2}
+  a.cite::before{content:"\1F4C4 ";font-size:10px}
+  .badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;letter-spacing:.02em;background:#ddf4ff;color:#0550ae;margin-right:4px}
+  .badge.warn{background:#fff8c5;color:#9a6700}
+  .badge.danger{background:#ffebe9;color:#cf222e}
+  .badge.ok{background:#dafbe1;color:#1a7f37}
+  .nodata{color:#57606a;font-style:italic;background:#fff8c5;border:1px dashed #d4a72c;padding:12px 16px;border-radius:6px}
+  .mermaid-fallback{background:#fffbe6;border:1px dashed #d4a72c;padding:8px 12px;border-radius:6px;font-size:12px;color:#7d4e00;margin:8px 0}
+  footer.report-foot{margin-top:64px;padding-top:16px;border-top:1px solid #d0d7de;color:#57606a;font-size:12px}
+  details{margin:8px 0}
+  details > summary{cursor:pointer;padding:6px 10px;background:#f6f8fa;border:1px solid #d0d7de;border-radius:6px;font-weight:600}
+  details[open] > summary{border-bottom-left-radius:0;border-bottom-right-radius:0}
+  details > div.details-body{border:1px solid #d0d7de;border-top:0;padding:12px 16px;border-radius:0 0 6px 6px}
+  dialog#md-dialog{padding:0;border:0;border-radius:8px;max-width:920px;width:92%;max-height:88vh;box-shadow:0 12px 40px rgba(15,23,42,.35);background:#fff;color:#1f2328}
+  dialog#md-dialog::backdrop{background:rgba(15,23,42,.55)}
+  dialog#md-dialog .md-dialog-head{display:flex;align-items:center;justify-content:space-between;padding:14px 22px;border-bottom:1px solid #d0d7de;position:sticky;top:0;background:#fff;border-radius:8px 8px 0 0}
+  dialog#md-dialog .md-dialog-head h2{margin:0;font-size:14px;font-family:"SF Mono",Menlo,Consolas,monospace;color:#57606a;font-weight:600;word-break:break-all}
+  dialog#md-dialog .md-dialog-head .md-dialog-actions{display:flex;gap:8px;align-items:center;flex-shrink:0;margin-left:12px}
+  dialog#md-dialog .md-dialog-head a.md-dialog-open{font-size:12px;color:#0969da;text-decoration:none;padding:4px 10px;border:1px solid #d0d7de;border-radius:6px}
+  dialog#md-dialog .md-dialog-head a.md-dialog-open:hover{background:#f6f8fa}
+  dialog#md-dialog .md-dialog-head button{background:transparent;border:0;font-size:24px;cursor:pointer;color:#57606a;padding:0 6px;line-height:1}
+  dialog#md-dialog .md-dialog-head button:hover{color:#1f2328}
+  dialog#md-dialog .md-dialog-body{padding:18px 26px;overflow-y:auto;max-height:calc(88vh - 56px)}
+  dialog#md-dialog .md-dialog-body h1,dialog#md-dialog .md-dialog-body h2,dialog#md-dialog .md-dialog-body h3,dialog#md-dialog .md-dialog-body h4,dialog#md-dialog .md-dialog-body h5{line-height:1.3}
+  dialog#md-dialog .md-dialog-body h1{font-size:22px;border-bottom:1px solid #d0d7de;padding-bottom:6px;margin-top:0}
+  dialog#md-dialog .md-dialog-body h2{font-size:18px;border-bottom:1px solid #eaeef2;padding-bottom:4px}
+  dialog#md-dialog .md-dialog-body h3{font-size:16px}
+  dialog#md-dialog .md-dialog-body h4{font-size:14px;color:#57606a;text-transform:uppercase;letter-spacing:.04em}
+  dialog#md-dialog .md-dialog-body table{font-size:13px}
+  dialog#md-dialog .md-dialog-body pre{font-size:12px}
+  a.md-link{border-bottom:1px dotted #0969da;color:#0969da;text-decoration:none}
+  a.md-link:hover{background:#ddf4ff}
+  a.md-link::after{content:"\1F441";font-size:9px;margin-left:3px;opacity:.55;vertical-align:super}
+  @media (max-width: 720px){
+    body{flex-direction:column}
+    nav.sidebar{position:static;height:auto;width:100%;flex:none;border-right:0;border-bottom:1px solid #d0d7de}
+    main{padding:24px 16px}
+    dialog#md-dialog{width:96%;max-height:92vh}
+    dialog#md-dialog .md-dialog-body{max-height:calc(92vh - 56px);padding:14px 16px}
+  }
+</style>
+</head>
+<body>
+
+<nav class="sidebar">
+  <h1>Technical Report</h1>
+  <ul>
+    <li><a href="#overview">Overview</a></li>
+    <li><a href="#architecture">Architecture</a>
+      <ul>{{ARCHITECTURE_NAV}}</ul>
+    </li>
+    <li><a href="#contracts">Contracts</a></li>
+    <li><a href="#patterns">Patterns</a></li>
+    <li><a href="#domains">Domains</a></li>
+    <li><a href="#adrs">ADRs</a></li>
+    <li><a href="#runbooks">Runbooks</a></li>
+  </ul>
+</nav>
+
+<main>
+  <header class="report-head">
+    <h1>{{WORKSPACE}} — Technical Report</h1>
+    <div class="meta">
+      Generated <time>{{TIMESTAMP}}</time>
+      &middot; Source files scanned: <strong>{{FILE_COUNT}}</strong>
+      &middot; Wiki root: <code>{{WIKI_ROOT}}</code>
+    </div>
+  </header>
+
+  <section id="overview" class="report-section">
+    <h2>Overview</h2>
+    {{OVERVIEW_BODY}}
+  </section>
+
+  <section id="architecture" class="report-section">
+    <h2>Architecture</h2>
+    {{ARCHITECTURE_BODY}}
+  </section>
+
+  <section id="contracts" class="report-section">
+    <h2>Contracts</h2>
+    {{CONTRACTS_BODY}}
+  </section>
+
+  <section id="patterns" class="report-section">
+    <h2>Patterns</h2>
+    {{PATTERNS_BODY}}
+  </section>
+
+  <section id="domains" class="report-section">
+    <h2>Domains</h2>
+    {{DOMAINS_BODY}}
+  </section>
+
+  <section id="adrs" class="report-section">
+    <h2>ADRs &mdash; Architecture Decisions</h2>
+    {{ADRS_BODY}}
+  </section>
+
+  <section id="runbooks" class="report-section">
+    <h2>Runbooks</h2>
+    {{RUNBOOKS_BODY}}
+  </section>
+
+  <footer class="report-foot">
+    Generated by <code>/wiki-report</code> from workspace <strong>{{WORKSPACE}}</strong>
+    on {{TIMESTAMP}}. Source: <code>{{WIKI_ROOT}}/workspaces/{{WORKSPACE}}/</code>.
+    Citations point to file paths relative to workspace root. Click <code>.md</code> link to preview.
+  </footer>
+</main>
+
+<dialog id="md-dialog" aria-labelledby="md-dialog-title">
+  <div class="md-dialog-head">
+    <h2 id="md-dialog-title"></h2>
+    <div class="md-dialog-actions">
+      <a class="md-dialog-open" id="md-dialog-open" href="#" target="_blank" rel="noopener">Open file</a>
+      <button type="button" id="md-dialog-close" aria-label="Close">&times;</button>
+    </div>
+  </div>
+  <div class="md-dialog-body" id="md-dialog-body"></div>
+</dialog>
+
+<script id="md-cache" type="application/json">{{MD_CACHE_JSON}}</script>
+
+<script>
+(function(){
+  /* ---------- Sidebar nav (active highlight + smooth scroll) ---------- */
+  var navLinks=document.querySelectorAll('nav.sidebar a[href^="#"]');
+  var sections=document.querySelectorAll('section.report-section');
+  function setActive(){
+    var pos=window.scrollY+120, current=null;
+    sections.forEach(function(s){if(s.offsetTop<=pos)current=s.id});
+    navLinks.forEach(function(a){
+      a.classList.toggle('active', current && a.getAttribute('href')==='#'+current);
+    });
+  }
+  window.addEventListener('scroll', setActive, {passive:true});
+  setActive();
+  navLinks.forEach(function(a){
+    a.addEventListener('click', function(e){
+      var id=a.getAttribute('href').slice(1);
+      var t=document.getElementById(id);
+      if(!t)return;
+      e.preventDefault();
+      window.scrollTo({top:t.offsetTop-12, behavior:'smooth'});
+      history.replaceState(null,'','#'+id);
+    });
+  });
+
+  /* ---------- Markdown cache + renderer ---------- */
+  var cacheNode=document.getElementById('md-cache');
+  var MD_CACHE={};
+  try{ MD_CACHE=JSON.parse(cacheNode.textContent||'{}'); }catch(err){ console.error('md-cache parse fail',err); }
+
+  function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+
+  function resolvePath(from, href){
+    if(/^(?:https?:|mailto:|tel:|#)/.test(href)) return href;
+    var hashIdx=href.indexOf('#'), hash=hashIdx>=0?href.slice(hashIdx):'';
+    var pathPart=hashIdx>=0?href.slice(0,hashIdx):href;
+    var dir=(from||'').split('/').slice(0,-1);
+    pathPart.split('/').forEach(function(p){
+      if(p==='..'){dir.pop();}
+      else if(p==='.'||p===''){/* skip */}
+      else{dir.push(p);}
+    });
+    return dir.join('/')+hash;
+  }
+
+  function inline(text, currentPath){
+    text=esc(text);
+    text=text.replace(/`([^`]+)`/g,function(m,c){return '<code>'+c+'</code>';});
+    text=text.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g,function(m,t,h){
+      var resolved=resolvePath(currentPath,h);
+      var key=resolved.split('#')[0];
+      var isMd=/\.md(?:$|#|\?)/.test(resolved);
+      var inCache=isMd && Object.prototype.hasOwnProperty.call(MD_CACHE,key);
+      var cls=inCache?' class="md-link"':'';
+      return '<a href="'+resolved+'"'+cls+'>'+t+'</a>';
+    });
+    text=text.replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>');
+    text=text.replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g,'$1<em>$2</em>');
+    return text;
+  }
+
+  function renderTable(rows, currentPath){
+    function cells(r){return r.replace(/^\s*\||\|\s*$/g,'').split('|').map(function(c){return c.trim();});}
+    var head=cells(rows[0]);
+    var body=rows.slice(2).map(cells);
+    var thead='<thead><tr>'+head.map(function(c){return '<th>'+inline(c,currentPath)+'</th>';}).join('')+'</tr></thead>';
+    var tbody='<tbody>'+body.map(function(r){return '<tr>'+r.map(function(c){return '<td>'+inline(c,currentPath)+'</td>';}).join('')+'</tr>';}).join('')+'</tbody>';
+    return '<table>'+thead+tbody+'</table>';
+  }
+
+  function renderMd(src, currentPath){
+    var lines=String(src||'').split(/\r?\n/);
+    var out=[], i=0;
+    /* strip YAML front-matter */
+    if(lines[0]==='---'){
+      var j=1;
+      while(j<lines.length && lines[j]!=='---') j++;
+      if(j<lines.length){ i=j+1; }
+    }
+    while(i<lines.length){
+      var l=lines[i];
+      if(/^```/.test(l)){
+        var buf=[]; i++;
+        while(i<lines.length && !/^```/.test(lines[i])){ buf.push(lines[i]); i++; }
+        i++;
+        out.push('<pre><code>'+esc(buf.join('\n'))+'</code></pre>');
+        continue;
+      }
+      var hm=/^(#{1,6})\s+(.*)$/.exec(l);
+      if(hm){ out.push('<h'+hm[1].length+'>'+inline(hm[2],currentPath)+'</h'+hm[1].length+'>'); i++; continue; }
+      if(/^\s*\|.+\|\s*$/.test(l) && i+1<lines.length && /^\s*\|[\s:|-]+\|\s*$/.test(lines[i+1])){
+        var rows=[];
+        while(i<lines.length && /^\s*\|.+\|\s*$/.test(lines[i])){ rows.push(lines[i]); i++; }
+        out.push(renderTable(rows,currentPath));
+        continue;
+      }
+      if(/^\s*>\s?/.test(l)){
+        var bq=[];
+        while(i<lines.length && /^\s*>\s?/.test(lines[i])){ bq.push(lines[i].replace(/^\s*>\s?/,'')); i++; }
+        out.push('<blockquote>'+inline(bq.join(' '),currentPath)+'</blockquote>');
+        continue;
+      }
+      if(/^\s*[-*]\s+/.test(l) || /^\s*\d+\.\s+/.test(l)){
+        var ordered=/^\s*\d+\.\s/.test(l);
+        var items=[];
+        while(i<lines.length && (/^\s*[-*]\s+/.test(lines[i]) || /^\s*\d+\.\s+/.test(lines[i]))){
+          items.push('<li>'+inline(lines[i].replace(/^\s*(?:[-*]|\d+\.)\s+/,''),currentPath)+'</li>');
+          i++;
+        }
+        out.push((ordered?'<ol>':'<ul>')+items.join('')+(ordered?'</ol>':'</ul>'));
+        continue;
+      }
+      if(/^\s*$/.test(l)){ i++; continue; }
+      var para=[l]; i++;
+      while(i<lines.length && !/^\s*$/.test(lines[i]) && !/^(?:#|>|```|\||\s*[-*]\s|\s*\d+\.\s)/.test(lines[i])){
+        para.push(lines[i]); i++;
+      }
+      out.push('<p>'+inline(para.join(' '),currentPath)+'</p>');
+    }
+    return out.join('\n');
+  }
+
+  /* ---------- Dialog logic ---------- */
+  var dialog=document.getElementById('md-dialog');
+  var dlgTitle=document.getElementById('md-dialog-title');
+  var dlgBody=document.getElementById('md-dialog-body');
+  var dlgOpen=document.getElementById('md-dialog-open');
+  var openHelpers=typeof dialog.showModal==='function';
+
+  function lookupKey(href){
+    var pathPart=href.split('?')[0].split('#')[0];
+    /* strip leading ../ once (report file is in {ws}/reports/) */
+    if(pathPart.indexOf('../')===0) pathPart=pathPart.slice(3);
+    if(pathPart.indexOf('./')===0) pathPart=pathPart.slice(2);
+    return pathPart;
+  }
+
+  function navHref(h){
+    /* "Open file" href phải resolve đúng từ HTML location ({ws}/reports/...). */
+    if(/^(?:https?:|mailto:|tel:|#|\/)/.test(h)) return h;
+    if(h.indexOf('../')===0||h.indexOf('./')===0) return h;
+    return '../'+h; /* ws-root-relative key → cần prefix khi open trực tiếp */
+  }
+  function openDialog(originalHref){
+    var key=lookupKey(originalHref);
+    var src=MD_CACHE[key];
+    if(typeof src!=='string'){ window.location.href=originalHref; return; }
+    dlgTitle.textContent=key;
+    dlgBody.innerHTML=renderMd(src,key);
+    dlgBody.scrollTop=0;
+    dlgOpen.href=navHref(originalHref);
+    if(openHelpers){ dialog.showModal(); }
+    else{ dialog.setAttribute('open',''); document.body.style.overflow='hidden'; }
+  }
+  function closeDialog(){
+    if(openHelpers){ try{ dialog.close(); }catch(e){} }
+    else{ dialog.removeAttribute('open'); document.body.style.overflow=''; }
+    dlgBody.innerHTML='';
+  }
+  document.getElementById('md-dialog-close').addEventListener('click', closeDialog);
+  dialog.addEventListener('click', function(e){ if(e.target===dialog) closeDialog(); });
+  dialog.addEventListener('cancel', function(e){ /* ESC default close */ });
+
+  /* ---------- Intercept .md link clicks (delegated, works for content + dialog body) ---------- */
+  document.body.addEventListener('click', function(e){
+    var a=e.target.closest('a');
+    if(!a || a.id==='md-dialog-open' || a.id==='md-dialog-close') return;
+    var href=a.getAttribute('href');
+    if(!href || !/\.md(?:$|#|\?)/.test(href)) return;
+    if(e.ctrlKey||e.metaKey||e.shiftKey||e.altKey) return;
+    if(a.target==='_blank') return;
+    e.preventDefault();
+    openDialog(href);
+  });
+})();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,54 @@
+# templates/bundle.yaml — Platform Analysis Bundle Manifest
+# Copy file này vào thư mục staging của bạn, điền các trường, rồi chạy:
+#   /code-analyze --bundle <thư mục chứa file này>
+#
+# Bundle mode: phân tích nhiều repo cùng lúc → 1 evidence artifact tổng hợp
+# Single-repo: dùng /code-analyze --ref <path> --scope "src/**" như thông thường
+
+# Label ngắn mô tả platform bundle này (≤ 30 ký tự, dùng cho evid-id)
+# → evid-id sẽ là: {YYYY-MM-DD}-platform-{label-slug}
+label: "platform-v1"
+
+# ──────────────────────────────────────────────────────
+# repos: danh sách repo cần phân tích
+# ──────────────────────────────────────────────────────
+repos:
+  - path: "./core-framework"       # relative tới bundle.yaml này, hoặc absolute path
+    role: "framework"              # framework | shared-lib | application | sample | plugin
+    # name: "core-framework"       # optional — auto-detect từ pom.xml/package.json nếu bỏ trống
+    scope:                         # optional — bỏ trống để dùng default heuristic
+      - "src/main/**"              # Khuyến cáo hẹp hơn khi bundle nhiều repo (để tránh vượt 300KB)
+      - "build.gradle"
+      - "src/main/resources/**"
+
+  - path: "./shared-libs"
+    role: "shared-lib"
+    # scope: []                    # bỏ trống → dùng default heuristic của /code-analyze
+
+  - path: "./sample-project"
+    role: "application"
+    scope:
+      - "src/main/**"
+      - "package.json"
+
+  # Thêm repo tùy ý:
+  # - path: "./another-service"
+  #   role: "application"
+
+# ──────────────────────────────────────────────────────
+# docs: tài liệu mô tả đi kèm (optional)
+# ──────────────────────────────────────────────────────
+# Bao gồm khi muốn analysis prompts cross-ref với architecture doc, OpenAPI spec, v.v.
+# Mỗi doc được tóm tắt (không dump toàn bộ) để giữ raw.md trong size limit.
+docs:
+  - path: "./docs/architecture.md"
+    type: "architecture"           # architecture | openapi | confluence-export | readme | other
+    label: "Platform Architecture Overview"
+
+  # - path: "./docs/api-spec.yaml"
+  #   type: "openapi"
+  #   label: "External API Spec"
+
+  # - path: "./docs/adr-log.md"
+  #   type: "other"
+  #   label: "Architecture Decision Log"

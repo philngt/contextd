@@ -1,0 +1,29 @@
+name: pack-claude-plugin-dev
+version: 1.0.0
+description: Build Claude Code plugins per Anthropic standards — plugin manifest, slash commands, subagents, skills, hooks, MCP servers
+
+components:
+  - plugin
+  - command
+  - subagent
+  - skill
+  - hook
+  - plugin-mcp
+
+keywords:
+  plugin: [plugin, ".claude-plugin", "plugin.json", marketplace, "claude code plugin"]
+  command: ["slash command", ".claude/commands", "/command", "command frontmatter", "argument-hint", "allowed-tools"]
+  subagent: [subagent, ".claude/agents", "agent frontmatter", "Task tool", "agent definition"]
+  skill: [skill, "SKILL.md", ".claude/skills", "skill frontmatter", trigger]
+  hook: [hook, "PreToolUse", "PostToolUse", "UserPromptSubmit", "SessionStart", "settings.json hooks"]
+  plugin-mcp: ["mcp server config", ".mcp.json", "mcp settings", "stdio mcp"]
+
+files:
+  constraints: agents/constraints.md
+  coding_rules: agents/coding-rules.md
+  validator_rules: agents/pipeline/validator-rules.md
+  validator_script: scripts/rules.py
+  retrieval_map: agents/pipeline/retrieval-map.md
+  prompt_overrides: agents/pipeline/prompt-overrides.md
+
+conflicts_with: []

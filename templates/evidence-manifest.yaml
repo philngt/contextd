@@ -1,0 +1,50 @@
+# Template — evidence/applied/{evid-id}/manifest.yaml
+# Ghi bởi /evidence-apply sau khi update/rebase wiki thành công.
+# Đây là audit trail: evidence nào → file wiki nào → thời điểm.
+
+evid_id: "2026-05-04-paste-PROJ-1234"
+workspace: "example-surgery"
+applied_at: "2026-05-04T14:20:00+07:00"
+applied_by: "lechihieu.ict@gmail.com"
+mode: "update"                                # update | rebase
+
+# Inputs sử dụng làm authoritative source
+inputs:
+  verified_facts: "qa/2026-05-04-paste-PROJ-1234/verified-facts.md"
+  contradictions: "analysis/2026-05-04-paste-PROJ-1234/02-contradiction.md"
+  knowledge_gaps: "analysis/2026-05-04-paste-PROJ-1234/08-knowledge-gaps.md"
+  final_report: "analysis/2026-05-04-paste-PROJ-1234/10-final-report.md"   # nếu có
+
+# Files trong workspace bị sửa (paths relative tới {ws}/)
+target_files:
+  - path: "projects/surgery-service/services/kafka-consumer.md"
+    sections_changed:
+      - "Config Overrides"
+      - "Failure Handling"
+    change_summary: "Updated retry policy from 5x linear to 3x exponential per BE lead confirmation (q-002)."
+  - path: "platform/contracts/mqtt-topic-contract.md"
+    sections_changed:
+      - "Registered Types"
+    change_summary: "Added new type 'surgery.event.timeout' (q-001)."
+
+# Citations: mỗi thay đổi có evidence trace
+citations:
+  - target: "projects/surgery-service/services/kafka-consumer.md#failure-handling"
+    evidence: "qa/.../batch-1-answers.md#q-002"
+    answered_by: "expert"                     # self | expert
+    expert: "be-lead@example.com"
+  - target: "platform/contracts/mqtt-topic-contract.md#registered-types"
+    evidence: "qa/.../batch-1-answers.md#q-001"
+    answered_by: "self"
+
+# Validator gate results (từ agents/pipeline/evidence-lifecycle.md)
+validator:
+  p0_p1_resolved: true
+  cross_workspace_check: pass
+  contracts_not_violated: true
+  no_new_undocumented_states: true
+
+# Optional — nếu có Q chưa giải quyết (P2/P3 deferred OK, P0/P1 awaiting_external KHÔNG OK)
+deferred_questions:
+  - q-004                                     # P3 deferred — OK to apply
+unresolved_blockers: []                       # Phải rỗng để apply thành công

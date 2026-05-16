@@ -1,0 +1,25 @@
+name: pack-dba
+version: 0.1.0
+description: Database administration pack — schema change safety, query hygiene, backup/restore readiness, and operational guardrails.
+
+components:
+  - schema-change-management
+  - query-performance-hygiene
+  - backup-restore-readiness
+  - db-operational-guardrails
+
+keywords:
+  schema-change-management: [schema migration, ddl change, alter table, online migration, rollback migration]
+  query-performance-hygiene: [query performance, execution plan, index strategy, slow query, full table scan]
+  backup-restore-readiness: [backup, restore, rpo, rto, disaster recovery, recovery test]
+  db-operational-guardrails: [maintenance window, lock impact, transaction safety, db runbook]
+
+files:
+  constraints: agents/constraints.md
+  coding_rules: agents/coding-rules.md
+  validator_rules: agents/pipeline/validator-rules.md
+  validator_script: scripts/rules.py
+  retrieval_map: agents/pipeline/retrieval-map.md
+  prompt_overrides: agents/pipeline/prompt-overrides.md
+
+conflicts_with: []

@@ -1,0 +1,25 @@
+name: pack-frontend-react
+version: 1.0.0
+description: React/Next.js frontend patterns — hooks rules, a11y, effect cleanup, list keys, no direct state mutation
+
+components:
+  - react
+  - hooks
+  - jsx
+  - nextjs
+
+keywords:
+  react: [react, component, jsx, tsx, "useState", "useEffect", "useMemo", "useCallback", props]
+  hooks: [hook, "use[A-Z]", custom hook]
+  jsx: [jsx, tsx, render, element]
+  nextjs: [nextjs, "next.js", "app router", "server component", "use client", "use server", "getServerSideProps", "getStaticProps"]
+
+files:
+  constraints: agents/constraints.md
+  coding_rules: agents/coding-rules.md
+  validator_rules: agents/pipeline/validator-rules.md
+  validator_script: scripts/rules.py
+  retrieval_map: agents/pipeline/retrieval-map.md
+  prompt_overrides: agents/pipeline/prompt-overrides.md
+
+conflicts_with: []

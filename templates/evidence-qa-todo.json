@@ -1,0 +1,98 @@
+{
+  "_template_for": "{ws}/evidence/qa/{evid-id}/todo.json",
+  "_doc": "Authoritative state machine for Q&A loop. Updated by /evidence-qa each batch.",
+
+  "evid_id": "2026-05-04-paste-PROJ-1234",
+  "workspace": "example-surgery",
+  "created_at": "2026-05-04T10:30:00+07:00",
+  "updated_at": "2026-05-04T11:15:00+07:00",
+  "state": "qa_in_progress",
+  "_state_options": ["analyzed", "qa_in_progress", "qa_awaiting_external", "qa_done"],
+
+  "config": {
+    "batch_size": 4,
+    "stop_when_p0_p1_clear": true
+  },
+
+  "questions": [
+    {
+      "id": "q-001",
+      "text": "Topic name mới `surgery.event.timeout` đã được register ở contract chưa?",
+      "priority": "P0",
+      "_priority_options": ["P0", "P1", "P2", "P3"],
+      "reason": "blocks_apply: contract type mới phải khai báo trước khi update wiki",
+      "source_prompt": "04-questions",
+      "batch": 1,
+      "status": "answered",
+      "_status_options": ["pending", "answered", "skipped", "deferred", "awaiting_external"],
+      "answer_ref": "batch-1-answers.md#q-001",
+      "answered_at": "2026-05-04T10:45:00+07:00",
+      "answered_by": "self",
+      "_answered_by_options": ["self", "expert"]
+    },
+    {
+      "id": "q-002",
+      "text": "BE lead xác nhận retry policy mới là 3 lần exponential 2s/4s/8s?",
+      "priority": "P0",
+      "reason": "blocks_apply: thay đổi failure handling pattern",
+      "source_prompt": "08-knowledge-gaps",
+      "batch": 1,
+      "status": "awaiting_external",
+      "external": {
+        "assigned_to": "be-lead@example.com",
+        "channel": "email",
+        "_channel_options": ["email", "slack", "jira", "teams", "in_person", "other"],
+        "requested_at": "2026-05-04T10:50:00+07:00",
+        "expected_by": "2026-05-06T18:00:00+07:00",
+        "request_note": "Cần confirm trước khi update wiki cho release Friday."
+      }
+    },
+    {
+      "id": "q-003",
+      "text": "Mâu thuẫn: changelog ghi timeout 30s nhưng service doc ghi 45s — đâu là giá trị production?",
+      "priority": "P1",
+      "reason": "contradiction with projects/surgery-service/services/kafka-consumer.md",
+      "source_prompt": "02-contradiction",
+      "batch": 2,
+      "status": "pending"
+    },
+    {
+      "id": "q-004",
+      "text": "Insight: pattern này có thể tổng quát cho domain khác không?",
+      "priority": "P3",
+      "reason": "nice-to-know from insight extractor",
+      "source_prompt": "09-insights",
+      "batch": null,
+      "status": "deferred"
+    }
+  ],
+
+  "batches": [
+    {
+      "n": 1,
+      "priority": "P0",
+      "question_ids": ["q-001", "q-002"],
+      "asked_at": "2026-05-04T10:40:00+07:00",
+      "completed": false,
+      "_completed_when": "all questions answered|skipped (awaiting_external counts as in-flight, not completed)"
+    },
+    {
+      "n": 2,
+      "priority": "P1",
+      "question_ids": ["q-003"],
+      "asked_at": null,
+      "completed": false
+    }
+  ],
+
+  "external_checkpoints": [
+    {
+      "checkpoint_id": "ckpt-001",
+      "created_at": "2026-05-04T10:50:00+07:00",
+      "question_ids": ["q-002"],
+      "exported_to": "pending-external.md",
+      "resolved": false,
+      "resolved_at": null
+    }
+  ]
+}

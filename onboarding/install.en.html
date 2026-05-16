@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<!--
+  Workspace Wiki Install Guide — single-file HTML, self-contained.
+  No external CSS/JS/fonts/CDN. Open directly in a browser.
+  Goal: set up wiki-template into ~/.claude/ and your first codebase in ~5 minutes.
+-->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Workspace Wiki for Claude — 5-Minute Setup</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#1f2328;background:#f6f8fa;line-height:1.55}
+  a{color:#0969da;text-decoration:none}
+  a:hover{text-decoration:underline}
+  code{font-family:"SF Mono",Menlo,Consolas,monospace;font-size:13px;background:#eaeef2;padding:1px 6px;border-radius:3px;color:#1f2328}
+  pre{background:#0d1117;color:#e6edf3;border-radius:8px;padding:14px 18px;overflow-x:auto;font-size:13px;line-height:1.6;margin:12px 0}
+  pre code{background:transparent;padding:0;color:inherit}
+  h1,h2,h3,h4{margin:0 0 12px;line-height:1.25}
+  p{margin:0 0 12px}
+  ul,ol{padding-left:22px;margin:0 0 12px}
+  li{margin:4px 0}
+  .container{max-width:880px;margin:0 auto;padding:24px}
+  /* Hero */
+  header.hero{background:linear-gradient(135deg,#1a7f37 0%,#0a5d24 100%);color:#fff;padding:48px 24px;text-align:center}
+  header.hero h1{font-size:32px;margin:0 0 8px;font-weight:700;color:#fff}
+  header.hero p.tagline{font-size:17px;opacity:.9;margin:0 0 20px}
+  header.hero .meta{display:inline-block;background:rgba(255,255,255,.15);padding:6px 14px;border-radius:20px;font-size:13px}
+  /* Sections */
+  section.block{background:#fff;border:1px solid #d0d7de;border-radius:12px;padding:28px 32px;margin:24px 0}
+  section.block > h2{font-size:22px;margin:0 0 4px;color:#1f2328}
+  section.block > p.lead{color:#57606a;margin:0 0 20px;font-size:15px}
+  /* Step rows */
+  .step-row{display:flex;gap:16px;margin:20px 0;align-items:flex-start}
+  .step-num-bubble{flex:0 0 36px;height:36px;background:#1a7f37;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px}
+  .step-content{flex:1}
+  .step-content h4{font-size:16px;margin:6px 0 8px;color:#1f2328}
+  .step-content p{font-size:14px;color:#1f2328;margin:0 0 8px}
+  .step-content code{font-size:13px}
+  /* Callouts */
+  .callout{padding:14px 18px;border-radius:8px;margin:16px 0;border-left:4px solid}
+  .callout.info{background:#ddf4ff;border-color:#0969da;color:#0550ae}
+  .callout.warn{background:#fff8c5;border-color:#d4a72c;color:#7d4e00}
+  .callout.tip{background:#dafbe1;border-color:#1a7f37;color:#155724}
+  .callout strong{color:inherit}
+  .callout pre{margin:8px 0 0}
+  .callout ul,.callout ol{margin-bottom:0}
+  /* Footer nav */
+  .nav-back{display:inline-block;padding:8px 16px;background:#fff;border:1px solid #d0d7de;border-radius:8px;color:#1f2328;font-size:14px;margin-right:8px}
+  .nav-back:hover{background:#0969da;color:#fff;border-color:#0969da;text-decoration:none}
+  /* Footer */
+  footer{text-align:center;padding:32px 24px;color:#57606a;font-size:13px}
+  footer a{color:#0969da}
+  /* TOC chips */
+  .toc{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 0}
+  .toc a{display:inline-block;padding:6px 12px;background:#fff;border:1px solid #d0d7de;border-radius:20px;font-size:13px;color:#1f2328}
+  .toc a:hover{background:#1a7f37;color:#fff;border-color:#1a7f37;text-decoration:none}
+  .lang-switch{display:flex;justify-content:flex-end;gap:8px;margin:8px 0 0}
+  .lang-switch a{display:inline-block;padding:4px 10px;border:1px solid #d0d7de;border-radius:999px;font-size:12px;color:#1f2328;background:#fff;text-decoration:none}
+  .lang-switch a.active{background:#1a7f37;color:#fff;border-color:#1a7f37}
+  /* Tabs OS */
+  .os-tabs{display:flex;gap:0;margin:16px 0 0;border-bottom:2px solid #d0d7de}
+  .os-tab{padding:10px 20px;cursor:pointer;border:none;background:transparent;font-size:14px;font-weight:600;color:#57606a;border-bottom:3px solid transparent;margin-bottom:-2px}
+  .os-tab.active{color:#1a7f37;border-bottom-color:#1a7f37}
+  .os-tab:hover:not(.active){color:#1f2328}
+  .os-panel{display:none;padding:16px 0}
+  .os-panel.active{display:block}
+  @media (max-width:768px){
+    .container{padding:12px}
+    header.hero{padding:32px 16px}
+    header.hero h1{font-size:24px}
+    header.hero p.tagline{font-size:15px}
+    section.block{padding:18px 16px}
+    .step-row{flex-direction:column;gap:8px}
+    .step-num-bubble{width:28px;height:28px;font-size:13px;flex:0 0 28px}
+    pre{padding:12px;font-size:12px;white-space:pre-wrap;word-break:break-word}
+    code{word-break:break-word}
+    .step-content code{font-size:12px}
+    .callout{padding:12px 14px}
+    .toc{gap:6px}
+    .toc a{font-size:12px;padding:5px 10px}
+    .os-tabs{flex-wrap:wrap;gap:0}
+    .os-tab{padding:8px 14px;font-size:13px}
+    .nav-back{display:block;margin:8px 0;text-align:center}
+  }
+  @media (max-width:480px){
+    header.hero h1{font-size:20px}
+    header.hero .meta{font-size:11px}
+    section.block{padding:14px 12px;border-radius:8px}
+    section.block > h2{font-size:18px}
+    .step-content h4{font-size:15px}
+    .step-content p{font-size:13px}
+    .callout{border-left-width:3px;padding:10px 12px;font-size:13px}
+    pre{padding:10px;font-size:11px}
+    .os-tab{padding:6px 10px;font-size:12px}
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <h1>⚙️ Install Workspace Wiki for Claude</h1>
+  <p class="tagline">Set up once in about 5 minutes, then use in any project.</p>
+  <div class="meta">Works on Linux · macOS · Windows</div>
+  <p style="margin-top:12px;font-size:13px;opacity:.95">Need source code too? Open it on <a href="https://github.com/<owner>/<repo>" style="color:#fff;text-decoration:underline;text-underline-offset:2px">GitHub</a></p>
+</header>
+
+<div class="container">
+  <div class="lang-switch"><a href="install.html">VI</a><a href="install.en.html" class="active">EN</a></div>
+
+
+  <div class="toc">
+    <a href="#preflight">Pre-check</a>
+    <a href="#download">📥 Download (no Git needed)</a>
+    <a href="#step1">1. Clone (with Git)</a>
+    <a href="#step2">2. Run installer</a>
+    <a href="#step3">3. Setup project</a>
+    <a href="#troubleshoot">Common issues</a>
+    <a href="#update">Update</a>
+    <a href="index.en.html">← Onboarding</a>
+  </div>
+
+  <!-- ============ PRE-FLIGHT ============ -->
+  <section class="block" id="preflight">
+    <h2>📋 Before you start</h2>
+    <p class="lead">Before you start, check these basics:</p>
+
+    <div class="callout info">
+      <ul>
+        <li>✅ <a href="https://claude.com/claude-code">Claude Code CLI</a> or an installed IDE extension with login complete (verify by running <code>claude --version</code> in terminal, or by seeing the Claude icon in VS Code/JetBrains).</li>
+        <li>✅ <strong>Bash shell</strong>:
+          <ul style="margin-top:4px">
+            <li>Linux/macOS: available by default (your standard terminal)</li>
+            <li>Windows: install <a href="https://git-scm.com/download/win">Git for Windows</a> (includes Git Bash) or enable WSL</li>
+          </ul>
+        </li>
+        <li>✅ <strong>Git</strong> (verify: <code>git --version</code>)</li>
+        <li>⚪ <em>Optional</em>: Python ≥ 3.9 (only needed for <code>scripts/validate.py</code> and trace tools)</li>
+      </ul>
+    </div>
+
+    <p style="margin-top:16px;font-size:13px;color:#57606a">
+      If you do NOT have Bash on Windows, see <a href="#troubleshoot">Common issues</a> under "Windows without Bash".
+    </p>
+  </section>
+
+  <!-- ============ DOWNLOAD ZIP ============ -->
+  <section class="block" id="download">
+    <h2>📥 Easiest way: One command install (release URL via env)</h2>
+    <p class="lead">If your GitLab CI publishes release files, run one command to download + extract + install automatically.</p>
+
+    <div class="callout tip">
+      <strong>Linux / macOS one-liner</strong>
+      <pre><code>curl -fsSL https://github.com/&lt;org&gt;/&lt;repo&gt;/releases/download/&lt;tag&gt;/install.sh | sh</code></pre>
+      <strong>Windows PowerShell one-liner</strong>
+      <pre><code>iwr https://github.com/&lt;org&gt;/&lt;repo&gt;/releases/download/&lt;tag&gt;/install.ps1 -UseBasicParsing | iex</code></pre>
+      <p style="margin-top:8px">Installer scripts are generated per release and already point to the matching release artifact.</p>
+    </div>
+
+    <p class="lead">Or download the zip manually if needed, then run the installer.</p>
+
+    <div style="text-align:center;margin:24px 0">
+      <a href="../release/wiki-template-latest.zip" download
+         style="display:inline-block;padding:14px 28px;background:#1a7f37;color:#fff;border-radius:8px;font-weight:600;font-size:16px;text-decoration:none">
+        ⬇️ Download wiki-template-latest.zip
+      </a>
+      <p style="font-size:12px;color:#57606a;margin-top:8px">
+        This link works when opening files locally or when hosting a directory that includes <code>release/</code>.
+      </p>
+    </div>
+
+    <div class="step-row">
+      <div class="step-num-bubble">1</div>
+      <div class="step-content">
+        <h4>Extract the zip</h4>
+        <p>Extract to any folder — for example <code>~/wiki</code> on Linux/macOS or <code>D:\tool\wiki-template</code> on Windows.</p>
+
+        <div class="os-tabs">
+          <button class="os-tab active" onclick="showOS(this, 'extract-linux')">Linux / macOS</button>
+          <button class="os-tab" onclick="showOS(this, 'extract-windows')">Windows</button>
+        </div>
+
+        <div class="os-panel active" data-os="extract-linux">
+          <pre><code>mkdir -p ~/wiki && unzip wiki-template-latest.zip -d ~/wiki
+# The zip contains root folder 'wiki-template' → unzip creates ~/wiki/wiki-template/
+cd ~/wiki/wiki-template</code></pre>
+        </div>
+
+        <div class="os-panel" data-os="extract-windows">
+          <pre><code># PowerShell
+Expand-Archive -Path wiki-template-latest.zip -DestinationPath D:\tool
+# Creates D:\tool\wiki-template\
+cd D:\tool\wiki-template
+
+# Or Git Bash
+unzip wiki-template-latest.zip -d /d/tool</code></pre>
+          <p style="font-size:13px;color:#57606a">Or right-click the zip file and choose "Extract All..." in File Explorer.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="step-row">
+      <div class="step-num-bubble">2</div>
+      <div class="step-content">
+        <h4>Run the installer</h4>
+        <p>Same as Step 2 in the Git clone path — the file <code>scripts/install-to-claude.sh</code> is already in the zip:</p>
+        <pre><code>bash scripts/install-to-claude.sh</code></pre>
+        <p>Verify the same way as Git install: <code>cat ~/.claude/wiki-global.json</code> should show <code>"wiki_root"</code> with your extracted path.</p>
+      </div>
+    </div>
+
+    <div class="step-row">
+      <div class="step-num-bubble">3</div>
+      <div class="step-content">
+        <h4>Setup codebase</h4>
+        <p>Same as <a href="#step3">Step 3</a> below — run <code>/wiki-setup</code> in your codebase.</p>
+      </div>
+    </div>
+
+    <div class="callout warn">
+      <strong>⚠️ Future updates:</strong> you must download a new zip for each update — there is no <code>git pull</code>. We recommend <a href="#step1">Git clone</a> if you update often.
+    </div>
+
+    <div class="callout tip">
+      <strong>💡 For maintainers:</strong> create a new zip with <code>bash scripts/package-release.sh</code>. Output is written to <code>release/wiki-template-{version}.zip</code> + <code>release/wiki-template-latest.zip</code>. It automatically excludes <code>.git/</code>, raw evidence, workspaces other than <code>wiki/</code>, and runs/cache/log files. See <code>scripts/package-release.sh --help</code>.
+    </div>
+  </section>
+
+  <!-- ============ STEP 1 ============ -->
+  <section class="block" id="step1">
+    <h2>🔧 Stable path for technical users: Git clone</h2>
+    <p class="lead">If you have Git and want easier updates later, use this path.</p>
+
+    <div class="step-row">
+      <div class="step-num-bubble">1</div>
+      <div class="step-content">
+        <h2 style="margin-top:4px">Download the repository</h2>
+        <p>Choose any base folder — for example <code>~/wiki</code> on Linux/macOS or <code>D:\tool\wiki-template</code> on Windows.</p>
+
+        <div class="os-tabs">
+          <button class="os-tab active" onclick="showOS(this, 'linux')">Linux / macOS</button>
+          <button class="os-tab" onclick="showOS(this, 'windows')">Windows (Git Bash)</button>
+        </div>
+
+        <div class="os-panel active" data-os="linux">
+          <pre><code>git clone &lt;wiki-template-repo&gt; ~/wiki
+cd ~/wiki</code></pre>
+        </div>
+
+        <div class="os-panel" data-os="windows">
+          <pre><code>git clone &lt;wiki-template-repo&gt; /d/tool/wiki-template
+cd /d/tool/wiki-template</code></pre>
+          <p style="font-size:13px;color:#57606a">In Git Bash, Windows path <code>D:\tool\</code> is written as <code>/d/tool/</code> (forward slash).</p>
+        </div>
+
+        <p style="font-size:13px;color:#57606a;margin-top:12px">
+          This repo needs no build and no dependency install — it is markdown plus bash scripts.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ STEP 2 ============ -->
+  <section class="block" id="step2">
+    <div class="step-row">
+      <div class="step-num-bubble">2</div>
+      <div class="step-content">
+        <h2 style="margin-top:4px">Run the installer</h2>
+        <p>Run this command (safe to run multiple times):</p>
+        <pre><code>bash scripts/install-to-claude.sh</code></pre>
+
+        <p>This command automatically does 3 things:</p>
+        <ul>
+          <li>Syncs <strong>slash commands</strong> + <strong>subagents</strong> to <code>~/.claude/commands/</code> and <code>~/.claude/agents/</code> — Claude Code reads these folders automatically</li>
+          <li>Creates <code>~/.claude/wiki-global.json</code> and points <code>wiki_root</code> to your cloned repo</li>
+          <li><strong>Safe to run again</strong>: rerun after each <code>git pull</code> to refresh commands</li>
+        </ul>
+
+        <h4 style="margin-top:20px">Verify installation</h4>
+        <p>Check that the config path is correct:</p>
+
+        <div class="os-tabs">
+          <button class="os-tab active" onclick="showOS(this, 'verify-linux')">Linux / macOS</button>
+          <button class="os-tab" onclick="showOS(this, 'verify-windows')">Windows</button>
+        </div>
+
+        <div class="os-panel active" data-os="verify-linux">
+          <pre><code>cat ~/.claude/wiki-global.json</code></pre>
+        </div>
+
+        <div class="os-panel" data-os="verify-windows">
+          <pre><code># PowerShell
+type $env:USERPROFILE\.claude\wiki-global.json
+
+# Or Git Bash
+cat ~/.claude/wiki-global.json</code></pre>
+        </div>
+
+        <p>You should see field <code>"wiki_root"</code> with an absolute path to your cloned repo. Example:</p>
+        <pre><code>{
+  "wiki_root": "/home/user/wiki",
+  "default_workspace": null,
+  "obsidian": { ... }
+}</code></pre>
+
+        <p>Open Claude Code and run <code>/wiki-setup</code> → if the slash command appears in autocomplete, setup is successful.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ STEP 3 ============ -->
+  <section class="block" id="step3">
+    <div class="step-row">
+      <div class="step-num-bubble">3</div>
+      <div class="step-content">
+        <h2 style="margin-top:4px">Connect your first project</h2>
+        <p>Go to the codebase folder where you want to use the wiki, open Claude Code (or the IDE extension) there, and run:</p>
+        <pre><code>/wiki-setup</code></pre>
+
+        <p>The setup flow guides you step by step:</p>
+        <ul>
+          <li>Automatically detects project name + tech stack from <code>package.json</code> / <code>pom.xml</code> / <code>Cargo.toml</code> / ...</li>
+          <li>Prompts you to choose an existing workspace — or create a new workspace via <code>/new-workspace {name}</code></li>
+          <li><strong>Step 4.5 (Manage packs)</strong>: shows checkboxes for all available packs; auto-detects and pre-selects based on stack</li>
+          <li>Creates <code>&lt;codebase&gt;/.claude/wiki.json</code> with complete config + per-codebase pack overrides</li>
+        </ul>
+
+        <div class="callout tip">
+          <strong>💡 You only run this once per project.</strong> After that, the wiki just works — you can use slash commands normally (<code>/use-wiki</code>, <code>/find</code>, <code>/tool-design</code>, ...).
+        </div>
+
+        <p style="margin-top:16px">Next: open <a href="index.en.html">index.html</a> and choose a persona path (PM / Engineer / Wiki Owner / Solo Builder).</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ TROUBLESHOOT ============ -->
+  <section class="block" id="troubleshoot">
+    <h2>🔧 Common issues</h2>
+
+    <h3 style="margin-top:20px;font-size:17px">Windows without Bash</h3>
+    <div class="callout warn">
+      <p>If you do not have Git Bash or WSL, use these 4 manual steps:</p>
+      <ol style="margin-top:8px">
+        <li>Copy <code>templates\wiki-global.json</code> → <code>%USERPROFILE%\.claude\wiki-global.json</code></li>
+        <li>Open the copied file in Notepad, change <code>"wiki_root"</code> to the absolute repo path, and use <code>\\</code> instead of <code>\</code>:
+          <pre style="margin:8px 0">{
+  "wiki_root": "D:\\tool\\wiki-template",
+  ...
+}</pre>
+        </li>
+        <li>Copy folders <code>.claude\commands\</code> and <code>agents\</code> to <code>%USERPROFILE%\.claude\</code>:
+          <pre style="margin:8px 0">xcopy /E /I /Y .claude\commands %USERPROFILE%\.claude\commands
+xcopy /E /I /Y agents %USERPROFILE%\.claude\agents</pre>
+        </li>
+        <li>Verify: <code>type %USERPROFILE%\.claude\wiki-global.json</code></li>
+      </ol>
+      <p style="margin-top:8px"><strong>Recommended</strong>: install <a href="https://git-scm.com/download/win">Git for Windows</a> (free) to get Git Bash → installer runs with one simple command.</p>
+    </div>
+
+    <h3 style="margin-top:24px;font-size:17px">Commands do not appear in Claude Code</h3>
+    <ul>
+      <li>Check whether <code>~/.claude/commands/</code> contains <code>.md</code> files (e.g. <code>wiki-setup.md</code>)</li>
+      <li>Restart Claude Code (CLI: run <code>/exit</code> then reopen; IDE: reload window)</li>
+      <li>Re-run installer: <code>bash scripts/install-to-claude.sh</code></li>
+      <li>Check Claude Code logs for errors (CLI: stderr; IDE: Output panel)</li>
+    </ul>
+
+    <h3 style="margin-top:24px;font-size:17px">Error <code>wiki_root not found</code> when running slash commands</h3>
+    <ul>
+      <li>Open <code>~/.claude/wiki-global.json</code> and confirm <code>"wiki_root"</code> is an absolute path (do NOT use <code>~</code> or relative paths)</li>
+      <li>Path must point to the wiki-template repo root (the folder containing <code>CLAUDE.md</code>, <code>packs/</code>, <code>workspaces/</code>)</li>
+      <li>Verify the path exists: <code>ls "$(jq -r .wiki_root ~/.claude/wiki-global.json)"</code></li>
+    </ul>
+
+    <h3 style="margin-top:24px;font-size:17px"><code>/wiki-setup</code> shows "workspace not found"</h3>
+    <ul>
+      <li>No workspace exists yet — run <code>/new-workspace {name}</code> first (e.g. <code>/new-workspace acme-corp</code>)</li>
+      <li>Or list available workspaces: <code>/list-workspaces</code></li>
+    </ul>
+
+    <h3 style="margin-top:24px;font-size:17px">Permission error when running installer</h3>
+    <ul>
+      <li>Linux/macOS: <code>chmod +x scripts/install-to-claude.sh</code> then run again</li>
+      <li>Or force with bash: <code>bash scripts/install-to-claude.sh</code> (no executable bit required)</li>
+    </ul>
+  </section>
+
+  <!-- ============ UPDATE ============ -->
+  <section class="block" id="update">
+    <h2>🔄 Future updates</h2>
+    <p>After each <code>git pull</code> in the wiki-template repo, re-run the installer to sync updated slash commands:</p>
+    <pre><code>cd ~/wiki
+git pull
+bash scripts/install-to-claude.sh   # idempotent — updates everything</code></pre>
+
+    <div class="callout tip">
+      <strong>💡 When should you update?</strong>
+      <ul>
+        <li>The wiki-template repo has new slash commands (e.g. newly shipped <code>/tool-design</code>)</li>
+        <li>New packs were added to <code>packs/</code></li>
+        <li>Engine constraints / coding-rules were updated (new validator rules)</li>
+      </ul>
+      <p style="margin-top:8px">Your workspaces (<code>workspaces/{your-ws}/</code>) are data — they are not affected by engine updates.</p>
+    </div>
+  </section>
+
+  <p style="margin:24px 0;text-align:center">
+    <a href="index.en.html" class="nav-back">← Back to Onboarding</a>
+    <a href="../QUICKSTART.md" class="nav-back">QUICKSTART.md (text)</a>
+    <a href="../README.md" class="nav-back">README.md</a>
+    <a href="https://github.com/<owner>/<repo>" class="nav-back">GitHub Repository</a>
+  </p>
+
+  <footer>
+    <p>
+      📚 <strong>Workspace Wiki</strong> · This file is self-contained — copy it anywhere and open directly. No tracking, no CDN, no dependencies.
+    </p>
+  </footer>
+
+</div>
+
+<script>
+  function showOS(btn, os){
+    const tabs = btn.parentElement.querySelectorAll('.os-tab');
+    const panels = btn.parentElement.parentElement.querySelectorAll('.os-panel');
+    tabs.forEach(t => t.classList.remove('active'));
+    panels.forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    panels.forEach(p => {
+      if (p.dataset.os === os) p.classList.add('active');
+    });
+  }
+</script>
+</body>
+</html>

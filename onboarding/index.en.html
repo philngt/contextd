@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<!--
+  Workspace Wiki for Claude Onboarding — single-file HTML, self-contained.
+  No external CSS/JS/fonts/CDN. Open directly in a browser.
+  Goal: onboard anyone in ~5 minutes (non-tech, engineer, wiki owner).
+-->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Workspace Wiki for Claude — 5-Minute Onboarding</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#1f2328;background:#f6f8fa;line-height:1.55}
+  a{color:#0969da;text-decoration:none}
+  a:hover{text-decoration:underline}
+  code{font-family:"SF Mono",Menlo,Consolas,monospace;font-size:13px;background:#eaeef2;padding:1px 6px;border-radius:3px;color:#1f2328}
+  pre{background:#0d1117;color:#e6edf3;border-radius:8px;padding:14px 18px;overflow-x:auto;font-size:13px;line-height:1.6;margin:12px 0;word-break:break-word;white-space:pre-wrap}
+  pre code{background:transparent;padding:0;color:inherit;word-break:break-word;white-space:pre-wrap}
+  h1,h2,h3,h4{margin:0 0 12px;line-height:1.25}
+  p{margin:0 0 12px}
+  ul,ol{padding-left:22px;margin:0 0 12px}
+  li{margin:4px 0}
+  .container{max-width:1080px;margin:0 auto;padding:24px}
+  /* Hero */
+  header.hero{background:linear-gradient(135deg,#0969da 0%,#0550ae 100%);color:#fff;padding:56px 24px;text-align:center;border-radius:0}
+  header.hero h1{font-size:36px;margin:0 0 8px;font-weight:700;color:#fff}
+  header.hero p.tagline{font-size:18px;opacity:.9;margin:0 0 24px}
+  header.hero .meta{display:inline-block;background:rgba(255,255,255,.15);padding:6px 14px;border-radius:20px;font-size:13px;letter-spacing:.04em}
+  /* Persona picker */
+  section.personas{margin-top:-32px}
+  .persona-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+  .persona-card{background:#fff;border:2px solid #d0d7de;border-radius:12px;padding:24px;cursor:pointer;transition:all .15s;position:relative}
+  .persona-card:hover{border-color:#0969da;box-shadow:0 4px 12px rgba(9,105,218,.15);transform:translateY(-2px)}
+  .persona-card.active{border-color:#0969da;background:#ddf4ff}
+  .persona-card .icon{font-size:32px;margin-bottom:8px;display:block}
+  .persona-card h3{font-size:18px;margin:0 0 6px;color:#0969da}
+  .persona-card p{font-size:14px;color:#57606a;margin:0}
+  .persona-card .badge{display:inline-block;font-size:11px;background:#dafbe1;color:#1a7f37;padding:2px 8px;border-radius:10px;margin-top:8px;font-weight:600;letter-spacing:.02em}
+  /* Sections */
+  section.block{background:#fff;border:1px solid #d0d7de;border-radius:12px;padding:28px 32px;margin:24px 0}
+  section.block > h2{font-size:22px;margin:0 0 4px;color:#1f2328}
+  section.block > h2 .step-num{display:inline-block;width:28px;height:28px;background:#0969da;color:#fff;border-radius:50%;text-align:center;line-height:28px;font-size:14px;margin-right:10px;vertical-align:middle}
+  section.block > p.lead{color:#57606a;margin:0 0 20px;font-size:15px}
+  /* Persona path (hidden by default, shown when card clicked) */
+  .persona-path{display:none;margin-top:20px;padding:24px;background:#f6f8fa;border-radius:10px;border-left:4px solid #0969da}
+  .persona-path.active{display:block}
+  .persona-path h3{font-size:18px;margin:0 0 6px;color:#0969da}
+  .persona-path p.who{color:#57606a;font-size:14px;margin:0 0 16px}
+  .step-row{display:flex;gap:16px;margin:16px 0;align-items:flex-start}
+  .step-num-bubble{flex:0 0 32px;height:32px;background:#0969da;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px}
+  .step-content{flex:1}
+  .step-content h4{font-size:15px;margin:4px 0 6px;color:#1f2328}
+  .step-content p{font-size:14px;color:#1f2328;margin:0 0 8px}
+  .step-content code{font-size:13px}
+  /* Command grid (quick ref) */
+  .cmd-group{margin:16px 0}
+  .cmd-group h3{font-size:15px;color:#57606a;text-transform:uppercase;letter-spacing:.05em;margin:24px 0 8px;border-bottom:1px solid #d0d7de;padding-bottom:6px}
+  .cmd-table{width:100%;border-collapse:collapse;font-size:14px;margin:8px 0}
+  .cmd-table th{background:#f6f8fa;text-align:left;padding:8px 10px;border-bottom:2px solid #d0d7de;font-weight:600;font-size:13px;color:#57606a;text-transform:uppercase;letter-spacing:.04em}
+  .cmd-table td{padding:10px;border-bottom:1px solid #eaeef2;vertical-align:top}
+  .cmd-table tr:hover td{background:#f6f8fa}
+  .cmd-table .cmd-name{white-space:nowrap;font-family:"SF Mono",Menlo,Consolas,monospace;color:#0969da;font-weight:600}
+  .cmd-table .cmd-tag{display:inline-block;font-size:10px;padding:1px 6px;border-radius:8px;margin-left:6px;font-weight:600;letter-spacing:.04em;text-transform:uppercase}
+  .cmd-tag.tech{background:#ddf4ff;color:#0550ae}
+  .cmd-tag.nontech{background:#dafbe1;color:#1a7f37}
+  .cmd-tag.maintainer{background:#fff8c5;color:#9a6700}
+  .cmd-tag.beta{background:#fbefff;color:#7a1fa2}
+  /* FAQ */
+  details{background:#f6f8fa;border:1px solid #d0d7de;border-radius:8px;margin:8px 0;overflow:hidden}
+  details summary{padding:12px 16px;cursor:pointer;font-weight:600;list-style:none;display:flex;align-items:center;gap:8px}
+  details summary::-webkit-details-marker{display:none}
+  details summary::before{content:"▸";color:#57606a;transition:transform .15s}
+  details[open] summary::before{transform:rotate(90deg)}
+  details[open] summary{border-bottom:1px solid #d0d7de;background:#fff}
+  details .faq-body{padding:14px 18px;background:#fff}
+  details .faq-body p:last-child{margin-bottom:0}
+  /* Concept map */
+  .concept-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin:16px 0}
+  .concept-card{border:1px solid #d0d7de;border-radius:10px;padding:16px;background:#fff}
+  .concept-card .concept-icon{font-size:24px;margin-bottom:6px}
+  .concept-card h4{font-size:15px;margin:0 0 6px;color:#0969da}
+  .concept-card p{font-size:13px;color:#57606a;margin:0;line-height:1.5}
+  /* Glossary */
+  dl.glossary dt{font-weight:700;margin-top:12px;color:#0969da;font-size:14px}
+  dl.glossary dd{margin:4px 0 0 0;color:#1f2328;font-size:14px}
+  /* Footer */
+  footer{text-align:center;padding:32px 24px;color:#57606a;font-size:13px}
+  footer a{color:#0969da}
+  /* Callouts */
+  .callout{padding:14px 18px;border-radius:8px;margin:14px 0;border-left:4px solid}
+  .callout.info{background:#ddf4ff;border-color:#0969da;color:#0550ae}
+  .callout.warn{background:#fff8c5;border-color:#d4a72c;color:#7d4e00}
+  .callout.tip{background:#dafbe1;border-color:#1a7f37;color:#155724}
+  .callout strong{color:inherit}
+  /* TOC */
+  .toc{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 0}
+  .toc a{display:inline-block;padding:6px 12px;background:#fff;border:1px solid #d0d7de;border-radius:20px;font-size:13px;color:#1f2328}
+  .toc a:hover{background:#0969da;color:#fff;border-color:#0969da;text-decoration:none}
+  .lang-switch{display:flex;justify-content:flex-end;gap:8px;margin:8px 0 0}
+  .lang-switch a{display:inline-block;padding:4px 10px;border:1px solid #d0d7de;border-radius:999px;font-size:12px;color:#1f2328;background:#fff;text-decoration:none}
+  .lang-switch a.active{background:#0969da;color:#fff;border-color:#0969da}
+  @media (max-width:768px){
+    .container{padding:12px}
+    header.hero{padding:32px 16px}
+    header.hero h1{font-size:26px}
+    header.hero p.tagline{font-size:15px}
+    section.block{padding:18px 16px}
+    .step-row{flex-direction:column;gap:8px}
+    .step-num-bubble{width:28px;height:28px;font-size:13px;flex:0 0 28px}
+    .persona-grid{grid-template-columns:1fr}
+    .concept-grid{grid-template-columns:1fr}
+    .cmd-table{font-size:13px}
+    .cmd-table th,.cmd-table td{padding:8px 6px}
+    .cmd-table .cmd-name{white-space:normal}
+    details summary{padding:10px 12px;font-size:14px}
+    .callout{padding:12px 14px}
+    .toc{gap:6px}
+    .toc a{font-size:12px;padding:5px 10px}
+    pre{padding:12px;font-size:12px;word-break:break-word;white-space:pre-wrap}
+    code{word-break:break-word}
+    .step-content code{font-size:12px}
+  }
+  @media (max-width:420px){
+    header.hero h1{font-size:22px}
+    header.hero p.tagline{font-size:14px}
+    section.block{padding:14px 12px}
+    .persona-card{padding:16px}
+    .concept-card{padding:12px}
+    .cmd-table th,.cmd-table td{padding:6px 4px}
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <h1>📚 Workspace Wiki for Claude</h1>
+  <p class="tagline">Write your team’s working rules once, so Claude can follow them from the start.</p>
+  <div class="meta">For every role · Start in ~5 minutes</div>
+  <p style="margin-top:12px;font-size:13px;opacity:.95">View source and releases on <a href="https://github.com/<owner>/<repo>" style="color:#fff;text-decoration:underline;text-underline-offset:2px">GitHub</a></p>
+</header>
+
+<div class="container">
+  <div class="lang-switch"><a href="index.html">VI</a><a href="index.en.html" class="active">EN</a></div>
+
+
+  <div class="toc">
+    <a href="install.en.html">⚙️ Install</a>
+    <a href="#what">What is this?</a>
+    <a href="#start">Get started</a>
+    <a href="#concepts">Core concepts</a>
+    <a href="#commands">Command reference</a>
+    <a href="#packs">Packs</a>
+    <a href="#faq">FAQ</a>
+  </div>
+
+  <div class="callout info" style="margin-top:16px;background:#ddf4ff;padding:14px 18px;border-radius:8px;border-left:4px solid #0969da;color:#0550ae">
+    <strong>⚙️ Not installed yet?</strong> Open <a href="install.en.html"><strong>the install page</strong></a> first. Then come back and choose your role.
+  </div>
+
+  <!-- ============ WHAT IS THIS ============ -->
+  <section class="block" id="what">
+    <h2>📖 What is Workspace Wiki?</h2>
+    <p class="lead">
+      A <strong>shared playbook</strong> for people and AI.
+      Document how your team works in the wiki. AI reads it first and follows your standards.
+    </p>
+
+    <div class="concept-grid">
+      <div class="concept-card">
+        <div class="concept-icon">🏢</div>
+        <h4>Workspace</h4>
+        <p>One company or project uses one workspace. Do not mix knowledge between workspaces.</p>
+      </div>
+      <div class="concept-card">
+        <div class="concept-icon">📦</div>
+        <h4>Pack</h4>
+        <p>A pack is a ready guide for one type of work (web-api, frontend-react, ai-app, product, and more).</p>
+      </div>
+      <div class="concept-card">
+        <div class="concept-icon">📜</div>
+        <h4>Contract</h4>
+        <p>A contract is a fixed format (API shape, data format, error code). Do not change it by yourself.</p>
+      </div>
+      <div class="concept-card">
+        <div class="concept-icon">🧩</div>
+        <h4>Pattern</h4>
+        <p>A pattern is a recommended way to solve a common problem. Reuse it when possible.</p>
+      </div>
+      <div class="concept-card">
+        <div class="concept-icon">🎯</div>
+        <h4>Brief / OKR</h4>
+        <p>Product briefs, goals, users, and metrics — non-technical product knowledge. Requires <code>pack-product</code>.</p>
+      </div>
+      <div class="concept-card">
+        <div class="concept-icon">🔍</div>
+        <h4>Evidence</h4>
+        <p>Steps to turn notes into trusted wiki content: ingest → analyze → QA → apply.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PERSONA PICKER ============ -->
+  <section class="block" id="start">
+    <h2><span class="step-num">1</span>Who are you?</h2>
+    <p class="lead">Choose your role to see the simplest first steps.</p>
+
+    <div class="persona-grid">
+      <div class="persona-card" data-persona="nontech" onclick="pick('nontech')">
+        <span class="icon">💼</span>
+        <h3>Non-technical (PM / Business / Product Owner)</h3>
+        <p>You do not need to write code. You only need to describe goals, users, and product context.</p>
+        <span class="badge">Start here if you are in product/business</span>
+      </div>
+      <div class="persona-card" data-persona="engineer" onclick="pick('engineer')">
+        <span class="icon">🛠️</span>
+        <h3>Engineer</h3>
+        <p>You write code and want AI to follow your team’s contracts and patterns. You need wiki-aware code generation.</p>
+        <span class="badge">Start here if you write code</span>
+      </div>
+      <div class="persona-card" data-persona="owner" onclick="pick('owner')">
+        <span class="icon">📚</span>
+        <h3>Wiki Maintainer</h3>
+        <p>You set up and maintain the team wiki — ingest knowledge, define rules, and keep wiki content aligned with real code.</p>
+        <span class="badge">Start here if you maintain the wiki</span>
+      </div>
+      <div class="persona-card" data-persona="solo" onclick="pick('solo')">
+        <span class="icon">🔧</span>
+        <h3>Self-builder / Domain Expert</h3>
+        <p>You work in another field (mechanical, accounting, healthcare, etc.) and use Claude Code as a self-builder tool to create apps that support your work.</p>
+        <span class="badge">Start here if you are not a developer but build your own tools</span>
+      </div>
+    </div>
+
+    <!-- Path: Non-tech -->
+    <div class="persona-path" id="path-nontech">
+      <h3>💼 Guide for non-technical users</h3>
+      <p class="who">PM, Product Owner, Business Analyst, Stakeholder. No coding knowledge needed.</p>
+
+      <div class="step-row">
+        <div class="step-num-bubble">1</div>
+        <div class="step-content">
+          <h4>Ask your team for the workspace name</h4>
+          <p>You do not need to create a workspace yourself. Just use your team’s workspace name.
+            In Claude Code, run <code>/list-workspaces</code> to see all workspaces.</p>
+          <pre><code>/list-workspaces</code></pre>
+        </div>
+      </div>
+
+      <div class="step-row">
+        <div class="step-num-bubble">2</div>
+        <div class="step-content">
+          <h4>Need a simple explanation for technical terms?</h4>
+          <p>If you see a term you do not know, run <code>/wiki-explain topic</code>.
+            You will get a simple explanation with examples.</p>
+          <pre><code>/wiki-explain circuit-breaker --depth tldr
+/wiki-explain mqtt-topic-contract --depth short</code></pre>
+        </div>
+      </div>
+
+      <div class="step-row">
+        <div class="step-num-bubble">3</div>
+        <div class="step-content">
+          <h4>Create your first product brief (guided prompts)</h4>
+          <p>The system asks business questions: problem, users, success metrics, and timeline. No technical answers required.</p>
+          <pre><code>/product-brief "Reduce signup friction for mobile users"</code></pre>
+          <p>The result is saved automatically. You only need to fill remaining TODOs.</p>
+        </div>
+      </div>
+
+      <div class="callout tip">
+        <strong>💡 Next:</strong> When you need to explain a feature to leadership/business/customer support,
+        run <code>/business-view {service-name}</code> — it outputs a plain-language document auto-synced with the engineering doc.
+      </div>
+    </div>
+
+    <!-- Path: Engineer -->
+    <div class="persona-path" id="path-engineer">
+      <h3>🛠️ Guide for Engineers</h3>
+      <p class="who">Backend / frontend / fullstack / mobile developers. You write code; AI reads the wiki first and generates code aligned with team rules.</p>
+
+      <div class="step-row">
+        <div class="step-num-bubble">1</div>
+        <div class="step-content">
+          <h4>Connect the wiki to your current codebase</h4>
+          <p>First time in a new codebase: this command detects project name + tech stack and creates
+            <code>.claude/wiki.json</code> connected to your workspace.</p>
+          <pre><code>/wiki-setup</code></pre>
+          <p>If the workspace does not exist yet, run <code>/new-workspace project-name</code> to create one.</p>
+        </div>
+      </div>
+
+      <div class="step-row">
+        <div class="step-num-bubble">2</div>
+        <div class="step-content">
+          <h4>Quickly find rules/contracts before coding</h4>
+          <p>Use <code>/find {keywords}</code> to quickly locate rules in the wiki.</p>
+          <pre><code>/find idempotency retry
+/find rest error shape</code></pre>
+        </div>
+      </div>
+
+      <div class="step-row">
+        <div class="step-num-bubble">3</div>
+        <div class="step-content">
+          <h4>Write wiki-aligned code for larger tasks</h4>
+          <p>Before EVERY task (implement feature, fix bug, design, incident, review), run
+            <code>/use-wiki</code> to run a pre-check workflow before coding and reduce mistakes.</p>
+          <pre><code>/use-wiki implement payment refund flow with idempotency</code></pre>
+          <p>Goal: keep code aligned with team agreements and avoid invented APIs.</p>
+        </div>
+      </div>
+
+      <div class="callout tip">
+        <strong>💡 Next:</strong> After code is merged, run <code>/update-wiki</code> to sync wiki updates.
+        Run <code>/rebase-wiki</code> periodically to fix wiki/code drift.
+      </div>
+    </div>
+
+    <!-- Path: Maintainer -->
+    <div class="persona-path" id="path-owner">
+      <h3>📚 Path for Wiki Maintainers</h3>
+      <p class="who">You set up wiki for a new team, or bootstrap a workspace from an existing codebase.</p>
+
+      <div class="step-row">
+        <div class="step-num-bubble">1</div>
+        <div class="step-content">
+          <h4>Create a new workspace</h4>
+          <p>The wizard asks for metadata (company, role, period, stack, packs), then scaffolds full folders + workspace.md + an empty patterns-index.md.</p>
+          <pre><code>/new-workspace acme-corp</code></pre>
+        </div>
+      </div>
+
+      <div class="step-row">
+        <div class="step-num-bubble">2</div>
+        <div class="step-content">
+          <h4>Bootstrap knowledge from an existing codebase</h4>
+          <p>If the team already has a legacy codebase, run <code>/code-analyze</code> to snapshot it
+            → the system proposes rules, contracts, and architecture from real code.</p>
+          <pre><code>/code-analyze
+/evidence-qa
+/evidence-apply</code></pre>
+        </div>
+      </div>
+
+      <div class="step-row">
+        <div class="step-num-bubble">3</div>
+        <div class="step-content">
+          <h4>Generate an overview report for the team</h4>
+          <p>A self-contained HTML file covering the full workspace
+            (Overview / Architecture / Contracts / Patterns / Domains / ADRs / Runbooks).</p>
+          <pre><code>/wiki-report</code></pre>
+          <p>Open the HTML file directly in a browser — no server required.</p>
+        </div>
+      </div>
+
+      <div class="callout tip">
+        <strong>💡 Next:</strong> Run <code>/wiki-eval</code> periodically to measure wiki quality
+        (hallucination rate, knowledge gaps, plan-block rate). If you suspect drift, run <code>/rebase-wiki</code>.
+      </div>
+    </div>
+
+    <!-- Path: Self-builder / Domain Expert -->
+    <div class="persona-path" id="path-solo">
+      <h3>🔧 Guide for Self-builders / Domain Experts</h3>
+      <p class="who">You are a domain expert from another field (mechanical, accounting, healthcare, legal, education, etc.) using Claude Code as a personal builder assistant. You have ideas but need help starting.</p>
+
+      <div class="step-row">
+        <div class="step-num-bubble">1</div>
+        <div class="step-content">
+          <h4>Enable Solo Builder mode</h4>
+          <p><strong>Easiest way</strong>: run <code>/tool-design</code> directly — the system asks setup questions and enables the pack for you.</p>
+          <p><strong>Manual way</strong>: run <code>/wiki-setup</code> → in pack selection, tick <code>pack-solo-builder</code>.</p>
+          <p>To apply this for <strong>all projects</strong> in the workspace, edit <code>workspace.md</code> under <code>## Packs</code>:</p>
+          <pre><code>## Packs
+
+- pack-solo-builder</code></pre>
+        </div>
+      </div>
+
+      <div class="step-row">
+        <div class="step-num-bubble">2</div>
+        <div class="step-content">
+          <h4>Design your first tool from an idea</h4>
+          <p>Unclear ideas are okay. The system asks 6-8 questions (each with examples + an "I don't know" option), draws a system map, checks existing tools to avoid duplicates, then recommends a suitable approach.</p>
+          <pre><code>/tool-design "tool to calculate steel beam bending moment"
+/tool-design "manage workshop component inventory"
+/tool-design "pull USD/VND exchange rate every morning"</code></pre>
+          <p>Result: a design spec with system map, chosen technology + rationale, setup guide for Linux and Windows, and acceptance criteria.</p>
+        </div>
+      </div>
+
+      <div class="step-row">
+        <div class="step-num-bubble">3</div>
+        <div class="step-content">
+          <h4>Turn the design into code</h4>
+          <p>When the design spec is complete (no open questions), ask Claude Code to implement exactly from that spec:</p>
+          <pre><code>implement spec at workspaces/{ws}/tools/{slug}-spec.md</code></pre>
+          <p>Claude will implement according to the design spec — without changing technology choices on its own.</p>
+        </div>
+      </div>
+
+      <div class="callout tip">
+        <strong>💡 Next:</strong>
+        Use <code>/tool-list</code> to review existing tools (avoid duplicates). Use <code>/tool-extend tool-name</code> to add features. On Windows, Claude may recommend Docker for complex setup.
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CONCEPTS ============ -->
+  <section class="block" id="concepts">
+    <h2><span class="step-num">2</span>Core concepts (3-minute read)</h2>
+    <p class="lead">Understanding these five concepts is enough for daily wiki usage.</p>
+
+    <dl class="glossary">
+      <dt>Workspace (isolated knowledge base per company/project)</dt>
+      <dd>Each company/project gets its own workspace folder. Knowledge is never mixed across workspaces, because each organization has different rules. The active workspace is defined in <code>.claude/wiki.json</code>.</dd>
+
+      <dt>Pack (technology-specific knowledge bundle)</dt>
+      <dd>Wiki-template is stack-agnostic. Specialized knowledge (Kafka, REST, React, AI app, product, etc.) lives in <code>packs</code>. Enable/disable packs in <code>/wiki-setup</code> pack selection, or edit <code>workspace.md</code>. There are currently 14 packs (see section below).</dd>
+
+      <dt>Contract vs Pattern</dt>
+      <dd>Priority order: <strong>Contract &gt; Pattern &gt; Project docs &gt; Domain knowledge</strong>.
+        Contract = fixed agreement (API shape, data format) — must not be changed arbitrarily.
+        Pattern = preferred implementation approach — should be reused, with exceptions only when justified.</dd>
+
+      <dt>Slash command vs internal workflow</dt>
+      <dd>Commands (<code>/use-wiki</code>, <code>/find</code>, ...) are what you invoke directly.
+        Internal workflow (planner, context-selector, reviewer, ...) runs automatically in the background.</dd>
+
+      <dt>Evidence ingestion workflow</dt>
+      <dd>4 steps: <code>/evidence-ingest</code> → <code>/evidence-analyze</code> → <code>/evidence-qa</code> → <code>/evidence-apply</code>.
+        Use this when external sources (Confluence, Linear, pasted notes, code) need to be validated before entering the wiki.
+        Raw source data remains immutable after ingest. Each workspace stays fully isolated.</dd>
+    </dl>
+  </section>
+
+  <!-- ============ COMMANDS ============ -->
+  <section class="block" id="commands">
+    <h2><span class="step-num">3</span>Command reference (cheat sheet)</h2>
+    <p class="lead">Tags: <span class="cmd-tag tech">tech</span> for engineers · <span class="cmd-tag nontech">nontech</span> no coding needed · <span class="cmd-tag maintainer">maint</span> for wiki maintainers.</p>
+
+    <div class="cmd-group">
+      <h3>🏁 Workspace setup &amp; navigation</h3>
+      <table class="cmd-table">
+        <thead><tr><th>Command</th><th>Purpose</th><th>When to use</th></tr></thead>
+        <tbody>
+          <tr><td class="cmd-name">/wiki-setup<span class="cmd-tag tech">tech</span></td><td>Create <code>.claude/wiki.json</code> for the codebase, detect project name + components</td><td>First time using wiki with a codebase</td></tr>
+          <tr><td class="cmd-name">/wiki-detect<span class="cmd-tag tech">tech</span></td><td>Validate <code>wiki.json</code>, scan dependency, propose update</td><td>After setup, or when troubleshooting</td></tr>
+          <tr><td class="cmd-name">/switch-workspace name<span class="cmd-tag tech">tech</span></td><td>Switch the active workspace for the current codebase</td><td>One codebase serving multiple domains</td></tr>
+          <tr><td class="cmd-name">/new-workspace project-name<span class="cmd-tag maintainer">maint</span></td><td>Create a new workspace from template</td><td>Joining a new company/project</td></tr>
+          <tr><td class="cmd-name">/list-workspaces<span class="cmd-tag nontech">nontech</span><span class="cmd-tag tech">tech</span></td><td>List all workspaces and highlight active one</td><td>Check which workspaces exist</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="cmd-group">
+      <h3>🧠 Wiki usage (per-task)</h3>
+      <table class="cmd-table">
+        <thead><tr><th>Command</th><th>Purpose</th><th>When to use</th></tr></thead>
+        <tbody>
+          <tr><td class="cmd-name">/use-wiki<span class="cmd-tag tech">tech</span></td><td>Load the right wiki context before Claude writes code</td><td>Before each task: implement, bug fix, design, review</td></tr>
+          <tr><td class="cmd-name">/find {keywords}<span class="cmd-tag tech">tech</span></td><td>Find related rules and docs quickly</td><td>Use when you know the keyword but need the exact file</td></tr>
+          <tr><td class="cmd-name">/update-wiki<span class="cmd-tag tech">tech</span></td><td>Save important code changes back to wiki</td><td>Run after merge so wiki stays up to date</td></tr>
+          <tr><td class="cmd-name">/rebase-wiki<span class="cmd-tag maintainer">maint</span></td><td>Check wiki against code and suggest fixes</td><td>Run weekly/monthly, or when wiki looks outdated</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="cmd-group">
+      <h3>💼 Non-tech contributors (Product / Business)</h3>
+      <table class="cmd-table">
+        <thead><tr><th>Command</th><th>Purpose</th><th>When to use</th></tr></thead>
+        <tbody>
+          <tr><td class="cmd-name">/product-brief [title]<span class="cmd-tag nontech">nontech</span></td><td>Guide to create product brief: Problem / Users / Success metrics / Acceptance criteria</td><td>When PM creates a new brief before handing off to engineering</td></tr>
+          <tr><td class="cmd-name">/business-view {target}<span class="cmd-tag nontech">nontech</span></td><td>Translate technical docs into plain business language</td><td>Explain features to leadership/business/support</td></tr>
+          <tr><td class="cmd-name">/wiki-explain topic<span class="cmd-tag nontech">nontech</span></td><td>Explain a term/rule in plain language</td><td>When you hit unfamiliar terms while reading wiki</td></tr>
+        </tbody>
+      </table>
+      <div class="callout info">
+        <strong>Requirement:</strong> Workspace must enable <code>pack-product</code> — easiest path: run <code>/wiki-setup</code> Step 4.5 and tick <code>pack-product</code>. Or run <code>/product-brief</code> and let it guide enabling.
+      </div>
+    </div>
+
+    <div class="cmd-group">
+      <h3>🔧 Solo builder (Non-tech experts using Claude Code as a no-code IDE)</h3>
+      <table class="cmd-table">
+        <thead><tr><th>Command</th><th>Purpose</th><th>When to use</th></tr></thead>
+        <tbody>
+          <tr><td class="cmd-name">/tool-design "idea"<span class="cmd-tag nontech">nontech</span></td><td>Discovery wizard → system map → recipe match → recommended stack → write spec (NO code generation)</td><td>When you have a new tool idea but do not know where to start</td></tr>
+          <tr><td class="cmd-name">/tool-list<span class="cmd-tag nontech">nontech</span></td><td>List created tools grouped by status</td><td>Check existing tools before creating new ones (avoid duplicates)</td></tr>
+          <tr><td class="cmd-name">/tool-extend tool-name<span class="cmd-tag nontech">nontech</span></td><td>Propose upgrades for existing tools — add features, adjust scope</td><td>When an existing tool needs enhancements</td></tr>
+        </tbody>
+      </table>
+      <div class="callout info">
+        <strong>Requirement:</strong> Workspace enables <code>pack-solo-builder</code> (slash <code>/tool-design</code> can enable it). Cross-platform recipes: Linux native + Docker recommendation on Windows for complex dependencies.
+      </div>
+    </div>
+
+    <div class="cmd-group">
+      <h3>📊 Reporting</h3>
+      <table class="cmd-table">
+        <thead><tr><th>Command</th><th>Purpose</th><th>When to use</th></tr></thead>
+        <tbody>
+          <tr><td class="cmd-name">/wiki-report<span class="cmd-tag maintainer">maint</span></td><td>Single standalone HTML file — Overview / Architecture / Contracts / Patterns / Runbooks</td><td>Onboard new members, periodic reporting, gap review</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="cmd-group">
+      <h3>🔬 Codebase analysis &amp; evidence pipeline</h3>
+      <table class="cmd-table">
+        <thead><tr><th>Command</th><th>Purpose</th><th>When to use</th></tr></thead>
+        <tbody>
+          <tr><td class="cmd-name">/code-analyze<span class="cmd-tag maintainer">maint</span></td><td>Analyze codebase → propose rules/contracts/architecture from real code</td><td>Bootstrap old codebases, or refresh after major changes</td></tr>
+          <tr><td class="cmd-name">/evidence-ingest<span class="cmd-tag maintainer">maint</span></td><td>Pull raw data from MCP / API / paste / code into <code>evidence/sources/{id}/</code></td><td>When external sources need to be ingested</td></tr>
+          <tr><td class="cmd-name">/obsidian-ingest<span class="cmd-tag maintainer">maint</span></td><td>Batch ingest from Obsidian vault: scan, deduplicate, pre-check before ingest</td><td>Maintain your Obsidian Second Brain</td></tr>
+          <tr><td class="cmd-name">/evidence-analyze<span class="cmd-tag maintainer">maint</span></td><td>Analyze ingested data</td><td>After ingestion</td></tr>
+          <tr><td class="cmd-name">/evidence-qa<span class="cmd-tag maintainer">maint</span></td><td>Q&A loop with user, generate <code>verified-facts.md</code></td><td>After analysis, verify before apply</td></tr>
+          <tr><td class="cmd-name">/evidence-apply<span class="cmd-tag maintainer">maint</span></td><td>Apply verified facts to wiki</td><td>After verification</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="cmd-group">
+      <h3>🔭 Pipeline observability</h3>
+      <table class="cmd-table">
+        <thead><tr><th>Command</th><th>Purpose</th><th>When to use</th></tr></thead>
+        <tbody>
+          <tr><td class="cmd-name">/wiki-trace {run_id}<span class="cmd-tag maintainer">maint</span></td><td>Render Markdown timeline 1 run pipeline (5 stage)</td><td>When <code>/use-wiki</code> output is wrong — debug stage divergence</td></tr>
+          <tr><td class="cmd-name">/wiki-eval<span class="cmd-tag maintainer">maint</span></td><td>Metrics: hallucination rate, knowledge gaps, violation score</td><td>Periodic wiki quality check</td></tr>
+          <tr><td class="cmd-name">/wiki-viz<span class="cmd-tag maintainer">maint</span></td><td>HTML viewer + live trace watch</td><td>Visual inspection</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ PACKS ============ -->
+  <section class="block" id="packs">
+    <h2><span class="step-num">4</span>Available packs</h2>
+    <p class="lead">Enable packs via <code>/wiki-setup</code> Step 4.5 (per-codebase checkbox UI, saved in <code>wiki.json#packs</code>) — or edit <code>workspaces/{ws}/workspace.md</code> under <code>## Packs</code> (workspace-wide default).</p>
+
+    <table class="cmd-table">
+      <thead><tr><th>Pack</th><th>Status</th><th>Use for</th></tr></thead>
+      <tbody>
+        <tr><td class="cmd-name">pack-event-driven</td><td><span class="cmd-tag tech">stable</span></td><td>Event processing: Kafka, MQTT, RabbitMQ — retries, DLQ handling</td></tr>
+        <tr><td class="cmd-name">pack-web-api</td><td><span class="cmd-tag tech">stable</span></td><td>Web APIs: REST/GraphQL/gRPC — input validation, error shape, no information leakage</td></tr>
+        <tr><td class="cmd-name">pack-frontend-react</td><td><span class="cmd-tag tech">stable</span></td><td>React + Next.js — hooks rules, a11y, effect cleanup, list keys, server/client boundary</td></tr>
+        <tr><td class="cmd-name">pack-ai-app</td><td><span class="cmd-tag tech">stable</span></td><td>AI apps: prompt caching, structured output, testing, privacy safety</td></tr>
+        <tr><td class="cmd-name">pack-agentic</td><td><span class="cmd-tag tech">stable</span></td><td>AI agents: loops, tool use, multi-agent orchestration — bounded steps, safe retries</td></tr>
+        <tr><td class="cmd-name">pack-claude-plugin-dev</td><td><span class="cmd-tag tech">stable</span></td><td>Claude Code plugin development — commands, subagents, skills, hooks</td></tr>
+        <tr><td class="cmd-name">pack-product</td><td><span class="cmd-tag beta">beta</span></td><td>Product docs for PM/business — briefs, OKRs, roadmap, personas, metrics</td></tr>
+        <tr><td class="cmd-name">pack-solo-builder</td><td><span class="cmd-tag beta">beta</span></td><td>For non-tech domain experts (mechanical, accounting, ...) using Claude Code as a "no-code IDE" — tool-design coach + cross-platform recipe library</td></tr>
+        <tr><td class="cmd-name">pack-ba</td><td><span class="cmd-tag beta">beta</span></td><td>Business analysis — requirements modeling, acceptance criteria, process mapping, stakeholder alignment</td></tr>
+        <tr><td class="cmd-name">pack-qc</td><td><span class="cmd-tag beta">beta</span></td><td>Quality control — test design/execution, defect triage, regression planning, release quality gates</td></tr>
+        <tr><td class="cmd-name">pack-pentest</td><td><span class="cmd-tag beta">beta</span></td><td>Defensive/authorized pentest — scope boundaries, evidence-based findings, risk rating, remediation</td></tr>
+        <tr><td class="cmd-name">pack-security</td><td><span class="cmd-tag beta">beta</span></td><td>Security engineering — threat modeling, secure design reviews, vulnerability management, control verification</td></tr>
+        <tr><td class="cmd-name">pack-optimize</td><td><span class="cmd-tag beta">beta</span></td><td>Performance optimization — baseline metrics, profiling, bottleneck analysis, regression guards</td></tr>
+        <tr><td class="cmd-name">pack-dba</td><td><span class="cmd-tag beta">beta</span></td><td>DBA workflow — schema change safety, query hygiene, backup/restore readiness, operational guardrails</td></tr>
+      </tbody>
+    </table>
+
+    <p style="font-size:13px;color:#57606a;margin-top:16px">
+      <strong>Example combinations:</strong> Solo fullstack → <code>pack-web-api + pack-frontend-react + pack-ai-app</code>.
+      AI agent product → <code>pack-ai-app + pack-agentic + pack-web-api + pack-frontend-react</code>.
+      Team with PMs → add <code>pack-product</code>.
+    </p>
+  </section>
+
+  <!-- ============ FAQ ============ -->
+  <section class="block" id="faq">
+    <h2><span class="step-num">5</span>FAQ</h2>
+
+    <details>
+      <summary>I do not code — can I still use this wiki?</summary>
+      <div class="faq-body">
+        <p>Yes — two paths depending on your role:</p>
+        <p><strong>If you are PM/business</strong> in a team with engineers: enable <code>pack-product</code>, then use:</p>
+        <ul>
+          <li><code>/product-brief</code> — create a new brief</li>
+          <li><code>/business-view {service}</code> — read service docs in business language</li>
+          <li><code>/wiki-explain topic</code> — explain technical terms</li>
+        </ul>
+        <p><strong>If you are a domain expert</strong> (mechanical, accounting, healthcare, ... ) building your own tools: enable <code>pack-solo-builder</code>, then use:</p>
+        <ul>
+          <li><code>/tool-design "idea"</code> — wizard discovery + recommend tech stack</li>
+          <li><code>/tool-list</code> — view existing toolbox</li>
+          <li><code>/tool-extend tool-name</code> — extend an existing tool</li>
+        </ul>
+        <p>You do not need git, terminal expertise, or coding. You only need to run commands in Claude Code.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>I work across multiple companies/projects — can I use one wiki template?</summary>
+      <div class="faq-body">
+        <p>Yes. Each company/project has its own workspace under <code>workspaces/{name}/</code>.</p>
+        <p>Create one: <code>/new-workspace project-name</code>. Switch one: <code>/switch-workspace name</code>.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>Wiki and code drift — how do I sync?</summary>
+      <div class="faq-body">
+        <p>Use two commands:</p>
+        <ul>
+          <li><code>/update-wiki</code> — run after each merge</li>
+          <li><code>/rebase-wiki</code> — run regularly for a full check</li>
+        </ul>
+        <p>Use <code>/wiki-eval</code> to see quality metrics and missing knowledge.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>When should I use packs (and when not)?</summary>
+      <div class="faq-body">
+        <p><strong>Use packs</strong> for stack-specific knowledge (e.g. Kafka rules, React hooks rules). Enable via <code>/wiki-setup</code> Step 4.5.</p>
+        <p><strong>Do NOT use packs</strong> for rules specific to your workspace — write them in
+          <code>workspaces/{ws}/agents/constraints.md</code> with prefix <code>ws-</code>.</p>
+        <p><strong>Engine-wide rules</strong> (all workspaces, stack-agnostic) belong in <code>agents/constraints.md</code>.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>One workspace, multiple codebases, different pack needs — how?</summary>
+      <div class="faq-body">
+        <p>Use per-codebase override via <code>.claude/wiki.json#packs</code>:</p>
+        <ul>
+          <li>Workspace default: <code>workspaces/acme-corp/workspace.md ## Packs</code> = <code>[pack-event-driven, pack-web-api]</code></li>
+          <li>Frontend codebase: <code>acme-frontend/.claude/wiki.json</code> sets <code>"packs": ["pack-frontend-react", "pack-web-api"]</code> → effective packs are frontend + web-api only</li>
+          <li>Backend codebase (no override) → effective packs = workspace default</li>
+        </ul>
+        <p><strong>Replace semantics</strong>, not additive. <code>null</code>/missing field follows workspace default. Array fully overrides.</p>
+        <p>Easiest way: run <code>/wiki-setup</code> in the codebase → Step 4.5 shows all pack checkboxes and writes <code>wiki.json</code> automatically.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>There are too many slash commands — do I need all of them?</summary>
+      <div class="faq-body">
+        <p>No. Most people only need 3-4 commands:</p>
+        <ul>
+          <li><strong>Daily engineering</strong>: <code>/use-wiki</code>, <code>/find</code>, <code>/update-wiki</code></li>
+          <li><strong>Daily non-tech</strong>: <code>/product-brief</code>, <code>/business-view</code>, <code>/wiki-explain</code></li>
+          <li><strong>One-time setup</strong>: <code>/wiki-setup</code> or <code>/new-workspace</code></li>
+        </ul>
+        <p>Learn the others only when you need them.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>Where is my workspace stored?</summary>
+      <div class="faq-body">
+        <p>Default path is <code>{wiki-template-root}/workspaces/{name}/</code>. You can override it with <code>wiki_root</code> in <code>~/.claude/wiki-global.json</code>.
+          To see active path: use <code>/list-workspaces</code> or read <code>&lt;cwd&gt;/.claude/wiki.json</code>.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>Can AI hallucinate knowledge not in the wiki?</summary>
+      <div class="faq-body">
+        <p>The system enforces strict rules: if knowledge is missing, AI must report assumptions or constraint conflicts, not invent facts.
+          A validator (<code>scripts/validate.py</code>) checks common violation patterns.
+          For monitoring: <code>/wiki-eval</code> reports hallucination rate per run.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>I want a new pack for a custom stack (e.g. Flutter) — how?</summary>
+      <div class="faq-body">
+        <p>Run pack scaffold command:</p>
+        <pre style="background:#0d1117;color:#e6edf3"><code>python scripts/scaffold-pack.py pack-mobile-flutter</code></pre>
+        <p>This generates 8 skeleton files. Customize <code>pack.yaml</code> components + keywords, write <code>constraints.md</code>, and add rules in <code>scripts/rules.py</code>.
+          Register it in catalog: edit <code>packs/README.md</code>.</p>
+      </div>
+    </details>
+  </section>
+
+  <footer>
+    <p>
+      📚 <strong>Workspace Wiki</strong> · Want to go deeper? Read
+      <a href="install.en.html">install.html</a> (setup) ·
+      <a href="../README.md">README.md</a> ·
+      <a href="../QUICKSTART.md">QUICKSTART.md</a> ·
+      <a href="../CLAUDE.md">CLAUDE.md</a> (AI agent instructions) ·
+      <a href="../packs/README.md">packs/README.md</a> ·
+      <a href="../.claude/commands/README.md">slash commands index</a> ·
+      <a href="https://github.com/<owner>/<repo>">GitHub repository</a>
+    </p>
+    <p style="margin-top:8px;color:#8b949e">
+      This file is self-contained — copy anywhere and open directly. No tracking, no CDN, no dependencies.
+    </p>
+  </footer>
+
+</div>
+
+<script>
+  function pick(persona){
+    document.querySelectorAll('.persona-card').forEach(c=>{
+      c.classList.toggle('active', c.dataset.persona===persona);
+    });
+    document.querySelectorAll('.persona-path').forEach(p=>{
+      p.classList.toggle('active', p.id==='path-'+persona);
+    });
+    const target = document.getElementById('path-'+persona);
+    if(target){
+      setTimeout(()=>target.scrollIntoView({behavior:'smooth', block:'start'}), 50);
+    }
+  }
+  // Keyboard nav: 1/2/3/4 select persona
+  document.addEventListener('keydown', (e)=>{
+    if(e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    if(e.key==='1') pick('nontech');
+    if(e.key==='2') pick('engineer');
+    if(e.key==='3') pick('owner');
+    if(e.key==='4') pick('solo');
+  });
+</script>
+</body>
+</html>

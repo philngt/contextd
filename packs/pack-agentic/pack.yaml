@@ -1,0 +1,25 @@
+name: pack-agentic
+version: 1.0.0
+description: Agent loops, tool use, multi-agent orchestration, MCP servers — bounded steps, idempotent tools, human-in-the-loop checkpoints
+
+components:
+  - agent
+  - tool
+  - mcp
+  - orchestration
+
+keywords:
+  agent: [agent, "agent loop", "react loop", "planner", "executor", "critic", autonomous]
+  tool: [tool, "tool use", "function calling", "tool_choice"]
+  mcp: [mcp, "mcp server", "model context protocol"]
+  orchestration: [orchestration, subagent, "multi-agent", handoff, supervisor]
+
+files:
+  constraints: agents/constraints.md
+  coding_rules: agents/coding-rules.md
+  validator_rules: agents/pipeline/validator-rules.md
+  validator_script: scripts/rules.py
+  retrieval_map: agents/pipeline/retrieval-map.md
+  prompt_overrides: agents/pipeline/prompt-overrides.md
+
+conflicts_with: []

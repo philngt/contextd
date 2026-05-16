@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "_comment": "Project-shared hooks for wiki-template. (1) PostToolUse(Task) -> emit_trace.py captures wiki-* subagent pipeline traces (see agents/pipeline/observability.md). (2) UserPromptSubmit -> detect_repetition.py watches for recurring user intents and suggests promoting them to a skill/command/agent/pack (see agents/pipeline/repetition-detection.md). Both hooks are best-effort and NEVER block the turn.",
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python scripts/emit_trace.py",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python scripts/detect_repetition.py",
+            "timeout": 2
+          }
+        ]
+      }
+    ]
+  }
+}

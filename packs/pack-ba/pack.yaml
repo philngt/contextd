@@ -1,0 +1,25 @@
+name: pack-ba
+version: 0.1.0
+description: Business analysis pack — requirements modeling, acceptance criteria, process mapping, and stakeholder alignment.
+
+components:
+  - requirements-modeling
+  - acceptance-criteria
+  - process-mapping
+  - stakeholder-alignment
+
+keywords:
+  requirements-modeling: [requirement, business requirement, functional requirement, non-functional requirement, brd]
+  acceptance-criteria: [acceptance criteria, done criteria, user story, scenario, gherkin]
+  process-mapping: [process map, as-is, to-be, workflow map, swimlane]
+  stakeholder-alignment: [stakeholder, alignment, sign-off, dependency, handoff]
+
+files:
+  constraints: agents/constraints.md
+  coding_rules: agents/coding-rules.md
+  validator_rules: agents/pipeline/validator-rules.md
+  validator_script: scripts/rules.py
+  retrieval_map: agents/pipeline/retrieval-map.md
+  prompt_overrides: agents/pipeline/prompt-overrides.md
+
+conflicts_with: []

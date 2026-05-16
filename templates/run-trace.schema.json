@@ -1,0 +1,240 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "$id": "https://wiki-template/run-trace.schema.json",
+  "title": "Wiki Pipeline Run Trace",
+  "description": "Schema chung cho mọi trace file dưới {project_dir}/.claude/runs/{run_id}/. Mỗi stage emit 1 file theo discriminator field 'stage'.",
+
+  "type": "object",
+  "required": ["run_id", "stage", "ts", "workspace_at_run"],
+  "properties": {
+    "run_id": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}-[0-9]{6}-[a-z0-9-]{1,40}$",
+      "description": "Sinh bởi wiki-planner: {YYYY-MM-DD}-{HHMMSS}-{slug}"
+    },
+    "stage": {
+      "type": "string",
+      "enum": ["01-planner", "02-context", "03-plan-review", "04-builder", "05-review", "run"]
+    },
+    "ts": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO-8601 UTC timestamp khi emit"
+    },
+    "workspace_at_run": {
+      "type": "string",
+      "description": "Tên workspace active. Phải khớp .claude/wiki.json#workspace lúc run."
+    },
+    "duration_ms": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Optional. Thời lượng stage."
+    }
+  },
+
+  "oneOf": [
+    {
+      "$comment": "Stage 1 — wiki-planner",
+      "properties": {
+        "stage": { "const": "01-planner" },
+        "intent": {
+          "type": "object",
+          "required": ["workspace", "type", "components", "patterns_needed"],
+          "properties": {
+            "workspace": { "type": "string" },
+            "type": { "enum": ["implement_feature", "fix_bug", "design", "incident", "review"] },
+            "domain": { "type": ["string", "null"] },
+            "components": { "type": "array", "items": { "type": "string" } },
+            "scope": { "type": ["string", "null"] },
+            "patterns_needed": { "type": "array", "items": { "type": "string" } },
+            "contracts_touched": { "type": "array", "items": { "type": "string" } },
+            "approach": { "type": "string" },
+            "missing_knowledge": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "patterns_verified": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "exists"],
+            "properties": {
+              "name": { "type": "string" },
+              "exists": { "type": "boolean" },
+              "path": { "type": ["string", "null"] }
+            }
+          }
+        },
+        "contracts_verified": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "exists"],
+            "properties": {
+              "name": { "type": "string" },
+              "exists": { "type": "boolean" },
+              "path": { "type": ["string", "null"] }
+            }
+          }
+        },
+        "unverified_count": { "type": "integer", "minimum": 0 }
+      },
+      "required": ["intent", "patterns_verified", "unverified_count"]
+    },
+
+    {
+      "$comment": "Stage 2 — wiki-context-selector",
+      "properties": {
+        "stage": { "const": "02-context" },
+        "context_file": { "type": "string" },
+        "referenced_docs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["category", "path"],
+            "properties": {
+              "category": { "enum": ["contract", "pattern", "project", "domain", "decision", "runbook"] },
+              "path": { "type": "string" },
+              "sections": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        },
+        "gaps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["category", "missing"],
+            "properties": {
+              "category": { "type": "string" },
+              "missing": { "type": "string" },
+              "blocking_hint": { "type": "boolean" }
+            }
+          }
+        },
+        "file_count": { "type": "integer", "minimum": 0 },
+        "gap_count": { "type": "integer", "minimum": 0 },
+        "total_chars": { "type": "integer", "minimum": 0 }
+      },
+      "required": ["context_file", "referenced_docs", "gaps", "file_count", "gap_count"]
+    },
+
+    {
+      "$comment": "Stage 3 — wiki-plan-reviewer",
+      "properties": {
+        "stage": { "const": "03-plan-review" },
+        "verdict": { "enum": ["APPROVED", "BLOCK"] },
+        "issues": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "category", "severity", "detail"],
+            "properties": {
+              "id": { "type": "string" },
+              "category": { "enum": ["missing-pattern", "missing-contract", "conflict", "blocking-gap", "component-uncovered", "unverified-pattern"] },
+              "severity": { "enum": ["blocking", "warning"] },
+              "detail": { "type": "string" },
+              "evidence": { "type": "string" }
+            }
+          }
+        },
+        "warnings": { "type": "array", "items": { "type": "object" } },
+        "checks_summary": {
+          "type": "object",
+          "properties": {
+            "patterns_verified": { "type": "integer" },
+            "contracts_verified": { "type": "integer" },
+            "components_covered": { "type": "array", "items": { "type": "string" } },
+            "blocking_gaps": { "type": "integer" },
+            "conflicts": { "type": "integer" }
+          }
+        }
+      },
+      "required": ["verdict", "issues", "checks_summary"]
+    },
+
+    {
+      "$comment": "Stage 4 — main agent (builder)",
+      "properties": {
+        "stage": { "const": "04-builder" },
+        "used_docs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["path"],
+            "properties": {
+              "path": { "type": "string" },
+              "section": { "type": "string" }
+            }
+          }
+        },
+        "files_modified": { "type": "array", "items": { "type": "string" } },
+        "assumptions_count": { "type": "integer", "minimum": 0 },
+        "self_check_passed": { "type": "boolean" }
+      },
+      "required": ["used_docs", "files_modified", "self_check_passed"]
+    },
+
+    {
+      "$comment": "Stage 5 — wiki-reviewer",
+      "properties": {
+        "stage": { "const": "05-review" },
+        "verdict": { "enum": ["APPROVED", "VIOLATIONS", "INSUFFICIENT_CONTEXT"] },
+        "files_reviewed": { "type": "array", "items": { "type": "string" } },
+        "violations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "rule", "file_line", "severity"],
+            "properties": {
+              "id": { "type": "string" },
+              "rule": { "type": "string" },
+              "file_line": { "type": "string" },
+              "quote": { "type": "string" },
+              "severity": { "enum": ["blocking", "non-blocking"] },
+              "fix": { "type": "string" }
+            }
+          }
+        },
+        "hallucinated_refs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["ref", "found_in"],
+            "properties": {
+              "ref": { "type": "string" },
+              "found_in": { "type": "string" },
+              "reason": { "type": "string" }
+            }
+          }
+        },
+        "violation_count": { "type": "integer", "minimum": 0 },
+        "hallucination_count": { "type": "integer", "minimum": 0 }
+      },
+      "required": ["verdict", "violations", "hallucinated_refs", "violation_count", "hallucination_count"]
+    },
+
+    {
+      "$comment": "run.json roll-up",
+      "properties": {
+        "stage": { "const": "run" },
+        "ts_start": { "type": "string", "format": "date-time" },
+        "ts_end": { "type": ["string", "null"], "format": "date-time" },
+        "user_task": { "type": "string" },
+        "stages_completed": {
+          "type": "array",
+          "items": { "enum": ["01-planner", "02-context", "03-plan-review", "04-builder", "05-review"] }
+        },
+        "final_verdict": { "enum": ["APPROVED", "BLOCKED", "VIOLATIONS", "INCOMPLETE"] },
+        "totals": {
+          "type": "object",
+          "properties": {
+            "unverified_patterns": { "type": "integer" },
+            "knowledge_gaps": { "type": "integer" },
+            "violations": { "type": "integer" },
+            "hallucinations": { "type": "integer" }
+          }
+        }
+      },
+      "required": ["ts_start", "user_task", "stages_completed"]
+    }
+  ]
+}

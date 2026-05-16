@@ -1,0 +1,30 @@
+# Skeleton cho pack mới. Copy file này vào packs/{your-pack}/pack.yaml.
+# Convention: tên pack lowercase, prefix `pack-`.
+
+name: pack-{your-name}
+version: 0.1.0
+description: {Một câu mô tả: stack/use case pack này phục vụ}
+
+# Components mà pack này khai báo. Intent-parser sẽ map keyword → component.
+# Các component này phải KHÔNG trùng với pack khác (engine fail-fast nếu trùng).
+components:
+  - {component-1}
+  - {component-2}
+
+# Keyword detection cho task-to-docs-map. Map component → list keyword (case-insensitive).
+keywords:
+  {component-1}: [keyword1, keyword2]
+  {component-2}: [keyword3, keyword4]
+
+# Pack files. Tất cả relative tới packs/{name}/.
+# Bỏ field nếu pack không có file đó.
+files:
+  constraints: agents/constraints.md
+  coding_rules: agents/coding-rules.md
+  validator_rules: agents/pipeline/validator-rules.md
+  validator_script: scripts/rules.py
+  retrieval_map: agents/pipeline/retrieval-map.md
+  prompt_overrides: agents/pipeline/prompt-overrides.md
+
+# Packs không thể bật chung. Loader fail-fast nếu cùng workspace bật cả hai.
+conflicts_with: []

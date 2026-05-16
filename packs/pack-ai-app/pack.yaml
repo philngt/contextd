@@ -1,0 +1,25 @@
+name: pack-ai-app
+version: 1.0.0
+description: LLM application patterns — prompt caching, structured output, eval harness, cost tracking, no PII leak
+
+components:
+  - llm
+  - prompt
+  - rag
+  - embedding
+
+keywords:
+  llm: [llm, anthropic, openai, gemini, claude, gpt, "messages.create", "chat.completions"]
+  prompt: [prompt, system_prompt, "system prompt", "cache_control", template]
+  rag: [rag, retrieval, "vector store", chunk, embedding, retrieve]
+  embedding: [embedding, "vector db", pinecone, qdrant, weaviate, chroma, faiss]
+
+files:
+  constraints: agents/constraints.md
+  coding_rules: agents/coding-rules.md
+  validator_rules: agents/pipeline/validator-rules.md
+  validator_script: scripts/rules.py
+  retrieval_map: agents/pipeline/retrieval-map.md
+  prompt_overrides: agents/pipeline/prompt-overrides.md
+
+conflicts_with: []

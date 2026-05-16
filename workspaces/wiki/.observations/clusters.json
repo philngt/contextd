@@ -1,0 +1,238 @@
+{
+  "stage": "observations",
+  "updated_at": "2026-05-15T09:37:28+00:00",
+  "last_hint_emitted_at": "",
+  "clusters": [
+    {
+      "id": "ideopenedfile-user-opened-66ce16",
+      "representative_tokens": [
+        "ide_opened_file",
+        "user",
+        "opened",
+        "file",
+        "tool",
+        "wiki",
+        "template",
+        "claude",
+        "commands",
+        "observations",
+        "clear",
+        "md",
+        "ide",
+        "related",
+        "current",
+        "task",
+        "nhá",
+        "ng",
+        "iá",
+        "ƒm"
+      ],
+      "count": 1,
+      "first_seen": "2026-05-15T08:00:00+00:00",
+      "last_seen": "2026-05-15T08:00:00+00:00",
+      "last_hinted_at": "",
+      "members": [
+        "9b09082d95a34d6a"
+      ]
+    },
+    {
+      "id": "ideopenedfile-user-opened-fdbf10",
+      "representative_tokens": [
+        "ide_opened_file",
+        "user",
+        "opened",
+        "file",
+        "tool",
+        "wiki",
+        "template",
+        "claude",
+        "settings",
+        "json",
+        "ide",
+        "related",
+        "current",
+        "task",
+        "nhá",
+        "ng",
+        "thã",
+        "tin",
+        "trã",
+        "cã"
+      ],
+      "count": 1,
+      "first_seen": "2026-05-15T08:26:28+00:00",
+      "last_seen": "2026-05-15T08:26:28+00:00",
+      "last_hinted_at": "",
+      "members": [
+        "4fa10f05a97fc948"
+      ]
+    },
+    {
+      "id": "c-t-li-6a0bd5",
+      "representative_tokens": [
+        "cã",
+        "tã",
+        "liá",
+        "ngã",
+        "nh",
+        "tá",
+        "detect",
+        "pack"
+      ],
+      "count": 1,
+      "first_seen": "2026-05-15T08:29:16+00:00",
+      "last_seen": "2026-05-15T08:29:16+00:00",
+      "last_hinted_at": "",
+      "members": [
+        "b720d2e34bc3ab3e"
+      ]
+    },
+    {
+      "id": "ideopenedfile-user-opened-a61335",
+      "representative_tokens": [
+        "ide_opened_file",
+        "user",
+        "opened",
+        "file",
+        "tool",
+        "wiki",
+        "template",
+        "claude",
+        "commands",
+        "evidence",
+        "analyze",
+        "md",
+        "ide",
+        "related",
+        "current",
+        "task",
+        "cã",
+        "thá",
+        "giá",
+        "hæ"
+      ],
+      "count": 1,
+      "first_seen": "2026-05-15T08:42:55+00:00",
+      "last_seen": "2026-05-15T08:42:55+00:00",
+      "last_hinted_at": "",
+      "members": [
+        "c443b6c77696f85d"
+      ]
+    },
+    {
+      "id": "ideopenedfile-user-opened-fae78a",
+      "representative_tokens": [
+        "ide_opened_file",
+        "user",
+        "opened",
+        "file",
+        "tool",
+        "wiki",
+        "template",
+        "onboarding",
+        "html",
+        "ide",
+        "related",
+        "current",
+        "task",
+        "cã",
+        "cá",
+        "nhá",
+        "lá",
+        "ko"
+      ],
+      "count": 1,
+      "first_seen": "2026-05-15T09:10:31+00:00",
+      "last_seen": "2026-05-15T09:10:31+00:00",
+      "last_hinted_at": "",
+      "members": [
+        "4f67a60dde6f25db"
+      ]
+    },
+    {
+      "id": "b-sung-th-6835e8",
+      "representative_tokens": [
+        "bá",
+        "sung",
+        "thã",
+        "phá",
+        "hæ",
+        "ng",
+        "dá",
+        "cã",
+        "luã"
+      ],
+      "count": 1,
+      "first_seen": "2026-05-15T09:20:25+00:00",
+      "last_seen": "2026-05-15T09:20:25+00:00",
+      "last_hinted_at": "",
+      "members": [
+        "e3d02fa0aae353df"
+      ]
+    },
+    {
+      "id": "ideopenedfile-user-opened-fe6f66",
+      "representative_tokens": [
+        "ide_opened_file",
+        "user",
+        "opened",
+        "file",
+        "tool",
+        "wiki",
+        "template",
+        "scripts",
+        "install",
+        "claude",
+        "sh",
+        "ide",
+        "related",
+        "current",
+        "task",
+        "tã",
+        "ch",
+        "trang",
+        "cã",
+        "riã"
+      ],
+      "count": 1,
+      "first_seen": "2026-05-15T09:31:07+00:00",
+      "last_seen": "2026-05-15T09:31:07+00:00",
+      "last_hinted_at": "",
+      "members": [
+        "7f1bd31b51678338"
+      ]
+    },
+    {
+      "id": "ideopenedfile-user-opened-768206",
+      "representative_tokens": [
+        "ide_opened_file",
+        "user",
+        "opened",
+        "file",
+        "tool",
+        "wiki",
+        "template",
+        "gitignore",
+        "ide",
+        "related",
+        "current",
+        "task",
+        "bá",
+        "sung",
+        "thã",
+        "script",
+        "package",
+        "cã",
+        "source",
+        "cá"
+      ],
+      "count": 1,
+      "first_seen": "2026-05-15T09:37:28+00:00",
+      "last_seen": "2026-05-15T09:37:28+00:00",
+      "last_hinted_at": "",
+      "members": [
+        "908bfc8ca108fa03"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+name: pack-solo-builder
+version: 0.1.0
+description: Cho non-tech expert (cơ khí, kế toán, y tế, ...) dùng Claude Code làm "no-code IDE" — tool design coach + tech recipe library cross-platform (Linux native + Windows Docker).
+
+components:
+  - tool-design
+  - tool-extend
+  - recipe
+  - tool-catalog
+
+keywords:
+  tool-design: [tool, công cụ, build, xây, làm, automate, tự động hóa, script, idea, ý tưởng]
+  tool-extend: [extend, sửa, thêm, modify, update tool, mở rộng]
+  recipe: [recipe, công thức, stack, tech, technology, framework]
+  tool-catalog: [catalog, list tools, danh sách, toolbox, ngăn kéo]
+
+files:
+  constraints: agents/constraints.md
+  coding_rules: agents/coding-rules.md
+  validator_rules: agents/pipeline/validator-rules.md
+  validator_script: scripts/rules.py
+  retrieval_map: agents/pipeline/retrieval-map.md
+  prompt_overrides: agents/pipeline/prompt-overrides.md
+
+conflicts_with: []

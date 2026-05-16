@@ -1,0 +1,329 @@
+<!--
+  ============================================================
+  REPORT FRAGMENTS — copy/paste templates cho /wiki-report
+  ============================================================
+  Mỗi fragment nằm giữa  [FRAGMENT: name] ... [/FRAGMENT]
+  Placeholder dùng       {{UPPER_SNAKE_CASE}}
+  Agent đọc file 1 lần, copy fragment, thay placeholder, paste
+  vào skeleton (templates/report-html-skeleton.html).
+
+  KHÔNG render file này trực tiếp — chỉ là kho fragment.
+  Mọi href dùng path relative TỪ {ws}/reports/ (vd "../workspace.md").
+  ============================================================
+-->
+
+
+<!--[FRAGMENT: citation]
+Dùng sau mỗi heading hoặc đầu mỗi block content.
+{{PATH}}     = path relative từ {ws}/reports/ (vd "../workspace.md")
+{{FILENAME}} = display text (vd "workspace.md")
+-->
+<a class="cite" href="{{PATH}}">{{FILENAME}}</a>
+<!--[/FRAGMENT: citation]-->
+
+
+<!--[FRAGMENT: nodata]
+Dùng khi 1 section/sub-section không có file nguồn nào.
+-->
+<p class="nodata">No data in this workspace.</p>
+<!--[/FRAGMENT: nodata]-->
+
+
+<!--[FRAGMENT: badge-used-by]
+Dùng cho contracts. {{SERVICES_LINKS}} = chuỗi <a> phân tách dấu phẩy.
+-->
+<p><span class="badge">Used by:</span> {{SERVICES_LINKS}}</p>
+<!--[/FRAGMENT: badge-used-by]-->
+
+
+<!--[FRAGMENT: badge-adoption-ok]
+Dùng cho pattern có service áp dụng.
+{{N}}              = số service (1, 2, 3...)
+{{SERVICES_LINKS}} = chuỗi <a> phân tách dấu phẩy
+-->
+<p>
+  <span class="badge ok">Adopted by: {{N}} service(s)</span>
+  {{SERVICES_LINKS}}
+</p>
+<!--[/FRAGMENT: badge-adoption-ok]-->
+
+
+<!--[FRAGMENT: badge-adoption-none]
+Dùng cho pattern không có service áp dụng.
+-->
+<p><span class="badge warn">Not adopted yet</span> — no service in this workspace currently references this pattern.</p>
+<!--[/FRAGMENT: badge-adoption-none]-->
+
+
+<!--[FRAGMENT: details]
+Collapsible block. {{BODY_HTML}} đã là HTML hoàn chỉnh (đã include citation).
+-->
+<details>
+  <summary>{{SUMMARY}}</summary>
+  <div class="details-body">
+{{BODY_HTML}}
+  </div>
+</details>
+<!--[/FRAGMENT: details]-->
+
+
+<!--[FRAGMENT: section-overview]
+Section Overview hoàn chỉnh. Agent fill từ workspace.md.
+{{INTRO_BLOCKQUOTE}}  = <blockquote>...</blockquote> (nếu file có) hoặc rỗng
+{{IDENTITY_LIST}}     = <ul><li>...</li></ul>
+{{TECH_STACK_LIST}}   = <ul>...</ul>
+{{ENTRY_POINTS_LIST}} = <ul>...</ul>
+{{OVERRIDE_NOTES}}    = đoạn HTML hoặc <p>None</p>
+{{KM_TABLE_ROWS}}     = chuỗi <tr>...</tr> (1 row/group)
+-->
+<a class="cite" href="../workspace.md">workspace.md</a>
+{{INTRO_BLOCKQUOTE}}
+
+<h3>Identity</h3>
+{{IDENTITY_LIST}}
+
+<h3>Tech Stack</h3>
+{{TECH_STACK_LIST}}
+
+<h3>Entry Points</h3>
+{{ENTRY_POINTS_LIST}}
+
+<h3>Override Notes</h3>
+{{OVERRIDE_NOTES}}
+
+<h3>Knowledge Map Summary</h3>
+<table>
+  <thead><tr><th>Group</th><th>Count</th><th>Files</th></tr></thead>
+  <tbody>
+{{KM_TABLE_ROWS}}
+  </tbody>
+</table>
+<!--[/FRAGMENT: section-overview]-->
+
+
+<!--[FRAGMENT: km-row]
+1 row trong Knowledge Map Summary.
+{{GROUP}} = "Architecture" | "Contracts" | ...
+{{COUNT}} = số nguyên (or "—")
+{{FILES_LIST_HTML}} = chuỗi <a> phân tách dấu phẩy, hoặc text plain
+-->
+<tr><td>{{GROUP}}</td><td>{{COUNT}}</td><td>{{FILES_LIST_HTML}}</td></tr>
+<!--[/FRAGMENT: km-row]-->
+
+
+<!--[FRAGMENT: section-arch-project]
+1 project trong Architecture. {{KNOWLEDGE_MAP_BODY}} = HTML đã convert từ knowledge-map.md (drop H1).
+{{SERVICES_DETAILS_LIST}} = chuỗi <details>...</details> (1 cái cho mỗi service file).
+-->
+<h3 id="arch-{{PROJECT_SLUG}}">Project: {{PROJECT_NAME}}</h3>
+<a class="cite" href="../projects/{{PROJECT_SLUG}}/knowledge-map.md">knowledge-map.md</a>
+
+{{KNOWLEDGE_MAP_BODY}}
+
+<h4>Services</h4>
+{{SERVICES_DETAILS_LIST}}
+<!--[/FRAGMENT: section-arch-project]-->
+
+
+<!--[FRAGMENT: arch-nav-item]
+1 entry trong sidebar nav cho Architecture.
+-->
+<li><a href="#arch-{{PROJECT_SLUG}}">{{PROJECT_NAME}}</a></li>
+<!--[/FRAGMENT: arch-nav-item]-->
+
+
+<!--[FRAGMENT: section-contract]
+1 contract block trong Contracts section.
+{{USAGE_BADGE}}     = badge-used-by hoặc rỗng (nếu không có service dùng)
+{{CONTRACT_BODY}}   = HTML đã convert từ file (drop H1)
+-->
+<h3>{{CONTRACT_TITLE}}</h3>
+<a class="cite" href="../platform/contracts/{{CONTRACT_FILE}}">{{CONTRACT_FILE}}</a>
+{{USAGE_BADGE}}
+
+{{CONTRACT_BODY}}
+<!--[/FRAGMENT: section-contract]-->
+
+
+<!--[FRAGMENT: section-pattern-index]
+Phần index ở đầu Patterns section. Lấy từ patterns-index.md.
+{{INDEX_TABLES}} = HTML các bảng từ patterns-index.md
+{{HOW_TO_USE_LIST}} = <ol>...</ol> phần "How to Use This Index"
+-->
+<h3>Patterns Index</h3>
+<a class="cite" href="../patterns-index.md">patterns-index.md</a>
+<p>Quick lookup table for AI agents. Find the pattern name, follow the link, read before generating code.</p>
+<blockquote>Paths are relative to this file (workspace root).</blockquote>
+
+{{INDEX_TABLES}}
+
+<h4>How to Use This Index</h4>
+{{HOW_TO_USE_LIST}}
+<!--[/FRAGMENT: section-pattern-index]-->
+
+
+<!--[FRAGMENT: section-pattern]
+1 pattern block trong Patterns section.
+{{ADOPTION_BADGE}} = badge-adoption-ok hoặc badge-adoption-none
+{{PATTERN_BODY}}   = HTML đã convert từ file (drop H1)
+-->
+<h3>{{PATTERN_TITLE}}</h3>
+<a class="cite" href="../platform/patterns/{{PATTERN_FILE}}">{{PATTERN_FILE}}</a>
+{{ADOPTION_BADGE}}
+
+{{PATTERN_BODY}}
+<!--[/FRAGMENT: section-pattern]-->
+
+
+<!--[FRAGMENT: section-domain]
+1 domain block. {{DOMAIN_FILES_BLOCKS}} = chuỗi domain-file-block.
+-->
+<h3>Domain: {{DOMAIN_NAME}}</h3>
+{{DOMAIN_FILES_BLOCKS}}
+<!--[/FRAGMENT: section-domain]-->
+
+
+<!--[FRAGMENT: domain-file-block]
+1 file trong 1 domain (vd workflow.md). {{FILE_BODY}} = HTML đã convert (drop H1).
+-->
+<h4>{{FILE_TITLE}}</h4>
+<a class="cite" href="../domains/{{DOMAIN_NAME}}/{{FILE_NAME}}">{{FILE_NAME}}</a>
+{{FILE_BODY}}
+<!--[/FRAGMENT: domain-file-block]-->
+
+
+<!--[FRAGMENT: adr-summary-table]
+Bảng summary đầu ADRs section. {{ADR_ROWS}} = chuỗi adr-summary-row.
+-->
+<h3>Summary</h3>
+<a class="cite" href="../decisions/">decisions/</a>
+<table>
+  <thead><tr><th>ID</th><th>Scope</th><th>Title</th><th>Status</th><th>Source</th></tr></thead>
+  <tbody>
+{{ADR_ROWS}}
+  </tbody>
+</table>
+<!--[/FRAGMENT: adr-summary-table]-->
+
+
+<!--[FRAGMENT: adr-summary-row]
+1 row trong bảng ADR Summary.
+{{ADR_ID}}  = "ADR-001" / "ADR-002" / ...
+{{SCOPE}}   = "workspace" | "project: {project-name}"
+{{TITLE}}   = title từ H1 (đã trim "ADR-XXX:" prefix nếu có)
+{{STATUS}}  = badge HTML hoặc "—"
+{{PATH}}    = path relative từ {ws}/reports/
+-->
+<tr>
+  <td>{{ADR_ID}}</td>
+  <td>{{SCOPE}}</td>
+  <td>{{TITLE}}</td>
+  <td>{{STATUS}}</td>
+  <td><a href="{{PATH}}">{{FILENAME}}</a></td>
+</tr>
+<!--[/FRAGMENT: adr-summary-row]-->
+
+
+<!--[FRAGMENT: adr-status-badge-ok]-->
+<span class="badge ok">{{STATUS}}</span>
+<!--[/FRAGMENT: adr-status-badge-ok]-->
+
+<!--[FRAGMENT: adr-status-badge-warn]-->
+<span class="badge warn">{{STATUS}}</span>
+<!--[/FRAGMENT: adr-status-badge-warn]-->
+
+<!--[FRAGMENT: adr-status-badge-neutral]-->
+<span class="badge">{{STATUS}}</span>
+<!--[/FRAGMENT: adr-status-badge-neutral]-->
+
+
+<!--[FRAGMENT: adr-full]
+Full ADR trong <details>. {{ADR_BODY}} = HTML đã convert (drop H1).
+-->
+<details>
+  <summary>{{ADR_ID}} — {{TITLE}}</summary>
+  <div class="details-body">
+    <a class="cite" href="{{PATH}}">{{FILENAME}}</a>
+{{ADR_BODY}}
+  </div>
+</details>
+<!--[/FRAGMENT: adr-full]-->
+
+
+<!--[FRAGMENT: section-runbook]
+1 runbook block.
+{{SHORT_DESC}} = first paragraph hoặc 200 chars đầu của body
+{{RUNBOOK_BODY}} = HTML full content (drop H1)
+-->
+<h3>{{RUNBOOK_TITLE}}</h3>
+<a class="cite" href="../runbooks/{{RUNBOOK_FILE}}">{{RUNBOOK_FILE}}</a>
+<p>{{SHORT_DESC}}</p>
+
+<details>
+  <summary>Full runbook</summary>
+  <div class="details-body">
+    <a class="cite" href="../runbooks/{{RUNBOOK_FILE}}">{{RUNBOOK_FILE}}</a>
+{{RUNBOOK_BODY}}
+  </div>
+</details>
+<!--[/FRAGMENT: section-runbook]-->
+
+
+<!--[FRAGMENT: service-details]
+1 service file trong project Architecture.
+{{SERVICE_FILE}} = filename (vd "kafka-consumer.md")
+{{SERVICE_BODY}} = HTML đã convert (drop H1)
+-->
+<details>
+  <summary>{{SERVICE_FILE}}</summary>
+  <div class="details-body">
+    <a class="cite" href="../projects/{{PROJECT_SLUG}}/services/{{SERVICE_FILE}}">{{SERVICE_FILE}}</a>
+{{SERVICE_BODY}}
+  </div>
+</details>
+<!--[/FRAGMENT: service-details]-->
+
+
+<!--[FRAGMENT: footer]
+Replace toàn bộ <footer> trong skeleton (đã có sẵn) — chỉ dùng nếu cần override.
+-->
+<footer class="report-foot">
+  Generated by <code>/wiki-report</code> from workspace <strong>{{WORKSPACE}}</strong>
+  on {{TIMESTAMP}}. Source: <code>{{WIKI_ROOT}}/workspaces/{{WORKSPACE}}/</code>.
+  Citations point to file paths relative to workspace root.
+</footer>
+<!--[/FRAGMENT: footer]-->
+
+
+<!--
+  ============================================================
+  MARKDOWN → HTML QUICK REFERENCE
+  ============================================================
+  Áp dụng cho mọi {{*_BODY}} placeholder. Drop H1 (đã đặt làm
+  section heading riêng), shift H2→h3, H3→h4, H4→h5.
+
+  | Markdown                  | HTML                                   |
+  |---------------------------|----------------------------------------|
+  | # Title                   | (drop — heading file đã ở ngoài)       |
+  | ## Heading                | <h3>Heading</h3>                       |
+  | ### Heading               | <h4>Heading</h4>                       |
+  | #### Heading              | <h5>Heading</h5>                       |
+  | **bold**                  | <strong>bold</strong>                  |
+  | *italic*                  | <em>italic</em>                        |
+  | `code`                    | <code>code</code>                      |
+  | ```lang\n...\n```         | <pre><code>...</code></pre>            |
+  | - item                    | <ul><li>item</li></ul>                 |
+  | 1. item                   | <ol><li>item</li></ol>                 |
+  | > text                    | <blockquote>text</blockquote>          |
+  | [text](path)              | <a href="../{path-from-ws-root}">text</a>|
+  | GFM table                 | <table><thead>...</thead><tbody>...</tbody></table> |
+  | ```mermaid\n...\n```      | <pre class="mermaid-fallback">...</pre> + note |
+
+  ESCAPE: mọi text content phải escape  &  <  >  "  '
+  Đặc biệt trong <pre><code>: vẫn phải escape & < >.
+
+  LINK rewrite: link relative trong .md → resolve absolute từ
+  workspace root → prefix "../" (vì HTML file nằm trong reports/).
+  Vd  [x](../patterns/y.md)  trong knowledge-map.md  →  href="../platform/patterns/y.md"
+  ============================================================
+-->

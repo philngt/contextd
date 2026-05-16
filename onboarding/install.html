@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<!--
+  Workspace Wiki Install Guide — single-file HTML, self-contained.
+  KHÔNG external CSS/JS/font/CDN. Mở trực tiếp trong browser.
+  Mục tiêu: 5 phút cài wiki-template vào ~/.claude/ + 1 codebase đầu tiên.
+-->
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Workspace Wiki for Claude — Cài đặt 5 phút</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#1f2328;background:#f6f8fa;line-height:1.55}
+  a{color:#0969da;text-decoration:none}
+  a:hover{text-decoration:underline}
+  code{font-family:"SF Mono",Menlo,Consolas,monospace;font-size:13px;background:#eaeef2;padding:1px 6px;border-radius:3px;color:#1f2328}
+  pre{background:#0d1117;color:#e6edf3;border-radius:8px;padding:14px 18px;overflow-x:auto;font-size:13px;line-height:1.6;margin:12px 0}
+  pre code{background:transparent;padding:0;color:inherit}
+  h1,h2,h3,h4{margin:0 0 12px;line-height:1.25}
+  p{margin:0 0 12px}
+  ul,ol{padding-left:22px;margin:0 0 12px}
+  li{margin:4px 0}
+  .container{max-width:880px;margin:0 auto;padding:24px}
+  /* Hero */
+  header.hero{background:linear-gradient(135deg,#1a7f37 0%,#0a5d24 100%);color:#fff;padding:48px 24px;text-align:center}
+  header.hero h1{font-size:32px;margin:0 0 8px;font-weight:700;color:#fff}
+  header.hero p.tagline{font-size:17px;opacity:.9;margin:0 0 20px}
+  header.hero .meta{display:inline-block;background:rgba(255,255,255,.15);padding:6px 14px;border-radius:20px;font-size:13px}
+  /* Sections */
+  section.block{background:#fff;border:1px solid #d0d7de;border-radius:12px;padding:28px 32px;margin:24px 0}
+  section.block > h2{font-size:22px;margin:0 0 4px;color:#1f2328}
+  section.block > p.lead{color:#57606a;margin:0 0 20px;font-size:15px}
+  /* Step rows */
+  .step-row{display:flex;gap:16px;margin:20px 0;align-items:flex-start}
+  .step-num-bubble{flex:0 0 36px;height:36px;background:#1a7f37;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px}
+  .step-content{flex:1}
+  .step-content h4{font-size:16px;margin:6px 0 8px;color:#1f2328}
+  .step-content p{font-size:14px;color:#1f2328;margin:0 0 8px}
+  .step-content code{font-size:13px}
+  /* Callouts */
+  .callout{padding:14px 18px;border-radius:8px;margin:16px 0;border-left:4px solid}
+  .callout.info{background:#ddf4ff;border-color:#0969da;color:#0550ae}
+  .callout.warn{background:#fff8c5;border-color:#d4a72c;color:#7d4e00}
+  .callout.tip{background:#dafbe1;border-color:#1a7f37;color:#155724}
+  .callout strong{color:inherit}
+  .callout pre{margin:8px 0 0}
+  .callout ul,.callout ol{margin-bottom:0}
+  /* Footer nav */
+  .nav-back{display:inline-block;padding:8px 16px;background:#fff;border:1px solid #d0d7de;border-radius:8px;color:#1f2328;font-size:14px;margin-right:8px}
+  .nav-back:hover{background:#0969da;color:#fff;border-color:#0969da;text-decoration:none}
+  /* Footer */
+  footer{text-align:center;padding:32px 24px;color:#57606a;font-size:13px}
+  footer a{color:#0969da}
+  /* TOC chips */
+  .toc{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 0}
+  .toc a{display:inline-block;padding:6px 12px;background:#fff;border:1px solid #d0d7de;border-radius:20px;font-size:13px;color:#1f2328}
+  .toc a:hover{background:#1a7f37;color:#fff;border-color:#1a7f37;text-decoration:none}
+  .lang-switch{display:flex;justify-content:flex-end;gap:8px;margin:8px 0 0}
+  .lang-switch a{display:inline-block;padding:4px 10px;border:1px solid #d0d7de;border-radius:999px;font-size:12px;color:#1f2328;background:#fff;text-decoration:none}
+  .lang-switch a.active{background:#1a7f37;color:#fff;border-color:#1a7f37}
+  /* Tabs OS */
+  .os-tabs{display:flex;gap:0;margin:16px 0 0;border-bottom:2px solid #d0d7de}
+  .os-tab{padding:10px 20px;cursor:pointer;border:none;background:transparent;font-size:14px;font-weight:600;color:#57606a;border-bottom:3px solid transparent;margin-bottom:-2px}
+  .os-tab.active{color:#1a7f37;border-bottom-color:#1a7f37}
+  .os-tab:hover:not(.active){color:#1f2328}
+  .os-panel{display:none;padding:16px 0}
+  .os-panel.active{display:block}
+  @media (max-width:768px){
+    .container{padding:12px}
+    header.hero{padding:32px 16px}
+    header.hero h1{font-size:24px}
+    header.hero p.tagline{font-size:15px}
+    section.block{padding:18px 16px}
+    .step-row{flex-direction:column;gap:8px}
+    .step-num-bubble{width:28px;height:28px;font-size:13px;flex:0 0 28px}
+    pre{padding:12px;font-size:12px;white-space:pre-wrap;word-break:break-word}
+    code{word-break:break-word}
+    .step-content code{font-size:12px}
+    .callout{padding:12px 14px}
+    .toc{gap:6px}
+    .toc a{font-size:12px;padding:5px 10px}
+    .os-tabs{flex-wrap:wrap;gap:0}
+    .os-tab{padding:8px 14px;font-size:13px}
+    .nav-back{display:block;margin:8px 0;text-align:center}
+  }
+  @media (max-width:480px){
+    header.hero h1{font-size:20px}
+    header.hero .meta{font-size:11px}
+    section.block{padding:14px 12px;border-radius:8px}
+    section.block > h2{font-size:18px}
+    .step-content h4{font-size:15px}
+    .step-content p{font-size:13px}
+    .callout{border-left-width:3px;padding:10px 12px;font-size:13px}
+    pre{padding:10px;font-size:11px}
+    .os-tab{padding:6px 10px;font-size:12px}
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <h1>⚙️ Cài đặt Workspace Wiki for Claude</h1>
+  <p class="tagline">Làm một lần (~5 phút), sau đó dùng được cho mọi dự án</p>
+  <div class="meta">Chạy được trên: Linux · macOS · Windows</div>
+  <p style="margin-top:12px;font-size:13px;opacity:.95">Cần xem source đầy đủ? Mở trên <a href="https://github.com/<owner>/<repo>" style="color:#fff;text-decoration:underline;text-underline-offset:2px">GitHub</a></p>
+</header>
+
+<div class="container">
+  <div class="lang-switch"><a href="install.html" class="active">VI</a><a href="install.en.html">EN</a></div>
+
+
+  <div class="toc">
+    <a href="#preflight">Pre-flight</a>
+    <a href="#download">📥 Download (không cần Git)</a>
+    <a href="#step1">1. Clone (có Git)</a>
+    <a href="#step2">2. Run installer</a>
+    <a href="#step3">3. Setup codebase</a>
+    <a href="#troubleshoot">Khi gặp lỗi thường gặp</a>
+    <a href="#update">Update</a>
+    <a href="index.html">← Onboarding</a>
+  </div>
+
+  <!-- ============ PRE-FLIGHT ============ -->
+  <section class="block" id="preflight">
+    <h2>📋 Kiểm tra trước khi cài</h2>
+    <p class="lead">Trước khi bắt đầu, bạn cần 3 thứ sau:</p>
+
+    <div class="callout info">
+      <ul>
+        <li>✅ <a href="https://claude.com/claude-code">Claude Code CLI</a> hoặc IDE extension đã cài + login (verify: gõ <code>claude --version</code> trong terminal hoặc thấy icon Claude trong VS Code/JetBrains)</li>
+        <li>✅ <strong>Bash shell</strong>:
+          <ul style="margin-top:4px">
+            <li>Linux/macOS: có sẵn (terminal default)</li>
+            <li>Windows: cài <a href="https://git-scm.com/download/win">Git for Windows</a> (bao gồm Git Bash) hoặc enable WSL</li>
+          </ul>
+        </li>
+        <li>✅ <strong>Git</strong> (verify: <code>git --version</code>)</li>
+        <li>⚪ <em>Optional</em>: Python ≥ 3.9 (chỉ cần khi dùng <code>scripts/validate.py</code> + trace tools)</li>
+      </ul>
+    </div>
+
+    <p style="margin-top:16px;font-size:13px;color:#57606a">
+      Nếu KHÔNG có Bash trên Windows → xem phần <a href="#troubleshoot">Khi gặp lỗi thường gặp</a> phần "Windows native (không Bash)".
+    </p>
+  </section>
+
+  <!-- ============ DOWNLOAD ZIP ============ -->
+  <section class="block" id="download">
+    <h2>📥 Cách dễ nhất: Cài one-command (URL release qua env)</h2>
+    <p class="lead">Nếu GitLab CI đã publish release, bạn chỉ cần 1 lệnh để tải + giải nén + cài tự động.</p>
+
+    <div class="callout tip">
+      <strong>Linux / macOS one-liner</strong>
+      <pre><code>curl -fsSL https://github.com/&lt;org&gt;/&lt;repo&gt;/releases/download/&lt;tag&gt;/install.sh | sh</code></pre>
+      <strong>Windows PowerShell one-liner</strong>
+      <pre><code>iwr https://github.com/&lt;org&gt;/&lt;repo&gt;/releases/download/&lt;tag&gt;/install.ps1 -UseBasicParsing | iex</code></pre>
+      <p style="margin-top:8px">Script installer được generate theo từng release và đã trỏ sẵn đúng artifact của release đó.</p>
+    </div>
+
+    <p class="lead">Hoặc tải zip thủ công nếu cần, rồi chạy installer như cũ.</p>
+
+    <div style="text-align:center;margin:24px 0">
+      <a href="../release/wiki-template-latest.zip" download
+         style="display:inline-block;padding:14px 28px;background:#1a7f37;color:#fff;border-radius:8px;font-weight:600;font-size:16px;text-decoration:none">
+        ⬇️ Download wiki-template-latest.zip
+      </a>
+      <p style="font-size:12px;color:#57606a;margin-top:8px">
+        Link này hoạt động khi bạn mở file trên máy hoặc host thư mục có chứa <code>release/</code>.
+      </p>
+    </div>
+
+    <div class="step-row">
+      <div class="step-num-bubble">1</div>
+      <div class="step-content">
+        <h4>Giải nén zip</h4>
+        <p>Giải nén vào thư mục tuỳ ý — vd <code>~/wiki</code> trên Linux/macOS hoặc <code>D:\tool\wiki-template</code> trên Windows.</p>
+
+        <div class="os-tabs">
+          <button class="os-tab active" onclick="showOS(this, 'extract-linux')">Linux / macOS</button>
+          <button class="os-tab" onclick="showOS(this, 'extract-windows')">Windows</button>
+        </div>
+
+        <div class="os-panel active" data-os="extract-linux">
+          <pre><code>mkdir -p ~/wiki && unzip wiki-template-latest.zip -d ~/wiki
+# Zip chứa folder gốc 'wiki-template' → unzip sẽ tạo ~/wiki/wiki-template/
+cd ~/wiki/wiki-template</code></pre>
+        </div>
+
+        <div class="os-panel" data-os="extract-windows">
+          <pre><code># PowerShell
+Expand-Archive -Path wiki-template-latest.zip -DestinationPath D:\tool
+# Tạo D:\tool\wiki-template\
+cd D:\tool\wiki-template
+
+# Hoặc Git Bash
+unzip wiki-template-latest.zip -d /d/tool</code></pre>
+          <p style="font-size:13px;color:#57606a">Hoặc click chuột phải file zip → "Extract All..." trong File Explorer.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="step-row">
+      <div class="step-num-bubble">2</div>
+      <div class="step-content">
+        <h4>Chạy trình cài đặt</h4>
+        <p>Giống Step 2 cách Git clone — file <code>scripts/install-to-claude.sh</code> đã có trong zip:</p>
+        <pre><code>bash scripts/install-to-claude.sh</code></pre>
+        <p>Verify giống cách Git: <code>cat ~/.claude/wiki-global.json</code> phải thấy <code>"wiki_root"</code> đúng path bạn vừa extract.</p>
+      </div>
+    </div>
+
+    <div class="step-row">
+      <div class="step-num-bubble">3</div>
+      <div class="step-content">
+        <h4>Setup codebase</h4>
+        <p>Giống <a href="#step3">Step 3</a> bên dưới — gõ <code>/wiki-setup</code> trong codebase.</p>
+      </div>
+    </div>
+
+    <div class="callout warn">
+      <strong>⚠️ Cập nhật sau này:</strong> phải download zip mới mỗi lần update — KHÔNG có <code>git pull</code>. Khuyên dùng dùng cách <a href="#step1">Git clone</a> nếu bạn sẽ update thường xuyên.
+    </div>
+
+    <div class="callout tip">
+      <strong>💡 Cho quản trị:</strong> tạo zip mới bằng <code>bash scripts/package-release.sh</code>. Output ghi vào <code>release/wiki-template-{version}.zip</code> + <code>release/wiki-template-latest.zip</code>. Auto-exclude <code>.git/</code>, evidence raw, workspaces khác <code>wiki/</code>, runs/cache/log files. Xem <code>scripts/package-release.sh --help</code>.
+    </div>
+  </section>
+
+  <!-- ============ STEP 1 ============ -->
+  <section class="block" id="step1">
+    <h2>🔧 Cách ổn định cho người dùng kỹ thuật: Git clone</h2>
+    <p class="lead">Nếu bạn có Git và muốn cập nhật dễ hơn về sau, dùng cách này.</p>
+
+    <div class="step-row">
+      <div class="step-num-bubble">1</div>
+      <div class="step-content">
+        <h2 style="margin-top:4px">Tải repo về máy</h2>
+        <p>Chọn 1 thư mục gốc tuỳ ý — vd <code>~/wiki</code> trên Linux/macOS hoặc <code>D:\tool\wiki-template</code> trên Windows.</p>
+
+        <div class="os-tabs">
+          <button class="os-tab active" onclick="showOS(this, 'linux')">Linux / macOS</button>
+          <button class="os-tab" onclick="showOS(this, 'windows')">Windows (Git Bash)</button>
+        </div>
+
+        <div class="os-panel active" data-os="linux">
+          <pre><code>git clone &lt;wiki-template-repo&gt; ~/wiki
+cd ~/wiki</code></pre>
+        </div>
+
+        <div class="os-panel" data-os="windows">
+          <pre><code>git clone &lt;wiki-template-repo&gt; /d/tool/wiki-template
+cd /d/tool/wiki-template</code></pre>
+          <p style="font-size:13px;color:#57606a">Trong Git Bash, Windows path <code>D:\tool\</code> viết là <code>/d/tool/</code> (forward slash).</p>
+        </div>
+
+        <p style="font-size:13px;color:#57606a;margin-top:12px">
+          Repo này KHÔNG cần build, KHÔNG cần install dependency — chỉ là markdown + bash scripts.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ STEP 2 ============ -->
+  <section class="block" id="step2">
+    <div class="step-row">
+      <div class="step-num-bubble">2</div>
+      <div class="step-content">
+        <h2 style="margin-top:4px">Chạy trình cài đặt</h2>
+        <p>Chạy 1 lệnh sau (có thể chạy lại nhiều lần, vẫn an toàn):</p>
+        <pre><code>bash scripts/install-to-claude.sh</code></pre>
+
+        <p>Lệnh này sẽ tự làm 3 việc:</p>
+        <ul>
+          <li>Sync <strong>slash commands</strong> + <strong>subagents</strong> vào <code>~/.claude/commands/</code> và <code>~/.claude/agents/</code> — Claude Code tự đọc folder này</li>
+          <li>Tạo <code>~/.claude/wiki-global.json</code> với <code>wiki_root</code> trỏ về repo bạn vừa clone</li>
+          <li><strong>An toàn khi chạy lại</strong>: chạy lại sau mỗi <code>git pull</code> để cập nhật slash mới</li>
+        </ul>
+
+        <h4 style="margin-top:20px">Kiểm tra cài đặt</h4>
+        <p>Kiểm tra cấu hình đã đúng đường dẫn:</p>
+
+        <div class="os-tabs">
+          <button class="os-tab active" onclick="showOS(this, 'verify-linux')">Linux / macOS</button>
+          <button class="os-tab" onclick="showOS(this, 'verify-windows')">Windows</button>
+        </div>
+
+        <div class="os-panel active" data-os="verify-linux">
+          <pre><code>cat ~/.claude/wiki-global.json</code></pre>
+        </div>
+
+        <div class="os-panel" data-os="verify-windows">
+          <pre><code># PowerShell
+type $env:USERPROFILE\.claude\wiki-global.json
+
+# Hoặc Git Bash
+cat ~/.claude/wiki-global.json</code></pre>
+        </div>
+
+        <p>Phải thấy field <code>"wiki_root"</code> với absolute path đúng repo bạn vừa clone. Vd:</p>
+        <pre><code>{
+  "wiki_root": "/home/user/wiki",
+  "default_workspace": null,
+  "obsidian": { ... }
+}</code></pre>
+
+        <p>Mở Claude Code, gõ <code>/wiki-setup</code> → nếu slash command hiện ra trong autocomplete = OK.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ STEP 3 ============ -->
+  <section class="block" id="step3">
+    <div class="step-row">
+      <div class="step-num-bubble">3</div>
+      <div class="step-content">
+        <h2 style="margin-top:4px">Kết nối vào dự án đầu tiên</h2>
+        <p>Vào thư mục codebase bạn muốn dùng wiki, mở Claude Code (hoặc IDE extension) tại đó, gõ:</p>
+        <pre><code>/wiki-setup</code></pre>
+
+        <p>Hệ thống sẽ hướng dẫn bạn từng bước:</p>
+        <ul>
+          <li>Tự nhận diện tên dự án + loại công nghệ từ <code>package.json</code> / <code>pom.xml</code> / <code>Cargo.toml</code> / ...</li>
+          <li>Hỏi chọn workspace có sẵn — hoặc tạo workspace mới qua <code>/new-workspace {name}</code></li>
+          <li><strong>Bước 4.5 (Manage packs)</strong>: hiện checkbox UI cho mọi pack có sẵn; auto-detect và pre-tick theo stack</li>
+          <li>Tạo <code>&lt;codebase&gt;/.claude/wiki.json</code> với cấu hình hoàn chỉnh + packs override per-codebase</li>
+        </ul>
+
+        <div class="callout tip">
+          <strong>💡 Mỗi dự án chỉ cần chạy 1 lần.</strong> Sau đó wiki tự work — bạn chỉ gõ slash command bình thường (<code>/use-wiki</code>, <code>/find</code>, <code>/tool-design</code>, ...).
+        </div>
+
+        <p style="margin-top:16px">Tiếp theo: mở <a href="index.html">index.html</a> để chọn đường đi theo persona (PM / Engineer / Wiki Owner / Solo Builder).</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ TROUBLESHOOT ============ -->
+  <section class="block" id="troubleshoot">
+    <h2>🔧 Khi gặp lỗi thường gặp</h2>
+
+    <h3 style="margin-top:20px;font-size:17px">Windows không có Bash</h3>
+    <div class="callout warn">
+      <p>Nếu bạn chưa có Git Bash hoặc WSL, làm thủ công 4 bước sau:</p>
+      <ol style="margin-top:8px">
+        <li>Copy <code>templates\wiki-global.json</code> → <code>%USERPROFILE%\.claude\wiki-global.json</code></li>
+        <li>Mở file vừa copy bằng Notepad, sửa <code>"wiki_root"</code> thành absolute path tới repo. Nhớ dùng \\ thay cho \:
+          <pre style="margin:8px 0">{
+  "wiki_root": "D:\\tool\\wiki-template",
+  ...
+}</pre>
+        </li>
+        <li>Copy folder <code>.claude\commands\</code> và <code>agents\</code> sang <code>%USERPROFILE%\.claude\</code>:
+          <pre style="margin:8px 0">xcopy /E /I /Y .claude\commands %USERPROFILE%\.claude\commands
+xcopy /E /I /Y agents %USERPROFILE%\.claude\agents</pre>
+        </li>
+        <li>Verify: <code>type %USERPROFILE%\.claude\wiki-global.json</code></li>
+      </ol>
+      <p style="margin-top:8px"><strong>Khuyên dùng</strong>: cài <a href="https://git-scm.com/download/win">Git for Windows</a> (free) để có Git Bash → installer chạy 1 lệnh đơn giản hơn nhiều.</p>
+    </div>
+
+    <h3 style="margin-top:24px;font-size:17px">Lệnh không hiện trong Claude Code</h3>
+    <ul>
+      <li>Check folder <code>~/.claude/commands/</code> có file <code>.md</code> không (vd <code>wiki-setup.md</code>)</li>
+      <li>Restart Claude Code (CLI: gõ <code>/exit</code> rồi mở lại; IDE: reload window)</li>
+      <li>Re-run installer: <code>bash scripts/install-to-claude.sh</code></li>
+      <li>Check log Claude Code có error nào không (CLI: stderr; IDE: Output panel)</li>
+    </ul>
+
+    <h3 style="margin-top:24px;font-size:17px">Lỗi <code>wiki_root not found</code> khi gõ slash</h3>
+    <ul>
+      <li>Mở <code>~/.claude/wiki-global.json</code>, confirm <code>"wiki_root"</code> là absolute path (KHÔNG dùng <code>~</code>, KHÔNG dùng relative)</li>
+      <li>Path phải tới folder gốc của repo wiki-template (folder chứa <code>CLAUDE.md</code>, <code>packs/</code>, <code>workspaces/</code>)</li>
+      <li>Verify path tồn tại: <code>ls "$(jq -r .wiki_root ~/.claude/wiki-global.json)"</code></li>
+    </ul>
+
+    <h3 style="margin-top:24px;font-size:17px"><code>/wiki-setup</code> báo "workspace not found"</h3>
+    <ul>
+      <li>Chưa có workspace nào — chạy <code>/new-workspace {name}</code> trước (vd <code>/new-workspace acme-corp</code>)</li>
+      <li>Hoặc list workspaces có sẵn: <code>/list-workspaces</code></li>
+    </ul>
+
+    <h3 style="margin-top:24px;font-size:17px">Lỗi quyền khi chạy trình cài đặt</h3>
+    <ul>
+      <li>Linux/macOS: <code>chmod +x scripts/install-to-claude.sh</code> rồi chạy lại</li>
+      <li>Hoặc force bash: <code>bash scripts/install-to-claude.sh</code> (không cần executable bit)</li>
+    </ul>
+  </section>
+
+  <!-- ============ UPDATE ============ -->
+  <section class="block" id="update">
+    <h2>🔄 Cập nhật sau này</h2>
+    <p>Sau mỗi <code>git pull</code> trên repo wiki-template, re-run installer để sync slash commands mới:</p>
+    <pre><code>cd ~/wiki
+git pull
+bash scripts/install-to-claude.sh   # idempotent — cập nhật tất cả</code></pre>
+
+    <div class="callout tip">
+      <strong>💡 Khi nào cần cập nhật?</strong>
+      <ul>
+        <li>Wiki-template repo có slash command mới (vd <code>/tool-design</code> mới ship)</li>
+        <li>Có pack mới được thêm vào <code>packs/</code></li>
+        <li>Engine constraints / coding-rules update (validator rules mới)</li>
+      </ul>
+      <p style="margin-top:8px">Workspaces của bạn (<code>workspaces/{your-ws}/</code>) là dữ liệu — KHÔNG bị ảnh hưởng bởi update engine.</p>
+    </div>
+  </section>
+
+  <p style="margin:24px 0;text-align:center">
+    <a href="index.html" class="nav-back">← Quay về Onboarding</a>
+    <a href="../QUICKSTART.md" class="nav-back">QUICKSTART.md (text)</a>
+    <a href="../README.md" class="nav-back">README.md</a>
+    <a href="https://github.com/<owner>/<repo>" class="nav-back">GitHub Repository</a>
+  </p>
+
+  <footer>
+    <p>
+      📚 <strong>Workspace Wiki</strong> · File này tự-contained — copy đi đâu cũng mở được. Không tracking, không CDN, không dependency.
+    </p>
+  </footer>
+
+</div>
+
+<script>
+  function showOS(btn, os){
+    const tabs = btn.parentElement.querySelectorAll('.os-tab');
+    const panels = btn.parentElement.parentElement.querySelectorAll('.os-panel');
+    tabs.forEach(t => t.classList.remove('active'));
+    panels.forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    panels.forEach(p => {
+      if (p.dataset.os === os) p.classList.add('active');
+    });
+  }
+</script>
+</body>
+</html>

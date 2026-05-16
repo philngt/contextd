@@ -1,0 +1,139 @@
+{
+  "_template_for": "{ws}/evidence/applied/{evid-id}/checkpoint.json",
+  "_doc": "Per-step checkpoint for /evidence-apply. Written incrementally as each sub-step completes. Used by /evidence-apply --resume to pick up after crash/interrupt/expert-pause.",
+
+  "evid_id": "2026-05-04-paste-PROJ-1234",
+  "workspace": "example-surgery",
+  "mode": "rebase",
+  "_mode_options": ["update", "rebase"],
+
+  "session_id": "8b3c4e5f-6a7b-4c8d-9e0f-1a2b3c4d5e6f",
+  "_session_id_doc": "UUID4 generated when this checkpoint was first written. Re-checked before every flush (I-8.1). Mismatch → STOP 'CHECKPOINT HIJACKED'. Legacy checkpoints missing this field are upgraded on next flush.",
+  "last_writer": {
+    "pid": 12345,
+    "started_at": "2026-05-04T14:00:00+07:00"
+  },
+
+  "started_at": "2026-05-04T14:00:00+07:00",
+  "last_updated_at": "2026-05-04T14:18:00+07:00",
+  "completed_at": null,
+  "status": "in_progress",
+  "_status_options": ["in_progress", "paused", "completed", "failed"],
+
+  "current_step": "verify_service_doc",
+  "_current_step_options": [
+    "init",
+    "validator_gate",
+    "build_prompt",
+    "verify_config_overrides",
+    "verify_flow",
+    "verify_pattern_ref",
+    "verify_failure_handling",
+    "verify_pattern_used_by",
+    "verify_contract_registered_types",
+    "verify_contract_format",
+    "verify_knowledge_map",
+    "verify_patterns_index",
+    "verify_workspace_md",
+    "write_manifest",
+    "write_diff_summary",
+    "transition_state"
+  ],
+
+  "steps": [
+    {
+      "step": "init",
+      "status": "done",
+      "started_at": "2026-05-04T14:00:00+07:00",
+      "finished_at": "2026-05-04T14:00:02+07:00",
+      "result": "workspace check pass; evid-id resolved; state=qa_done"
+    },
+    {
+      "step": "validator_gate",
+      "status": "done",
+      "started_at": "2026-05-04T14:00:02+07:00",
+      "finished_at": "2026-05-04T14:00:05+07:00",
+      "result": "all gates pass: P0/P1 cleared, citations complete, no cross-workspace leak"
+    },
+    {
+      "step": "build_prompt",
+      "status": "done",
+      "started_at": "2026-05-04T14:00:05+07:00",
+      "finished_at": "2026-05-04T14:00:06+07:00",
+      "result": "augmented prompt built from verified-facts + 02-contradiction + 08-knowledge-gaps"
+    },
+    {
+      "step": "verify_config_overrides",
+      "status": "done",
+      "started_at": "2026-05-04T14:01:00+07:00",
+      "finished_at": "2026-05-04T14:08:00+07:00",
+      "files_processed": [
+        "projects/surgery-service/services/kafka-consumer.md"
+      ],
+      "files_modified": [
+        "projects/surgery-service/services/kafka-consumer.md"
+      ],
+      "result": "Updated retry policy 5x linear → 3x exponential per F-002"
+    },
+    {
+      "step": "verify_flow",
+      "status": "done",
+      "started_at": "2026-05-04T14:08:00+07:00",
+      "finished_at": "2026-05-04T14:12:00+07:00",
+      "files_processed": [
+        "projects/surgery-service/services/kafka-consumer.md"
+      ],
+      "files_modified": [],
+      "result": "Flow already correct, no change"
+    },
+    {
+      "step": "verify_pattern_ref",
+      "status": "in_progress",
+      "started_at": "2026-05-04T14:12:00+07:00",
+      "finished_at": null,
+      "files_processed": [],
+      "files_modified": [],
+      "current_file": "projects/surgery-service/services/kafka-consumer.md",
+      "blocker": null,
+      "_blocker_examples": [
+        "user_input_required: 'Pattern X conflicts with verified fact F-005, manual review needed'",
+        "expert_followup: 'q-007-followup needs answer before continuing'",
+        "tool_error: 'WebFetch timeout for {url}'"
+      ]
+    },
+    {
+      "step": "verify_failure_handling",
+      "status": "pending",
+      "started_at": null,
+      "finished_at": null
+    }
+  ],
+
+  "files_modified_total": [
+    "projects/surgery-service/services/kafka-consumer.md"
+  ],
+
+  "facts_applied": [
+    {
+      "fact_id": "F-002",
+      "applied_to": "projects/surgery-service/services/kafka-consumer.md#failure-handling",
+      "step": "verify_config_overrides"
+    }
+  ],
+
+  "facts_pending": [
+    "F-001",
+    "F-003"
+  ],
+
+  "interrupted_reason": null,
+  "_interrupted_reason_examples": [
+    "user_ctrl_c",
+    "expert_followup_required: q-007-followup",
+    "tool_failure: Edit tool error on {file}",
+    "validator_failure: contract violation detected mid-apply"
+  ],
+
+  "resume_token": "verify_pattern_ref:projects/surgery-service/services/kafka-consumer.md",
+  "_resume_token_format": "{step}:{current_file_or_subitem}"
+}

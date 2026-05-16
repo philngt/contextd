@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<!--
+  Workspace Wiki for Claude Onboarding — single-file HTML, self-contained.
+  KHÔNG external CSS/JS/font/CDN. Mở trực tiếp trong browser.
+  Mục tiêu: 5 phút onboard cho bất kỳ ai (non-tech, engineer, wiki owner).
+-->
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Workspace Wiki for Claude — Onboarding 5 phút</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#1f2328;background:#f6f8fa;line-height:1.55}
+  a{color:#0969da;text-decoration:none}
+  a:hover{text-decoration:underline}
+  code{font-family:"SF Mono",Menlo,Consolas,monospace;font-size:13px;background:#eaeef2;padding:1px 6px;border-radius:3px;color:#1f2328}
+  pre{background:#0d1117;color:#e6edf3;border-radius:8px;padding:14px 18px;overflow-x:auto;font-size:13px;line-height:1.6;margin:12px 0;word-break:break-word;white-space:pre-wrap}
+  pre code{background:transparent;padding:0;color:inherit;word-break:break-word;white-space:pre-wrap}
+  h1,h2,h3,h4{margin:0 0 12px;line-height:1.25}
+  p{margin:0 0 12px}
+  ul,ol{padding-left:22px;margin:0 0 12px}
+  li{margin:4px 0}
+  .container{max-width:1080px;margin:0 auto;padding:24px}
+  /* Hero */
+  header.hero{background:linear-gradient(135deg,#0969da 0%,#0550ae 100%);color:#fff;padding:56px 24px;text-align:center;border-radius:0}
+  header.hero h1{font-size:36px;margin:0 0 8px;font-weight:700;color:#fff}
+  header.hero p.tagline{font-size:18px;opacity:.9;margin:0 0 24px}
+  header.hero .meta{display:inline-block;background:rgba(255,255,255,.15);padding:6px 14px;border-radius:20px;font-size:13px;letter-spacing:.04em}
+  /* Persona picker */
+  section.personas{margin-top:-32px}
+  .persona-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+  .persona-card{background:#fff;border:2px solid #d0d7de;border-radius:12px;padding:24px;cursor:pointer;transition:all .15s;position:relative}
+  .persona-card:hover{border-color:#0969da;box-shadow:0 4px 12px rgba(9,105,218,.15);transform:translateY(-2px)}
+  .persona-card.active{border-color:#0969da;background:#ddf4ff}
+  .persona-card .icon{font-size:32px;margin-bottom:8px;display:block}
+  .persona-card h3{font-size:18px;margin:0 0 6px;color:#0969da}
+  .persona-card p{font-size:14px;color:#57606a;margin:0}
+  .persona-card .badge{display:inline-block;font-size:11px;background:#dafbe1;color:#1a7f37;padding:2px 8px;border-radius:10px;margin-top:8px;font-weight:600;letter-spacing:.02em}
+  /* Sections */
+  section.block{background:#fff;border:1px solid #d0d7de;border-radius:12px;padding:28px 32px;margin:24px 0}
+  section.block > h2{font-size:22px;margin:0 0 4px;color:#1f2328}
+  section.block > h2 .step-num{display:inline-block;width:28px;height:28px;background:#0969da;color:#fff;border-radius:50%;text-align:center;line-height:28px;font-size:14px;margin-right:10px;vertical-align:middle}
+  section.block > p.lead{color:#57606a;margin:0 0 20px;font-size:15px}
+  /* Persona path (hidden by default, shown when card clicked) */
+  .persona-path{display:none;margin-top:20px;padding:24px;background:#f6f8fa;border-radius:10px;border-left:4px solid #0969da}
+  .persona-path.active{display:block}
+  .persona-path h3{font-size:18px;margin:0 0 6px;color:#0969da}
+  .persona-path p.who{color:#57606a;font-size:14px;margin:0 0 16px}
+  .step-row{display:flex;gap:16px;margin:16px 0;align-items:flex-start}
+  .step-num-bubble{flex:0 0 32px;height:32px;background:#0969da;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px}
+  .step-content{flex:1}
+  .step-content h4{font-size:15px;margin:4px 0 6px;color:#1f2328}
+  .step-content p{font-size:14px;color:#1f2328;margin:0 0 8px}
+  .step-content code{font-size:13px}
+  /* Command grid (quick ref) */
+  .cmd-group{margin:16px 0}
+  .cmd-group h3{font-size:15px;color:#57606a;text-transform:uppercase;letter-spacing:.05em;margin:24px 0 8px;border-bottom:1px solid #d0d7de;padding-bottom:6px}
+  .cmd-table{width:100%;border-collapse:collapse;font-size:14px;margin:8px 0}
+  .cmd-table th{background:#f6f8fa;text-align:left;padding:8px 10px;border-bottom:2px solid #d0d7de;font-weight:600;font-size:13px;color:#57606a;text-transform:uppercase;letter-spacing:.04em}
+  .cmd-table td{padding:10px;border-bottom:1px solid #eaeef2;vertical-align:top}
+  .cmd-table tr:hover td{background:#f6f8fa}
+  .cmd-table .cmd-name{white-space:nowrap;font-family:"SF Mono",Menlo,Consolas,monospace;color:#0969da;font-weight:600}
+  .cmd-table .cmd-tag{display:inline-block;font-size:10px;padding:1px 6px;border-radius:8px;margin-left:6px;font-weight:600;letter-spacing:.04em;text-transform:uppercase}
+  .cmd-tag.tech{background:#ddf4ff;color:#0550ae}
+  .cmd-tag.nontech{background:#dafbe1;color:#1a7f37}
+  .cmd-tag.maintainer{background:#fff8c5;color:#9a6700}
+  .cmd-tag.beta{background:#fbefff;color:#7a1fa2}
+  /* FAQ */
+  details{background:#f6f8fa;border:1px solid #d0d7de;border-radius:8px;margin:8px 0;overflow:hidden}
+  details summary{padding:12px 16px;cursor:pointer;font-weight:600;list-style:none;display:flex;align-items:center;gap:8px}
+  details summary::-webkit-details-marker{display:none}
+  details summary::before{content:"▸";color:#57606a;transition:transform .15s}
+  details[open] summary::before{transform:rotate(90deg)}
+  details[open] summary{border-bottom:1px solid #d0d7de;background:#fff}
+  details .faq-body{padding:14px 18px;background:#fff}
+  details .faq-body p:last-child{margin-bottom:0}
+  /* Concept map */
+  .concept-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin:16px 0}
+  .concept-card{border:1px solid #d0d7de;border-radius:10px;padding:16px;background:#fff}
+  .concept-card .concept-icon{font-size:24px;margin-bottom:6px}
+  .concept-card h4{font-size:15px;margin:0 0 6px;color:#0969da}
+  .concept-card p{font-size:13px;color:#57606a;margin:0;line-height:1.5}
+  /* Glossary */
+  dl.glossary dt{font-weight:700;margin-top:12px;color:#0969da;font-size:14px}
+  dl.glossary dd{margin:4px 0 0 0;color:#1f2328;font-size:14px}
+  /* Footer */
+  footer{text-align:center;padding:32px 24px;color:#57606a;font-size:13px}
+  footer a{color:#0969da}
+  /* Callouts */
+  .callout{padding:14px 18px;border-radius:8px;margin:14px 0;border-left:4px solid}
+  .callout.info{background:#ddf4ff;border-color:#0969da;color:#0550ae}
+  .callout.warn{background:#fff8c5;border-color:#d4a72c;color:#7d4e00}
+  .callout.tip{background:#dafbe1;border-color:#1a7f37;color:#155724}
+  .callout strong{color:inherit}
+  /* TOC */
+  .toc{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 0}
+  .toc a{display:inline-block;padding:6px 12px;background:#fff;border:1px solid #d0d7de;border-radius:20px;font-size:13px;color:#1f2328}
+  .toc a:hover{background:#0969da;color:#fff;border-color:#0969da;text-decoration:none}
+  .lang-switch{display:flex;justify-content:flex-end;gap:8px;margin:8px 0 0}
+  .lang-switch a{display:inline-block;padding:4px 10px;border:1px solid #d0d7de;border-radius:999px;font-size:12px;color:#1f2328;background:#fff;text-decoration:none}
+  .lang-switch a.active{background:#0969da;color:#fff;border-color:#0969da}
+  @media (max-width:768px){
+    .container{padding:12px}
+    header.hero{padding:32px 16px}
+    header.hero h1{font-size:26px}
+    header.hero p.tagline{font-size:15px}
+    section.block{padding:18px 16px}
+    .step-row{flex-direction:column;gap:8px}
+    .step-num-bubble{width:28px;height:28px;font-size:13px;flex:0 0 28px}
+    .persona-grid{grid-template-columns:1fr}
+    .concept-grid{grid-template-columns:1fr}
+    .cmd-table{font-size:13px}
+    .cmd-table th,.cmd-table td{padding:8px 6px}
+    .cmd-table .cmd-name{white-space:normal}
+    details summary{padding:10px 12px;font-size:14px}
+    .callout{padding:12px 14px}
+    .toc{gap:6px}
+    .toc a{font-size:12px;padding:5px 10px}
+    pre{padding:12px;font-size:12px;word-break:break-word;white-space:pre-wrap}
+    code{word-break:break-word}
+    .step-content code{font-size:12px}
+  }
+  @media (max-width:420px){
+    header.hero h1{font-size:22px}
+    header.hero p.tagline{font-size:14px}
+    section.block{padding:14px 12px}
+    .persona-card{padding:16px}
+    .concept-card{padding:12px}
+    .cmd-table th,.cmd-table td{padding:6px 4px}
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <h1>📚 Workspace Wiki for Claude</h1>
+  <p class="tagline">Nơi lưu cách làm việc của team — để AI làm đúng ngay từ lần đầu</p>
+  <div class="meta">Cho mọi vai trò · Bắt đầu trong ~5 phút</div>
+  <p style="margin-top:12px;font-size:13px;opacity:.95">Xem mã nguồn và bản phát hành trên <a href="https://github.com/<owner>/<repo>" style="color:#fff;text-decoration:underline;text-underline-offset:2px">GitHub</a></p>
+</header>
+
+<div class="container">
+  <div class="lang-switch"><a href="index.html" class="active">VI</a><a href="index.en.html">EN</a></div>
+
+
+  <div class="toc">
+    <a href="install.html">⚙️ Cài đặt</a>
+    <a href="#what">Wiki là gì?</a>
+    <a href="#start">Bắt đầu</a>
+    <a href="#concepts">Khái niệm cốt lõi</a>
+    <a href="#commands">Tra cứu lệnh</a>
+    <a href="#packs">Packs</a>
+    <a href="#faq">FAQ</a>
+  </div>
+
+  <div class="callout info" style="margin-top:16px;background:#ddf4ff;padding:14px 18px;border-radius:8px;border-left:4px solid #0969da;color:#0550ae">
+    <strong>⚙️ Chưa cài đặt?</strong> Mở <a href="install.html"><strong>trang cài đặt</strong></a> trước. Cài xong quay lại đây và chọn đúng vai trò của bạn.
+  </div>
+
+  <!-- ============ WHAT IS THIS ============ -->
+  <section class="block" id="what">
+    <h2>📖 Workspace Wiki là gì?</h2>
+    <p class="lead">
+      Một <strong>thư viện hướng dẫn dùng chung</strong> cho cả người và AI.
+      Bạn ghi cách team làm việc vào wiki. Trước khi hỗ trợ, AI sẽ đọc các hướng dẫn này để làm đúng chuẩn của team.
+    </p>
+
+    <div class="concept-grid">
+      <div class="concept-card">
+        <div class="concept-icon">🏢</div>
+        <h4>Workspace</h4>
+        <p>Mỗi công ty/dự án = 1 workspace. Kiến thức KHÔNG trộn lẫn giữa các workspace.</p>
+      </div>
+      <div class="concept-card">
+        <div class="concept-icon">📦</div>
+        <h4>Pack</h4>
+        <p>Gói kiến thức theo công nghệ: web-api, frontend-react, ai-app, product, ... Bật/tắt tuỳ ý.</p>
+      </div>
+      <div class="concept-card">
+        <div class="concept-icon">📜</div>
+        <h4>Contract</h4>
+        <p>Thoả thuận cố định: cấu trúc API, định dạng dữ liệu, mã lỗi. Engineer KHÔNG được thay đổi.</p>
+      </div>
+      <div class="concept-card">
+        <div class="concept-icon">🧩</div>
+        <h4>Pattern</h4>
+        <p>Cách làm chuẩn cho từng vấn đề. Dùng lại thay vì tự nghĩ cách mới mỗi lần.</p>
+      </div>
+      <div class="concept-card">
+        <div class="concept-icon">🎯</div>
+        <h4>Brief / OKR</h4>
+        <p>Tóm tắt sản phẩm, mục tiêu, người dùng, số đo — kiến thức phi kỹ thuật. Cần <code>pack-product</code>.</p>
+      </div>
+      <div class="concept-card">
+        <div class="concept-icon">🔍</div>
+        <h4>Evidence</h4>
+        <p>Quy trình: đưa dữ liệu thô vào → phân tích → kiểm tra → áp vào wiki.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PERSONA PICKER ============ -->
+  <section class="block" id="start">
+    <h2><span class="step-num">1</span>Bạn là ai?</h2>
+    <p class="lead">Chọn đúng vai trò để xem các bước bắt đầu đơn giản nhất.</p>
+
+    <div class="persona-grid">
+      <div class="persona-card" data-persona="nontech" onclick="pick('nontech')">
+        <span class="icon">💼</span>
+        <h3>Không chuyên kỹ thuật (PM / Business / Chủ sản phẩm)</h3>
+        <p>Bạn không cần viết code. Bạn chỉ cần mô tả mục tiêu, người dùng và bối cảnh sản phẩm.</p>
+        <span class="badge">Nếu bạn làm business, bắt đầu ở đây</span>
+      </div>
+      <div class="persona-card" data-persona="engineer" onclick="pick('engineer')">
+        <span class="icon">🛠️</span>
+        <h3>Engineer</h3>
+        <p>Bạn viết code và muốn AI tuân thủ contracts/patterns của team. Bạn cần wiki-aware code generation.</p>
+        <span class="badge">Nếu bạn là developer, bắt đầu ở đây</span>
+      </div>
+      <div class="persona-card" data-persona="owner" onclick="pick('owner')">
+        <span class="icon">📚</span>
+        <h3>Quản trị Wiki</h3>
+        <p>Bạn setup và duy trì wiki cho team — đưa dữ liệu vào, viết quy tắc, kiểm tra wiki không lệch so với code thật.</p>
+        <span class="badge">Nếu bạn quản lý wiki, bắt đầu ở đây</span>
+      </div>
+      <div class="persona-card" data-persona="solo" onclick="pick('solo')">
+        <span class="icon">🔧</span>
+        <h3>Tự làm / Chuyên gia ngành khác</h3>
+        <p>Bạn làm ngành khác (cơ khí, kế toán, y tế...) và dùng Claude Code như "công cụ tự build" để tạo ứng dụng hỗ trợ công việc.</p>
+        <span class="badge">Nếu bạn không phải dev nhưng tự làm tool, bắt đầu ở đây</span>
+      </div>
+    </div>
+
+    <!-- Path: Non-tech -->
+    <div class="persona-path" id="path-nontech">
+      <h3>💼 Dành cho người không chuyên kỹ thuật</h3>
+      <p class="who">PM, Product Owner, Business Analyst, Stakeholder. Không cần biết lập trình.</p>
+
+      <div class="step-row">
+        <div class="step-num-bubble">1</div>
+        <div class="step-content">
+          <h4>Hỏi team tên workspace đang dùng</h4>
+          <p>Bạn không cần tự tạo workspace. Chỉ cần biết team đang dùng workspace nào.
+            Trong Claude Code, gõ <code>/list-workspaces</code> để xem tất cả.</p>
+          <pre><code>/list-workspaces</code></pre>
+        </div>
+      </div>
+
+      <div class="step-row">
+        <div class="step-num-bubble">2</div>
+        <div class="step-content">
+          <h4>Gặp từ khó? Yêu cầu giải thích dễ hiểu</h4>
+          <p>Nếu gặp từ khó (ví dụ thuật ngữ kỹ thuật), dùng lệnh sau để nhận giải thích ngắn gọn:
+            <code>/wiki-explain chủ-đề</code>. Kết quả là 1 trang giải thích đơn giản, có ví dụ thực tế.</p>
+          <pre><code>/wiki-explain circuit-breaker --depth tldr
+/wiki-explain mqtt-topic-contract --depth short</code></pre>
+        </div>
+      </div>
+
+      <div class="step-row">
+        <div class="step-num-bubble">3</div>
+        <div class="step-content">
+          <h4>Tạo bản tóm tắt sản phẩm đầu tiên (theo câu hỏi có sẵn)</h4>
+          <p>Hệ thống sẽ hỏi theo mẫu: vấn đề gì, ai dùng, đo thành công ra sao, mốc thời gian khi nào. Không cần trả lời kỹ thuật.</p>
+          <pre><code>/product-brief "Reduce signup friction for mobile users"</code></pre>
+          <p>Hệ thống sẽ tự lưu kết quả. Bạn chỉ cần điền các mục còn trống.</p>
+        </div>
+      </div>
+
+      <div class="callout tip">
+        <strong>💡 Tiếp theo:</strong> Khi cần giải thích 1 tính năng cho sếp/kinh doanh/CS,
+        gõ <code>/business-view {service-name}</code> — output là 1 document plain-language tự động sync với engineering doc.
+      </div>
+    </div>
+
+    <!-- Path: Engineer -->
+    <div class="persona-path" id="path-engineer">
+      <h3>🛠️ Hướng dẫn cho Engineer</h3>
+      <p class="who">Backend / frontend / fullstack / mobile dev. Bạn viết code, AI đọc wiki rồi sinh code đúng quy tắc team.</p>
+
+      <div class="step-row">
+        <div class="step-num-bubble">1</div>
+        <div class="step-content">
+          <h4>Kết nối wiki với codebase hiện tại</h4>
+          <p>Lần đầu mở 1 codebase mới. Lệnh detect project name + tech stack rồi tạo
+            <code>.claude/wiki.json</code> kết nối với workspace.</p>
+          <pre><code>/wiki-setup</code></pre>
+          <p>Nếu workspace chưa có, gõ <code>/new-workspace tên-dự-án</code> để tạo mới.</p>
+        </div>
+      </div>
+
+      <div class="step-row">
+        <div class="step-num-bubble">2</div>
+        <div class="step-content">
+          <h4>Tìm nhanh quy tắc/thoả thuận trước khi code</h4>
+          <p>Biết mình cần tìm gì thì dùng <code>/find {keywords}</code> để tìm nhanh trong wiki.</p>
+          <pre><code>/find idempotency retry
+/find rest error shape</code></pre>
+        </div>
+      </div>
+
+      <div class="step-row">
+        <div class="step-num-bubble">3</div>
+        <div class="step-content">
+          <h4>Viết code theo wiki cho task lớn</h4>
+          <p>Trước MỌI task (implement feature, fix bug, design, incident, review), gõ
+            <code>/use-wiki</code> để chạy quy trình kiểm tra trước khi viết code, giúp giảm sai sót.</p>
+          <pre><code>/use-wiki implement payment refund flow with idempotency</code></pre>
+          <p>Mục tiêu: code bám đúng quy tắc của team, tránh tạo ra phần không được thống nhất.</p>
+        </div>
+      </div>
+
+      <div class="callout tip">
+        <strong>💡 Tiếp theo:</strong> Sau khi code merge, gõ <code>/update-wiki</code> để wiki cập nhật theo code mới.
+        Định kỳ chạy <code>/rebase-wiki</code> để sửa chỗ wiki khác so với code thật.
+      </div>
+    </div>
+
+    <!-- Path: Maintainer -->
+    <div class="persona-path" id="path-owner">
+      <h3>📚 Đường đi cho Quản trị Wiki</h3>
+      <p class="who">Bạn setup wiki cho team mới, hoặc tạo workspace từ codebase cũ.</p>
+
+      <div class="step-row">
+        <div class="step-num-bubble">1</div>
+        <div class="step-content">
+          <h4>Tạo workspace mới</h4>
+          <p>Wizard hỏi metadata (company, role, period, stack, packs) rồi scaffold đủ folder + workspace.md + patterns-index.md trống.</p>
+          <pre><code>/new-workspace acme-corp</code></pre>
+        </div>
+      </div>
+
+      <div class="step-row">
+        <div class="step-num-bubble">2</div>
+        <div class="step-content">
+          <h4>Bootstrap knowledge từ codebase có sẵn</h4>
+          <p>Nếu team đã có codebase legacy, dùng <code>/code-analyze</code> để snapshot codebase
+            → hệ thống đề xuất quy tắc, thoả thuận, và kiến trúc từ code thật.</p>
+          <pre><code>/code-analyze
+/evidence-qa
+/evidence-apply</code></pre>
+        </div>
+      </div>
+
+      <div class="step-row">
+        <div class="step-num-bubble">3</div>
+        <div class="step-content">
+          <h4>Sinh report tổng quan để share cho team</h4>
+          <p>Một file HTML self-contained với toàn bộ workspace
+            (Overview / Architecture / Contracts / Patterns / Domains / ADRs / Runbooks).</p>
+          <pre><code>/wiki-report</code></pre>
+          <p>Mở file HTML trong trình duyệt — không cần server.</p>
+        </div>
+      </div>
+
+      <div class="callout tip">
+        <strong>💡 Tiếp theo:</strong> Định kỳ chạy <code>/wiki-eval</code> để xem hiệu quả wiki
+        (hallucination rate, knowledge gaps, plan-block rate). Khi nghi wiki lệch so với code → <code>/rebase-wiki</code>.
+      </div>
+    </div>
+
+    <!-- Path: Tự làm / Chuyên gia ngành khác -->
+    <div class="persona-path" id="path-solo">
+      <h3>🔧 Hướng dẫn cho Tự làm / Chuyên gia ngành khác</h3>
+      <p class="who">Bạn là chuyên gia ngành khác (cơ khí, kế toán, y tế, luật, giáo viên...) tự dùng Claude Code làm trợ lý cá nhân để tạo công cụ. Có ý tưởng nhưng không biết bắt đầu từ đâu.</p>
+
+      <div class="step-row">
+        <div class="step-num-bubble">1</div>
+        <div class="step-content">
+          <h4>Bật chế độ Solo Builder</h4>
+          <p><strong>Cách dễ nhất</strong>: gõ <code>/tool-design</code> ngay — hệ thống tự hỏi và bật gói giúp.</p>
+          <p><strong>Cách thủ công</strong>: chạy <code>/wiki-setup</code> → bước chọn packs, tick <code>pack-solo-builder</code>.</p>
+          <p>Khi muốn áp cho <strong>tất cả dự án</strong> trong workspace → sửa file <code>workspace.md</code> mục <code>## Packs</code>:</p>
+          <pre><code>## Packs
+
+- pack-solo-builder</code></pre>
+        </div>
+      </div>
+
+      <div class="step-row">
+        <div class="step-num-bubble">2</div>
+        <div class="step-content">
+          <h4>Thiết kế công cụ đầu tiên từ ý tưởng</h4>
+          <p>Ý tưởng chưa rõ cũng OK. Hệ thống sẽ hỏi 6-8 câu (mỗi câu có ví dụ + option "tôi không biết"), vẽ sơ đồ hệ thống, kiểm tra công cụ đã có để tránh trùng, rồi gợi ý cách làm phù hợp.</p>
+          <pre><code>/tool-design "tool tính moment uốn cho dầm thép"
+/tool-design "quản lý kho linh kiện trong xưởng"
+/tool-design "pull tỷ giá USD/VND mỗi sáng"</code></pre>
+          <p>Kết quả: 1 bản thiết kế chứa sơ đồ hệ thống, công nghệ được chọn + lý do, hướng dẫn cài đặt cho cả Linux lẫn Windows, và tiêu chí kiểm tra.</p>
+        </div>
+      </div>
+
+      <div class="step-row">
+        <div class="step-num-bubble">3</div>
+        <div class="step-content">
+          <h4>Chuyển thiết kế thành code</h4>
+          <p>Khi bản thiết kế đã hoàn chỉnh (đầy đủ, không còn câu hỏi mở), yêu cầu Claude Code viết code theo đúng thiết kế:</p>
+          <pre><code>implement spec ở workspaces/{ws}/tools/{slug}-spec.md</code></pre>
+          <p>Claude sẽ viết code đúng theo bản thiết kế — không tự đổi công nghệ hay tự quyết định.</p>
+        </div>
+      </div>
+
+      <div class="callout tip">
+        <strong>💡 Tiếp theo:</strong>
+        <code>/tool-list</code> xem công cụ đã tạo (tránh tạo trùng). <code>/tool-extend tên-công-cụ</code> thêm tính năng cho công cụ đã có. Trên Windows nếu cần cài đặt phức tạp → Claude tự gợi ý dùng Docker.
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CONCEPTS ============ -->
+  <section class="block" id="concepts">
+    <h2><span class="step-num">2</span>Khái niệm cốt lõi (đọc 3 phút)</h2>
+    <p class="lead">Hiểu 5 khái niệm này là đủ để dùng wiki hằng ngày.</p>
+
+    <dl class="glossary">
+      <dt>Workspace (kho kiến thức riêng cho từng công ty/dự án)</dt>
+      <dd>Mỗi công ty/dự án bạn làm = 1 thư mục riêng. Kiến thức KHÔNG được trộn giữa các workspace — vì công ty A và B có quy tắc khác nhau, nếu trộn AI sẽ áp sai. Workspace đang dùng nằm trong <code>.claude/wiki.json</code>.</dd>
+
+      <dt>Pack (gói kiến thức theo công nghệ)</dt>
+      <dd>Wiki-template hoạt động với mọi công nghệ. Kiến thức đặc thù (Kafka, REST, React, AI app, product...) nằm trong các <code>packs</code>. Bật/tắt qua <code>/wiki-setup</code> bước chọn packs (giao diện tick), hoặc sửa file <code>workspace.md</code>. Hiện có 14 packs, xem section bên dưới.</dd>
+
+      <dt>Thoả thuận (Contract) vs Cách làm (Pattern)</dt>
+      <dd>Thứ tự ưu tiên: <strong>Thoả thuận &gt; Cách làm &gt; Tài liệu dự án &gt; Kiến thức chuyên môn</strong>.
+        Thoả thuận = quy tắc cố định (cấu trúc API, định dạng dữ liệu) — KHÔNG được thay đổi.
+        Cách làm = phương pháp tốt nhất — nên tái sử dụng, có thể ngoại lệ nếu có lý do chính đáng.</dd>
+
+      <dt>Lệnh (Slash command) vs Quy trình nội bộ</dt>
+      <dd>Lệnh (<code>/use-wiki</code>, <code>/find</code>, ...) = lệnh bạn gọi trực tiếp.
+        Quy trình nội bộ (planner, context-selector, reviewer, ...) = các bước chạy tự động bên trong,
+        bạn không cần quan tâm.</dd>
+
+      <dt>Quy trình đưa dữ liệu vào wiki (Evidence)</dt>
+      <dd>4 bước: <code>/evidence-ingest</code> (nhập) → <code>/evidence-analyze</code> (phân tích) → <code>/evidence-qa</code> (kiểm tra) → <code>/evidence-apply</code> (áp dụng).
+        Dùng khi có nguồn ngoài (Confluence, Linear, paste, code) cần đưa vào wiki đã kiểm tra.
+        Dữ liệu gốc không đổi sau khi nhập. Mỗi workspace tách biệt hoàn toàn.</dd>
+    </dl>
+  </section>
+
+  <!-- ============ COMMANDS ============ -->
+  <section class="block" id="commands">
+    <h2><span class="step-num">3</span>Tra cứu lệnh (cheat sheet)</h2>
+    <p class="lead">Tag <span class="cmd-tag tech">tech</span> = dành cho engineer · <span class="cmd-tag nontech">nontech</span> = không cần biết code · <span class="cmd-tag maintainer">maint</span> = wiki owner.</p>
+
+    <div class="cmd-group">
+      <h3>🏁 Workspace setup &amp; navigation</h3>
+      <table class="cmd-table">
+        <thead><tr><th>Lệnh</th><th>Mục đích</th><th>Khi nào</th></tr></thead>
+        <tbody>
+          <tr><td class="cmd-name">/wiki-setup<span class="cmd-tag tech">tech</span></td><td>Tạo <code>.claude/wiki.json</code> cho codebase, detect project name + components</td><td>Lần đầu dùng wiki với 1 codebase</td></tr>
+          <tr><td class="cmd-name">/wiki-detect<span class="cmd-tag tech">tech</span></td><td>Validate <code>wiki.json</code>, scan dependency, propose update</td><td>Kiểm tra sau setup, hoặc khi gặp lỗi</td></tr>
+          <tr><td class="cmd-name">/switch-workspace tên<span class="cmd-tag tech">tech</span></td><td>Đổi workspace đang dùng cho codebase hiện tại</td><td>Cùng codebase phục vụ nhiều lĩnh vực</td></tr>
+          <tr><td class="cmd-name">/new-workspace tên-dự-án<span class="cmd-tag maintainer">maint</span></td><td>Tạo workspace mới từ mẫu</td><td>Mới tham gia công ty/dự án</td></tr>
+          <tr><td class="cmd-name">/list-workspaces<span class="cmd-tag nontech">nontech</span><span class="cmd-tag tech">tech</span></td><td>Hiện danh sách mọi workspace, đánh dấu workspace đang dùng</td><td>Xem workspace nào đã có</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="cmd-group">
+      <h3>🧠 Wiki usage (per-task)</h3>
+      <table class="cmd-table">
+        <thead><tr><th>Lệnh</th><th>Mục đích</th><th>Khi nào</th></tr></thead>
+        <tbody>
+          <tr><td class="cmd-name">/use-wiki<span class="cmd-tag tech">tech</span></td><td>5-stage pipeline (planner → context → review → code → reviewer)</td><td>Trước MỌI task: implement, fix bug, design, review</td></tr>
+          <tr><td class="cmd-name">/find {keywords}<span class="cmd-tag tech">tech</span></td><td>Tìm nhanh quy tắc/thoả thuận/dịch vụ, 5 kết quả phù hợp nhất</td><td>Tìm nhanh khi đã biết mình cần gì</td></tr>
+          <tr><td class="cmd-name">/update-wiki<span class="cmd-tag tech">tech</span></td><td>Sync wiki với code đã thay đổi (git diff → curator áp dụng)</td><td>Sau khi merge code, để wiki không bị lệch</td></tr>
+          <tr><td class="cmd-name">/rebase-wiki<span class="cmd-tag maintainer">maint</span></td><td>Quét toàn bộ wiki vs code, sửa chỗ wiki khác so với code thật</td><td>Định kỳ (tuần/tháng), hoặc khi nghi drift lớn</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="cmd-group">
+      <h3>💼 Non-tech contributors (Product / Business)</h3>
+      <table class="cmd-table">
+        <thead><tr><th>Lệnh</th><th>Mục đích</th><th>Khi nào</th></tr></thead>
+        <tbody>
+          <tr><td class="cmd-name">/product-brief [title]<span class="cmd-tag nontech">nontech</span></td><td>Hướng dẫn tạo bản tóm tắt sản phẩm: Vấn đề / Người dùng / Số đo thành công / Tiêu chí</td><td>PM tạo brief mới trước khi giao cho engineering</td></tr>
+          <tr><td class="cmd-name">/business-view {target}<span class="cmd-tag nontech">nontech</span></td><td>Dịch tài liệu kỹ thuật → ngôn ngữ dễ hiểu cho người phi kỹ thuật</td><td>Giải thích tính năng cho sếp/kinh doanh/CS</td></tr>
+          <tr><td class="cmd-name">/wiki-explain chủ-đề<span class="cmd-tag nontech">nontech</span></td><td>Giải thích 1 thuật ngữ/quy tắc bằng ngôn ngữ đơn giản</td><td>Đọc wiki gặp thuật ngữ lạ, cần hiểu nhanh</td></tr>
+        </tbody>
+      </table>
+      <div class="callout info">
+        <strong>Yêu cầu:</strong> Workspace cần bật <code>pack-product</code> — dễ nhất: chạy <code>/wiki-setup</code> Bước 4.5 và tick <code>pack-product</code> (UI checkbox, không cần edit markdown). Hoặc slash <code>/product-brief</code> tự hỏi và bật giúp nếu chưa có.
+      </div>
+    </div>
+
+    <div class="cmd-group">
+      <h3>🔧 Solo builder (Non-tech expert dùng Claude Code làm no-code IDE)</h3>
+      <table class="cmd-table">
+        <thead><tr><th>Lệnh</th><th>Mục đích</th><th>Khi nào</th></tr></thead>
+        <tbody>
+          <tr><td class="cmd-name">/tool-design "ý tưởng"<span class="cmd-tag nontech">nontech</span></td><td>Wizard discovery → system map → recipe match → recommend tech stack → ghi spec (KHÔNG sinh code)</td><td>Có ý tưởng công cụ mới nhưng chưa biết bắt đầu thế nào</td></tr>
+          <tr><td class="cmd-name">/tool-list<span class="cmd-tag nontech">nontech</span></td><td>Hiện danh sách công cụ đã tạo, nhóm theo trạng thái</td><td>Xem "tôi đã tạo cái gì rồi" trước khi tạo mới (tránh trùng)</td></tr>
+          <tr><td class="cmd-name">/tool-extend tên-công-cụ<span class="cmd-tag nontech">nontech</span></td><td>Đề xuất nâng cấp cho công cụ đã có — thêm tính năng, thay đổi phạm vi</td><td>Công cụ đã có cần thêm tính năng hoặc điều chỉnh</td></tr>
+        </tbody>
+      </table>
+      <div class="callout info">
+        <strong>Yêu cầu:</strong> Workspace bật <code>pack-solo-builder</code> (slash <code>/tool-design</code> tự bật giúp). Recipe library cross-platform: Linux native + Windows recommend Docker khi deps phức tạp (PDF, image, share team).
+      </div>
+    </div>
+
+    <div class="cmd-group">
+      <h3>📊 Reporting</h3>
+      <table class="cmd-table">
+        <thead><tr><th>Lệnh</th><th>Mục đích</th><th>Khi nào</th></tr></thead>
+        <tbody>
+          <tr><td class="cmd-name">/wiki-report<span class="cmd-tag maintainer">maint</span></td><td>1 file HTML độc lập — Tổng quan / Kiến trúc / Thoả thuận / Quy tắc / Tài liệu vận hành</td><td>Onboard thành viên mới, báo cáo định kỳ, kiểm tra khoảng trống</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="cmd-group">
+      <h3>🔬 Codebase analysis &amp; evidence pipeline</h3>
+      <table class="cmd-table">
+        <thead><tr><th>Lệnh</th><th>Mục đích</th><th>Khi nào</th></tr></thead>
+        <tbody>
+          <tr><td class="cmd-name">/code-analyze<span class="cmd-tag maintainer">maint</span></td><td>Phân tích codebase → đề xuất quy tắc/thoả thuận/kiến trúc từ code thật</td><td>Nhập codebase cũ, hoặc làm mới sau thay đổi lớn</td></tr>
+          <tr><td class="cmd-name">/evidence-ingest<span class="cmd-tag maintainer">maint</span></td><td>Pull raw từ MCP / API / paste / code vào <code>evidence/sources/{id}/</code></td><td>Có nguồn ngoài cần đưa vào wiki</td></tr>
+          <tr><td class="cmd-name">/obsidian-ingest<span class="cmd-tag maintainer">maint</span></td><td>Nhập hàng loạt từ Obsidian vault: quét, loại trùng, kiểm tra trước khi nhập</td><td>Maintain Second Brain trong Obsidian</td></tr>
+          <tr><td class="cmd-name">/evidence-analyze<span class="cmd-tag maintainer">maint</span></td><td>Phân tích dữ liệu đã nhập</td><td>Sau khi nhập dữ liệu</td></tr>
+          <tr><td class="cmd-name">/evidence-qa<span class="cmd-tag maintainer">maint</span></td><td>Q&amp;A loop với user, sinh <code>verified-facts.md</code></td><td>Sau khi phân tích, kiểm tra trước khi áp dụng</td></tr>
+          <tr><td class="cmd-name">/evidence-apply<span class="cmd-tag maintainer">maint</span></td><td>Áp dụng sự kiện đã kiểm tra vào wiki</td><td>Sau khi kiểm tra xong</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="cmd-group">
+      <h3>🔭 Pipeline observability</h3>
+      <table class="cmd-table">
+        <thead><tr><th>Lệnh</th><th>Mục đích</th><th>Khi nào</th></tr></thead>
+        <tbody>
+          <tr><td class="cmd-name">/wiki-trace {run_id}<span class="cmd-tag maintainer">maint</span></td><td>Render Markdown timeline 1 run pipeline (5 stage)</td><td>Khi output <code>/use-wiki</code> sai — debug stage divergence</td></tr>
+          <tr><td class="cmd-name">/wiki-eval<span class="cmd-tag maintainer">maint</span></td><td>Thống kê: tỷ lệ AI bịa, khoảng trống kiến thức, điểm vi phạm</td><td>Định kỳ kiểm tra hiệu quả wiki</td></tr>
+          <tr><td class="cmd-name">/wiki-viz<span class="cmd-tag maintainer">maint</span></td><td>HTML viewer + live watch cho trace</td><td>Kiểm tra trực quan</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ============ PACKS ============ -->
+  <section class="block" id="packs">
+    <h2><span class="step-num">4</span>Packs có sẵn</h2>
+    <p class="lead">Bật pack: chạy <code>/wiki-setup</code> Bước 4.5 (checkbox UI per-codebase, ghi vào <code>wiki.json#packs</code>) — hoặc edit <code>workspaces/{ws}/workspace.md</code> section <code>## Packs</code> (áp dụng workspace-wide cho mọi codebase).</p>
+
+    <table class="cmd-table">
+      <thead><tr><th>Pack</th><th>Status</th><th>Use cho</th></tr></thead>
+      <tbody>
+        <tr><td class="cmd-name">pack-event-driven</td><td><span class="cmd-tag tech">stable</span></td><td>Xử lý sự kiện: Kafka, MQTT, RabbitMQ — hàng đợi thử lại, xử lý lỗi</td></tr>
+        <tr><td class="cmd-name">pack-web-api</td><td><span class="cmd-tag tech">stable</span></td><td>API web: REST/GraphQL/gRPC — kiểm tra đầu vào, mã lỗi, không lộ thông tin</td></tr>
+        <tr><td class="cmd-name">pack-frontend-react</td><td><span class="cmd-tag tech">stable</span></td><td>React + Next.js — hooks rules, a11y, effect cleanup, list keys, server/client boundary</td></tr>
+        <tr><td class="cmd-name">pack-ai-app</td><td><span class="cmd-tag tech">stable</span></td><td>Ứng dụng AI: prompt caching, output có cấu trúc, kiểm thử, không lộ dữ liệu cá nhân</td></tr>
+        <tr><td class="cmd-name">pack-agentic</td><td><span class="cmd-tag tech">stable</span></td><td>AI Agent: vòng lặp, dùng công cụ, đa agent — giới hạn bước, công cụ lặp lại an toàn</td></tr>
+        <tr><td class="cmd-name">pack-claude-plugin-dev</td><td><span class="cmd-tag tech">stable</span></td><td>Phát triển plugin cho Claude Code — lệnh, agent con, kỹ năng, hook</td></tr>
+        <tr><td class="cmd-name">pack-product</td><td><span class="cmd-tag beta">beta</span></td><td>Tài liệu sản phẩm cho PM/business — bản tóm tắt, OKR, lộ trình, người dùng, chỉ số</td></tr>
+        <tr><td class="cmd-name">pack-solo-builder</td><td><span class="cmd-tag beta">beta</span></td><td>Cho non-tech expert ngành khác (cơ khí, kế toán, ...) dùng Claude Code làm "no-code IDE" — tool design coach + recipe library cross-platform</td></tr>
+        <tr><td class="cmd-name">pack-ba</td><td><span class="cmd-tag beta">beta</span></td><td>Business analysis — mô hình hóa yêu cầu, acceptance criteria, process mapping, stakeholder alignment</td></tr>
+        <tr><td class="cmd-name">pack-qc</td><td><span class="cmd-tag beta">beta</span></td><td>Quality control — test design/execution, defect triage, regression plan, release quality gate</td></tr>
+        <tr><td class="cmd-name">pack-pentest</td><td><span class="cmd-tag beta">beta</span></td><td>Pentest defensive/authorized — scope boundary, evidence-based finding, risk rating, remediation</td></tr>
+        <tr><td class="cmd-name">pack-security</td><td><span class="cmd-tag beta">beta</span></td><td>Security engineering — threat modeling, secure design review, vulnerability management, control verification</td></tr>
+        <tr><td class="cmd-name">pack-optimize</td><td><span class="cmd-tag beta">beta</span></td><td>Performance optimization — baseline metric, profiling, bottleneck analysis, regression guard</td></tr>
+        <tr><td class="cmd-name">pack-dba</td><td><span class="cmd-tag beta">beta</span></td><td>DBA workflow — schema change safety, query hygiene, backup/restore readiness, operational guardrails</td></tr>
+      </tbody>
+    </table>
+
+    <p style="font-size:13px;color:#57606a;margin-top:16px">
+      <strong>Ví dụ kết hợp:</strong> Solo fullstack → <code>pack-web-api + pack-frontend-react + pack-ai-app</code>.
+      AI agent product → <code>pack-ai-app + pack-agentic + pack-web-api + pack-frontend-react</code>.
+      Team có PM → thêm <code>pack-product</code>.
+    </p>
+  </section>
+
+  <!-- ============ FAQ ============ -->
+  <section class="block" id="faq">
+    <h2><span class="step-num">5</span>FAQ</h2>
+
+    <details>
+      <summary>Tôi không biết code, có dùng wiki được không?</summary>
+      <div class="faq-body">
+        <p>Có — 2 hướng tuỳ vai trò:</p>
+        <p><strong>Nếu bạn là PM / người làm business</strong> trong team có engineer: bật <code>pack-product</code>, dùng:</p>
+        <ul>
+          <li><code>/product-brief</code> — tạo brief mới</li>
+          <li><code>/business-view {service}</code> — đọc service ở góc nhìn business</li>
+          <li><code>/wiki-explain chủ-đề</code> — giải thích thuật ngữ kỹ thuật</li>
+        </ul>
+        <p><strong>Nếu bạn là chuyên gia ngành khác</strong> (cơ khí, kế toán, y tế, ...) tự dùng Claude Code build tools: bật <code>pack-solo-builder</code>, dùng:</p>
+        <ul>
+          <li><code>/tool-design "ý tưởng"</code> — wizard discovery + recommend tech stack</li>
+          <li><code>/tool-list</code> — xem toolbox đã có</li>
+          <li><code>/tool-extend tên-công-cụ</code> — thêm tính năng cho tool đã có</li>
+        </ul>
+        <p>Không cần biết git, terminal, hay code. Chỉ cần biết gõ lệnh trong Claude Code.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>Tôi có 3 dự án ở 3 công ty khác nhau, có dùng chung wiki được không?</summary>
+      <div class="faq-body">
+        <p>Có — mỗi công ty/dự án = 1 workspace riêng dưới <code>workspaces/{name}/</code>. Knowledge KHÔNG được trộn (Hệ thống đảm bảo).
+          Tạo workspace mới: <code>/new-workspace tên-dự-án</code>. Đổi: <code>/switch-workspace tên</code>.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>Wiki và code drift — làm sao đồng bộ?</summary>
+      <div class="faq-body">
+        <p>2 lệnh:</p>
+        <ul>
+          <li><code>/update-wiki</code> — sau mỗi code merge, áp git diff vào wiki</li>
+          <li><code>/rebase-wiki</code> — định kỳ quét toàn bộ wiki so với code, sửa chỗ lệch</li>
+        </ul>
+        <p>Để evaluate hiệu quả wiki: <code>/wiki-eval</code> — báo cáo tỷ lệ AI bịa, khoảng trống kiến thức.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>Khi nào dùng pack, khi nào KHÔNG dùng?</summary>
+      <div class="faq-body">
+        <p><strong>Dùng pack</strong> khi knowledge đặc thù theo stack (vd Kafka rules, React hooks rules). Bật qua <code>/wiki-setup</code> Bước 4.5 — checkbox UI, không cần edit markdown.</p>
+        <p><strong>KHÔNG dùng pack</strong> cho rule chỉ áp dụng riêng workspace bạn — viết vào
+          <code>workspaces/{ws}/agents/constraints.md</code> với prefix <code>ws-</code>.</p>
+        <p><strong>Engine rule</strong> (mọi workspace, stack-agnostic) → sửa <code>agents/constraints.md</code>.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>1 workspace có nhiều codebase, mỗi codebase cần pack khác nhau — làm sao?</summary>
+      <div class="faq-body">
+        <p>Per-codebase override qua <code>.claude/wiki.json#packs</code> field:</p>
+        <ul>
+          <li>Workspace default: <code>workspaces/acme-corp/workspace.md ## Packs</code> = <code>[pack-event-driven, pack-web-api]</code></li>
+          <li>Codebase frontend: <code>acme-frontend/.claude/wiki.json</code> ghi <code>"packs": ["pack-frontend-react", "pack-web-api"]</code> → effective = chỉ frontend + web-api</li>
+          <li>Codebase backend (không override) → effective = workspace default</li>
+        </ul>
+        <p><strong>Replace semantics</strong>, không additive. <code>null</code>/không có field = follow workspace default. Array = override hoàn toàn.</p>
+        <p>Cách dễ nhất: chạy <code>/wiki-setup</code> trong codebase → Bước 4.5 hiện checkbox UI cho mọi pack có sẵn, tick/untick → tự ghi <code>wiki.json</code>.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>Có quá nhiều slash command — tôi cần biết hết không?</summary>
+      <div class="faq-body">
+        <p>Không. 80% use case chỉ cần 3-4 lệnh:</p>
+        <ul>
+          <li><strong>Engineer hằng ngày</strong>: <code>/use-wiki</code>, <code>/find</code>, <code>/update-wiki</code></li>
+          <li><strong>Non-tech hằng ngày</strong>: <code>/product-brief</code>, <code>/business-view</code>, <code>/wiki-explain</code></li>
+          <li><strong>Setup 1 lần</strong>: <code>/wiki-setup</code> hoặc <code>/new-workspace</code></li>
+        </ul>
+        <p>Còn lại là cho maintainer hoặc trường hợp đặc biệt — học khi cần.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>Workspace của tôi nằm ở đâu trên máy?</summary>
+      <div class="faq-body">
+        <p>Mặc định <code>{wiki-template-root}/workspaces/{name}/</code>. Có thể override qua <code>~/.claude/wiki-global.json</code> field <code>wiki_root</code>.
+          Để xem path active: <code>/list-workspaces</code> hoặc đọc <code>&lt;cwd&gt;/.claude/wiki.json</code>.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>AI có "hallucinate" knowledge không có trong wiki không?</summary>
+      <div class="faq-body">
+        <p>Hệ thống có quy tắc cứng: nếu thiếu kiến thức → AI PHẢI báo "Giả định" hoặc "Xung đột quy tắc", KHÔNG được tự bịa.
+          Có validator (<code>scripts/validate.py</code>) chạy regex check pattern phổ biến.
+          Để monitor: <code>/wiki-eval</code> báo hallucination rate per run.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>Tôi muốn thêm pack mới cho stack riêng (vd Flutter) — cách nào?</summary>
+      <div class="faq-body">
+        <p>Chạy lệnh tạo pack mới:</p>
+        <pre style="background:#0d1117;color:#e6edf3"><code>python scripts/scaffold-pack.py pack-mobile-flutter</code></pre>
+        <p>Sinh 8 file skeleton. Customize <code>pack.yaml</code> components + keywords, viết <code>constraints.md</code>, thêm rule vào <code>scripts/rules.py</code>.
+          Đăng ký vào catalog: edit <code>packs/README.md</code>.</p>
+      </div>
+    </details>
+  </section>
+
+  <footer>
+    <p>
+      📚 <strong>Workspace Wiki</strong> · Cần đào sâu? Đọc
+      <a href="install.html">install.html</a> (cài đặt) ·
+      <a href="../README.md">README.md</a> ·
+      <a href="../QUICKSTART.md">QUICKSTART.md</a> ·
+      <a href="../CLAUDE.md">CLAUDE.md</a> (AI agent instructions) ·
+      <a href="../packs/README.md">packs/README.md</a> ·
+      <a href="../.claude/commands/README.md">slash commands index</a> ·
+      <a href="https://github.com/<owner>/<repo>">GitHub repository</a>
+    </p>
+    <p style="margin-top:8px;color:#8b949e">
+      File này self-contained — copy đi đâu cũng mở được. Không tracking, không CDN, không dependency.
+    </p>
+  </footer>
+
+</div>
+
+<script>
+  function pick(persona){
+    document.querySelectorAll('.persona-card').forEach(c=>{
+      c.classList.toggle('active', c.dataset.persona===persona);
+    });
+    document.querySelectorAll('.persona-path').forEach(p=>{
+      p.classList.toggle('active', p.id==='path-'+persona);
+    });
+    const target = document.getElementById('path-'+persona);
+    if(target){
+      setTimeout(()=>target.scrollIntoView({behavior:'smooth', block:'start'}), 50);
+    }
+  }
+  // Keyboard nav: 1/2/3 chọn persona
+  document.addEventListener('keydown', (e)=>{
+    if(e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    if(e.key==='1') pick('nontech');
+    if(e.key==='2') pick('engineer');
+    if(e.key==='3') pick('owner');
+    if(e.key==='4') pick('solo');
+  });
+</script>
+</body>
+</html>

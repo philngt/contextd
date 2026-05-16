@@ -1,0 +1,25 @@
+name: pack-security
+version: 0.1.0
+description: Security engineering pack — threat modeling, secure design review, vulnerability management, and control verification.
+
+components:
+  - threat-modeling
+  - secure-design-review
+  - vulnerability-management
+  - security-controls
+
+keywords:
+  threat-modeling: [threat model, abuse case, threat scenario, attack path, trust boundary]
+  secure-design-review: [secure design, security review, authz boundary, least privilege]
+  vulnerability-management: [vulnerability management, triage, cve, patching, remediation tracking]
+  security-controls: [security control, logging redaction, encryption, key management, secret handling]
+
+files:
+  constraints: agents/constraints.md
+  coding_rules: agents/coding-rules.md
+  validator_rules: agents/pipeline/validator-rules.md
+  validator_script: scripts/rules.py
+  retrieval_map: agents/pipeline/retrieval-map.md
+  prompt_overrides: agents/pipeline/prompt-overrides.md
+
+conflicts_with: []

@@ -1,0 +1,192 @@
+evid_id: "2026-05-08-engine-bootstrap-wiki-template"
+workspace: "wiki"
+applied_at: "2026-05-08T00:00:00+07:00"
+applied_by: "lechihieu.ict@gmail.com"
+mode: "update"
+inline_apply: true   # main agent direct edit (curator delegation skipped — engine workspace bootstrap)
+inline_apply_reason: "Engine workspace bootstrap — wiki-curator subagent itself being documented; using inline mode with main agent path verification per Bước 5 fallback rule."
+
+inputs:
+  verified_facts: "workspaces/wiki/evidence/qa/2026-05-08-engine-bootstrap-wiki-template/verified-facts.md"
+  knowledge_gaps: "workspaces/wiki/evidence/analysis/2026-05-08-engine-bootstrap-wiki-template/08-knowledge-gaps.md"
+  contradictions: null   # agentic-engine pipeline does not generate 02-contradiction.md
+  final_report: null     # --with-report not passed
+
+target_files:
+  - path: "patterns-index.md"
+    sections_changed: ["Platform Patterns", "Contracts"]
+    change_summary: "Populated 8 pattern rows + 8 contract rows replacing empty placeholders. Order: alphabetical. F-007 multi-stage-subagent-pipeline NOT marked flagship (per user override q-007). Domain Workflows section updated to '(none — workspace wiki is engine-level)'."
+    citations: ["F-022", "q-007 (user override)"]
+
+created_files:
+  # Block: Platform Contracts (8)
+  - path: "platform/contracts/evid-id-format.md"
+    template_used: "constructed inline from a04#C-001 (no templates/contract.md exists)"
+    populated_from_facts: ["F-009"]
+    citations: ["q-009"]
+  - path: "platform/contracts/evidence-state-machine-transitions.md"
+    template_used: "inline (PAIR with patterns/evidence-state-machine.md)"
+    populated_from_facts: ["F-010"]
+    citations: ["q-005"]
+  - path: "platform/contracts/citation-format.md"
+    template_used: "inline (PAIR with patterns/citation-rule.md)"
+    populated_from_facts: ["F-011"]
+    citations: ["q-006"]
+  - path: "platform/contracts/evidence-file-layout.md"
+    template_used: "inline"
+    populated_from_facts: ["F-012"]
+    citations: ["q-010"]
+  - path: "platform/contracts/raw-md-section-structure.md"
+    template_used: "inline (1 contract đa-variant: code | agentic-engine | bundle)"
+    populated_from_facts: ["F-013"]
+    citations: ["q-011"]
+  - path: "platform/contracts/source-yaml-schema.md"
+    template_used: "inline (KEEP unified — no C-004a split)"
+    populated_from_facts: ["F-014"]
+    citations: ["q-012"]
+  - path: "platform/contracts/slash-command-naming.md"
+    template_used: "inline (BOTH conventions documented as valid)"
+    populated_from_facts: ["F-015"]
+    citations: ["q-013"]
+  - path: "platform/contracts/sub-agent-frontmatter-schema.md"
+    template_used: "inline"
+    populated_from_facts: ["F-016"]
+    citations: ["q-014"]
+
+  # Block: Platform Patterns (8)
+  - path: "platform/patterns/workspace-resolve-step0.md"
+    template_used: "templates/pattern.md"
+    populated_from_facts: ["F-001"]
+    citations: ["q-001"]
+  - path: "platform/patterns/askuser-confirm-preview.md"
+    template_used: "templates/pattern.md"
+    populated_from_facts: ["F-002"]
+    citations: ["q-002"]
+  - path: "platform/patterns/secrets-blocklist-gate.md"
+    template_used: "templates/pattern.md"
+    populated_from_facts: ["F-003"]
+    citations: ["q-003"]
+  - path: "platform/patterns/redaction-post-pass.md"
+    template_used: "templates/pattern.md"
+    populated_from_facts: ["F-004"]
+    citations: ["q-004"]
+  - path: "platform/patterns/evidence-state-machine.md"
+    template_used: "templates/pattern.md (PAIR with contracts/evidence-state-machine-transitions.md)"
+    populated_from_facts: ["F-005"]
+    citations: ["q-005"]
+  - path: "platform/patterns/citation-rule.md"
+    template_used: "templates/pattern.md (PAIR with contracts/citation-format.md)"
+    populated_from_facts: ["F-006"]
+    citations: ["q-006"]
+  - path: "platform/patterns/multi-stage-subagent-pipeline.md"
+    template_used: "templates/pattern.md"
+    populated_from_facts: ["F-007"]
+    citations: ["q-007 (user override — NOT flagship)"]
+    notes: "Per user override q-007: pattern doc NOT marked flagship in patterns-index. Position alphabetical normal. NO cross-reference từ workspace.md."
+  - path: "platform/patterns/variant-discriminated-dispatcher.md"
+    template_used: "templates/pattern.md"
+    populated_from_facts: ["F-008"]
+    citations: ["q-008"]
+    notes: "Version v1 — single instance. Pattern shape may evolve khi variant thứ 3 introduced. Confidence: medium."
+
+  # Block: Project engine + services (8)
+  - path: "projects/engine/knowledge-map.md"
+    template_used: "constructed inline (no templates/knowledge-map.md exists)"
+    populated_from_facts: ["F-017 (derived)"]
+    citations: ["q-015", "q-016"]
+  - path: "projects/engine/services/workspace-ops.md"
+    template_used: "templates/service.md (a05 DRAFT-G1)"
+    populated_from_facts: ["F-017a"]
+    citations: ["q-015"]
+  - path: "projects/engine/services/wiki-usage.md"
+    template_used: "templates/service.md (a05 DRAFT-G2)"
+    populated_from_facts: ["F-017b"]
+    citations: ["q-015"]
+  - path: "projects/engine/services/codebase-analysis.md"
+    template_used: "templates/service.md (a05 DRAFT-G3)"
+    populated_from_facts: ["F-017c"]
+    citations: ["q-015"]
+  - path: "projects/engine/services/reporting.md"
+    template_used: "templates/service.md (a05 DRAFT-G4)"
+    populated_from_facts: ["F-017d"]
+    citations: ["q-015"]
+  - path: "projects/engine/services/observability.md"
+    template_used: "templates/service.md (a05 DRAFT-G5)"
+    populated_from_facts: ["F-017e"]
+    citations: ["q-015"]
+  - path: "projects/engine/services/evidence-pipeline.md"
+    template_used: "templates/service.md (a05 DRAFT-G6)"
+    populated_from_facts: ["F-017f"]
+    citations: ["q-015"]
+  - path: "projects/engine/services/agents.md"
+    template_used: "templates/service.md adapted (a05 DRAFT-A1..A5 table format)"
+    populated_from_facts: ["F-017g"]
+    citations: ["q-015"]
+
+  # Block: ADRs (4)
+  - path: "decisions/001-introduce-agentic-engine-variant.md"
+    template_used: "templates/adr.md (status=ACCEPTED)"
+    populated_from_facts: ["F-018"]
+    citations: ["q-017"]
+  - path: "decisions/002-keep-code-analysis-prompts-monolithic.md"
+    template_used: "templates/adr.md"
+    populated_from_facts: ["F-019"]
+    citations: ["q-018"]
+  - path: "decisions/003-self-referential-engine-workspace.md"
+    template_used: "templates/adr.md"
+    populated_from_facts: ["F-020"]
+    citations: ["q-016", "raw.md note 5"]
+  - path: "decisions/004-pattern-contract-pairing-convention.md"
+    template_used: "templates/adr.md"
+    populated_from_facts: ["F-021"]
+    citations: ["q-005", "q-006"]
+
+validator:
+  verified_facts_present: pass
+  no_p0_p1_awaiting_external: pass
+  no_p0_p1_deferred: pass
+  citations_complete: pass
+  affects_paths_in_workspace: pass_with_note
+  affects_paths_note: "F-023 (.claude/commands/README.md) explicitly excluded — engine-level path, marked NOT in apply manifest by verified-facts.md. Will be handled in separate session via /update-wiki."
+  contradictions_resolved: not_applicable
+  contradictions_note: "agentic-engine pipeline doesn't generate 02-contradiction.md. Mini Contradiction Hunter ran across all batches — found 0 conflicts."
+
+deferred_questions:
+  - id: "q-020"
+    priority: "P2"
+    reason: "Pipeline support docs README table outdated (G-007 nice). Defer phiên riêng."
+  - id: "q-021"
+    priority: "P2"
+    reason: "Tools allowlist principle C-008a — sample size concern (G-009). Defer until sample ≥ 8 sub-agents."
+  - id: "q-022"
+    priority: "P2"
+    reason: "Configs/hooks unanalyzed (G-008). Defer to future rerun /code-analyze --allow-configs."
+  - id: "q-023"
+    priority: "P3"
+    reason: "Counter-arg overlap với engine spec docs. Stop check user choice. ADR D-003 covers boundary rule."
+  - id: "q-024"
+    priority: "P3"
+    reason: "Counter-arg source_type=engine alternative. Stop check. ADR D-001 alternatives section addresses."
+
+action_items_post_apply:
+  - id: "F-023"
+    description: "Add /wiki-viz row vào .claude/commands/README.md Section 'Pipeline observability'"
+    target_path: ".claude/commands/README.md"
+    target_scope: "engine-level (NOT in workspace path)"
+    command_to_run: "/update-wiki --scope .claude/commands/README.md"
+    blocking: false
+
+unresolved_blockers: []
+
+stats:
+  files_created: 28
+  files_edited: 1
+  total_facts_applied: 22
+  facts_excluded: 1
+  facts_excluded_list: ["F-023 (engine-level path, separate session)"]
+  patterns_created: 8
+  contracts_created: 8
+  services_created: 7
+  knowledge_maps_created: 1
+  adrs_created: 4
+  index_updates: 1

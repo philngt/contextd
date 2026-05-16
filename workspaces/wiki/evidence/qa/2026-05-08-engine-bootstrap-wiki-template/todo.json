@@ -1,0 +1,51 @@
+{
+  "evid_id": "2026-05-08-engine-bootstrap-wiki-template",
+  "workspace": "wiki",
+  "created_at": "2026-05-08T00:00:00+07:00",
+  "updated_at": "2026-05-08T00:00:00+07:00",
+  "state": "applied",
+
+  "config": {
+    "batch_size": 4,
+    "stop_when_p0_p1_clear": true
+  },
+
+  "questions": [
+    {"id": "q-001", "text": "Pattern P-001 workspace-resolve-step0 có nên thêm vào {ws}/platform/patterns/?", "priority": "P0", "reason": "G-001 blocking; 15/15 commands follow", "source_prompt": "04-questions", "batch": 1, "status": "answered", "answer_ref": "batches/batch-1-answers.md#q-001", "answered_at": "2026-05-08T00:00:00+07:00", "answered_by": "self", "via": "code-analyst-recommend"},
+    {"id": "q-002", "text": "Pattern P-002 askuser-confirm-preview có nên thêm vào platform/patterns/?", "priority": "P0", "reason": "G-001 blocking; 4+ commands follow", "source_prompt": "04-questions", "batch": 1, "status": "answered", "answer_ref": "batches/batch-1-answers.md#q-002", "answered_at": "2026-05-08T00:00:00+07:00", "answered_by": "self", "via": "code-analyst-recommend"},
+    {"id": "q-003", "text": "Pattern P-003 secrets-blocklist-gate có nên thêm vào platform/patterns/?", "priority": "P0", "reason": "G-001 blocking; security-critical", "source_prompt": "04-questions", "batch": 1, "status": "answered", "answer_ref": "batches/batch-1-answers.md#q-003", "answered_at": "2026-05-08T00:00:00+07:00", "answered_by": "self", "via": "code-analyst-recommend"},
+    {"id": "q-004", "text": "Pattern P-004 redaction-post-pass có nên thêm vào platform/patterns/?", "priority": "P0", "reason": "G-001 blocking; companion P-003", "source_prompt": "04-questions", "batch": 1, "status": "answered", "answer_ref": "batches/batch-1-answers.md#q-004", "answered_at": "2026-05-08T00:00:00+07:00", "answered_by": "self", "via": "code-analyst-recommend"},
+    {"id": "q-005", "text": "P-005/C-005 evidence-state-machine: pattern only, contract only, hay PAIR?", "priority": "P0", "reason": "G-001+G-002 cross-ref; convention decision", "source_prompt": "04-questions", "batch": 2, "status": "answered", "answer_ref": "batches/batch-2-answers.md#q-005", "answered_at": "2026-05-08T00:00:00+07:00", "answered_by": "self", "via": "code-analyst-recommend"},
+    {"id": "q-006", "text": "P-006/C-006 citation-rule + citation-format: confirm PAIR?", "priority": "P0", "reason": "G-001+G-002 cross-ref", "source_prompt": "04-questions", "batch": 2, "status": "answered", "answer_ref": "batches/batch-2-answers.md#q-006", "answered_at": "2026-05-08T00:00:00+07:00", "answered_by": "self", "via": "code-analyst-recommend"},
+    {"id": "q-007", "text": "Pattern P-007 multi-stage-subagent-pipeline làm FLAGSHIP top patterns-index?", "priority": "P0", "reason": "G-001 + identity statement", "source_prompt": "04-questions", "batch": 2, "status": "answered", "answer_ref": "batches/batch-2-answers.md#q-007", "answered_at": "2026-05-08T00:00:00+07:00", "answered_by": "self", "via": "user-override"},
+    {"id": "q-008", "text": "Pattern P-008 variant-discriminated-dispatcher: add NOW (sample=1) hay defer?", "priority": "P0", "reason": "G-001; sample size concern", "source_prompt": "04-questions", "batch": 2, "status": "answered", "answer_ref": "batches/batch-2-answers.md#q-008", "answered_at": "2026-05-08T00:00:00+07:00", "answered_by": "self", "via": "code-analyst-recommend"},
+    {"id": "q-009", "text": "Contract C-001 evid-id-format: src list {paste,api,mcp,code,engine,platform} đầy đủ?", "priority": "P0", "reason": "G-002 blocking; coverage 5/5", "source_prompt": "04-questions", "batch": 3, "status": "answered", "answer_ref": "batches/batch-3-answers.md#q-009", "answered_at": "2026-05-08T00:00:00+07:00", "answered_by": "self", "via": "code-analyst-recommend"},
+    {"id": "q-010", "text": "Contract C-002 evidence-file-layout: invariant đúng?", "priority": "P0", "reason": "G-002 blocking", "source_prompt": "04-questions", "batch": 3, "status": "answered", "answer_ref": "batches/batch-3-answers.md#q-010", "answered_at": "2026-05-08T00:00:00+07:00", "answered_by": "self", "via": "code-analyst-recommend"},
+    {"id": "q-011", "text": "Contract C-003 raw-md-section-structure: 1 đa-variant hay 3 contracts riêng?", "priority": "P0", "reason": "G-002 blocking; granularity decision", "source_prompt": "04-questions", "batch": 3, "status": "answered", "answer_ref": "batches/batch-3-answers.md#q-011", "answered_at": "2026-05-08T00:00:00+07:00", "answered_by": "self", "via": "code-analyst-recommend"},
+    {"id": "q-012", "text": "Contract C-004 source-yaml: tách C-004a (code-specific)?", "priority": "P0", "reason": "G-002 blocking; granularity", "source_prompt": "04-questions", "batch": 3, "status": "answered", "answer_ref": "batches/batch-3-answers.md#q-012", "answered_at": "2026-05-08T00:00:00+07:00", "answered_by": "self", "via": "code-analyst-recommend"},
+    {"id": "q-013", "text": "Contract C-007 slash-command-naming: enforce consistency hay accept mix?", "priority": "P0", "reason": "G-002+G-010", "source_prompt": "04-questions", "batch": 4, "status": "answered", "answer_ref": "batches/batch-4-answers.md#q-013", "answered_at": "2026-05-08T00:00:00+07:00", "answered_by": "self", "via": "code-analyst-recommend"},
+    {"id": "q-014", "text": "Contract C-008: 'DÙNG KHI/KHÔNG DÙNG' description = required hay convention?", "priority": "P0", "reason": "G-002 blocking; sample 5/5", "source_prompt": "04-questions", "batch": 4, "status": "answered", "answer_ref": "batches/batch-4-answers.md#q-014", "answered_at": "2026-05-08T00:00:00+07:00", "answered_by": "self", "via": "code-analyst-recommend"},
+    {"id": "q-015", "text": "Doc grouping strategy: 1-per-entry / by-category / mega-doc / service-style?", "priority": "P1", "reason": "G-003 blocking; affects 24+ files", "source_prompt": "04-questions", "batch": 5, "status": "answered", "answer_ref": "batches/batch-5-answers.md#q-015", "answered_at": "2026-05-08T00:00:00+07:00", "answered_by": "self", "via": "code-analyst-recommend"},
+    {"id": "q-016", "text": "Doc location: projects/engine/ vs engine/?", "priority": "P1", "reason": "G-003 blocking; structure", "source_prompt": "04-questions", "batch": 5, "status": "answered", "answer_ref": "batches/batch-5-answers.md#q-016", "answered_at": "2026-05-08T00:00:00+07:00", "answered_by": "self", "via": "code-analyst-recommend"},
+    {"id": "q-017", "text": "ADR variant=agentic-engine: a06 đã draft (D-001). Confirm apply?", "priority": "P1", "reason": "G-004 traceability", "source_prompt": "04-questions", "batch": 5, "status": "answered", "answer_ref": "batches/batch-5-answers.md#q-017", "answered_at": "2026-05-08T00:00:00+07:00", "answered_by": "self", "via": "code-analyst-recommend"},
+    {"id": "q-018", "text": "Split or keep code-analysis-prompts.md monolithic? a06 D-002 chose KEEP.", "priority": "P1", "reason": "G-005 maintenance", "source_prompt": "04-questions", "batch": 5, "status": "answered", "answer_ref": "batches/batch-5-answers.md#q-018", "answered_at": "2026-05-08T00:00:00+07:00", "answered_by": "self", "via": "code-analyst-recommend"},
+    {"id": "q-019", "text": "/wiki-viz orphan README fix: cùng phiên hay tách?", "priority": "P1", "reason": "G-006", "source_prompt": "04-questions", "batch": 6, "status": "answered", "answer_ref": "batches/batch-6-answers.md#q-019", "answered_at": "2026-05-08T00:00:00+07:00", "answered_by": "self", "via": "code-analyst-recommend"},
+    {"id": "q-020", "text": "Pipeline support docs README table extend?", "priority": "P2", "reason": "G-007 nice", "source_prompt": "04-questions", "batch": 6, "status": "deferred", "answer_ref": "batches/batch-6-answers.md#q-020", "answered_at": "2026-05-08T00:00:00+07:00", "answered_by": "self"},
+    {"id": "q-021", "text": "Tools allowlist principle (C-008a): formalize NOW or defer?", "priority": "P2", "reason": "G-009 sample", "source_prompt": "04-questions", "batch": 6, "status": "deferred", "answer_ref": "batches/batch-6-answers.md#q-021", "answered_at": "2026-05-08T00:00:00+07:00", "answered_by": "self"},
+    {"id": "q-022", "text": "Rerun /code-analyze --allow-configs phiên này?", "priority": "P2", "reason": "G-008 nice", "source_prompt": "04-questions", "batch": 6, "status": "deferred", "answer_ref": "batches/batch-6-answers.md#q-022", "answered_at": "2026-05-08T00:00:00+07:00", "answered_by": "self"},
+    {"id": "q-023", "text": "Counter-arg: P-001..P-008 có overlap với engine spec docs?", "priority": "P3", "reason": "self-referential workspace dilemma", "source_prompt": "04-questions", "batch": 7, "status": "deferred", "answered_at": "2026-05-08T00:00:00+07:00", "answered_by": "self", "via": "user-stop-here"},
+    {"id": "q-024", "text": "Counter-arg: source_type=engine thay vì variant=agentic-engine?", "priority": "P3", "reason": "design sanity check", "source_prompt": "04-questions", "batch": 7, "status": "deferred", "answered_at": "2026-05-08T00:00:00+07:00", "answered_by": "self", "via": "user-stop-here"}
+  ],
+
+  "batches": [
+    {"n": 1, "priority": "P0", "question_ids": ["q-001", "q-002", "q-003", "q-004"], "asked_at": null, "completed": false},
+    {"n": 2, "priority": "P0", "question_ids": ["q-005", "q-006", "q-007", "q-008"], "asked_at": null, "completed": false},
+    {"n": 3, "priority": "P0", "question_ids": ["q-009", "q-010", "q-011", "q-012"], "asked_at": null, "completed": false},
+    {"n": 4, "priority": "P0", "question_ids": ["q-013", "q-014"], "asked_at": null, "completed": false},
+    {"n": 5, "priority": "P1", "question_ids": ["q-015", "q-016", "q-017", "q-018"], "asked_at": null, "completed": false},
+    {"n": 6, "priority": "P1+P2", "question_ids": ["q-019", "q-020", "q-021", "q-022"], "asked_at": null, "completed": false},
+    {"n": 7, "priority": "P3", "question_ids": ["q-023", "q-024"], "asked_at": null, "completed": false}
+  ],
+
+  "external_checkpoints": []
+}

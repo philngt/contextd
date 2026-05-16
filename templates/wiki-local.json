@@ -1,0 +1,15 @@
+{
+  "_comment": "Copy file này vào .claude/wiki.json trong thư mục gốc của dự án (codebase). 'workspace' phải khớp tên thư mục trong wiki-template/workspaces/. Pipeline scan folder trực tiếp cho patterns/contracts/services — KHÔNG cần khai báo array.",
+  "project": "{project-name}",
+  "workspace": "{workspace-name}",
+  "wiki_root": null,
+  "knowledge_map": "projects/{project-name}/knowledge-map.md",
+  "domain": "{domain-name}",
+  "packs": null,
+  "_packs_comment": "Optional. Override packs cho codebase này (replace semantics — KHÔNG additive). null = fallback workspace.md ## Packs. Array = dùng đúng list này, ignore workspace.md cho codebase này. Quản lý qua /wiki-setup. Vd: [\"pack-web-api\", \"pack-frontend-react\"].",
+  "obsidian": {
+    "_comment": "Optional. Override vault per-codebase nếu khác wiki-global.json. Xóa block này để dùng global config.",
+    "vault_path": null,
+    "raw_folder": null
+  }
+}

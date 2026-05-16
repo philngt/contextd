@@ -1,0 +1,29 @@
+name: pack-product
+version: 0.1.0
+description: Product/business knowledge pack — product briefs, OKR, roadmap, personas, customer journey, success metrics. For non-tech contributors (PM, business, stakeholder).
+
+components:
+  - brief
+  - okr
+  - roadmap
+  - persona
+  - journey
+  - metric
+
+keywords:
+  brief: [brief, product brief, prd, requirement, feature spec, feature request]
+  okr: [okr, objective, key result, kpi, target, goal]
+  roadmap: [roadmap, milestone, quarter, q1, q2, q3, q4, release plan]
+  persona: [persona, user persona, customer profile, ICP, ideal customer]
+  journey: [journey, customer journey, user journey, touchpoint, funnel]
+  metric: [metric, success metric, north star, NSM, retention, activation, conversion]
+
+files:
+  constraints: agents/constraints.md
+  coding_rules: agents/coding-rules.md
+  validator_rules: agents/pipeline/validator-rules.md
+  validator_script: scripts/rules.py
+  retrieval_map: agents/pipeline/retrieval-map.md
+  prompt_overrides: agents/pipeline/prompt-overrides.md
+
+conflicts_with: []

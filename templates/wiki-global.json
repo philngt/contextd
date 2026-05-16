@@ -1,0 +1,10 @@
+{
+  "_comment": "Copy file này vào ~/.claude/wiki-global.json và điền đường dẫn thực tế. 'default_workspace' (optional) là fallback nếu .claude/wiki.json của project không khai báo 'workspace'.",
+  "wiki_root": "~/.wiki-template",
+  "default_workspace": null,
+  "obsidian": {
+    "_comment": "Optional. Dùng cho /obsidian-ingest. Nếu không xài Obsidian, để null hoặc xóa block này.",
+    "vault_path": null,
+    "raw_folder": "RAW"
+  }
+}
