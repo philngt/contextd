@@ -5,19 +5,11 @@ Designed for teams running multiple projects/companies who need strict context i
 
 If Claude starts mixing context between repos, this setup gives you deterministic, workspace-scoped retrieval and execution rules.
 
+## Onboarding
+
 > **Vietnamese:** [Onboarding (VI)](https://tanphuc16797.github.io/workspace-wiki/onboarding/index.html) · [Install Guide (VI)](https://tanphuc16797.github.io/workspace-wiki/onboarding/install.html)
 
 > **English:** [Onboarding (EN)](https://tanphuc16797.github.io/workspace-wiki/onboarding/index.en.html) · [Install Guide (EN)](https://tanphuc16797.github.io/workspace-wiki/onboarding/install.en.html)
-
-> **Quick start:** New to this repo? Go straight to [QUICKSTART.md](QUICKSTART.md) — from `git clone` to your first `/use-wiki` in about 5 minutes.
-
-## Try in 60 seconds
-
-```text
-1) Install once → run installer
-2) Bind codebase → /switch-workspace {name}
-3) Start task     → /use-wiki "your task"
-```
 
 ## Thesis (non-negotiables)
 
@@ -79,8 +71,6 @@ wiki-template/
 # Active workspace is per-codebase, stored in <project>/.claude/wiki.json.workspace
 # (there is no global pointer file inside wiki-template)
 ```
-
-For complete setup and onboarding flows, use [QUICKSTART.md](QUICKSTART.md) and [onboarding/install.en.html](onboarding/install.en.html).
 
 ## Packs (Stack-specific Knowledge)
 
@@ -175,14 +165,6 @@ bash scripts/install-to-claude.sh --force
 ```text
 /new-workspace {name}
 ```
-
-## Priority Order (for AI agents)
-
-```text
-Contracts > Platform Patterns > Project Documentation > Domain Knowledge
-```
-
-This priority applies only within the active workspace scope.
 
 ## Deploy GitHub Pages
 
