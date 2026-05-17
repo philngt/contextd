@@ -113,6 +113,32 @@ PowerShell (Windows):
 iwr https://github.com/tanphuc16797/workspace-wiki/releases/latest/download/install.ps1 -UseBasicParsing | iex
 ```
 
+### Secure install (verify SHA256 before run)
+
+Download installer + checksum file from release assets, verify SHA256, then run.
+
+```bash
+TAG="vX.Y.Z"
+BASE_URL="https://github.com/tanphuc16797/workspace-wiki/releases/download/${TAG}"
+curl -fL -o install.sh "${BASE_URL}/install.sh"
+curl -fL -o SHA256SUMS.txt "${BASE_URL}/SHA256SUMS.txt"
+grep ' install.sh$' SHA256SUMS.txt | shasum -a 256 -c -
+sh install.sh
+```
+
+PowerShell (Windows):
+
+```powershell
+$Tag = "vX.Y.Z"
+$BaseUrl = "https://github.com/tanphuc16797/workspace-wiki/releases/download/$Tag"
+Invoke-WebRequest "$BaseUrl/install.ps1" -OutFile "install.ps1"
+Invoke-WebRequest "$BaseUrl/SHA256SUMS.txt" -OutFile "SHA256SUMS.txt"
+$expected = (Select-String -Path .\SHA256SUMS.txt -Pattern ' install.ps1$').Line.Split(' ')[0].Trim()
+$actual = (Get-FileHash .\install.ps1 -Algorithm SHA256).Hash.ToLower()
+if ($actual -ne $expected.ToLower()) { throw "SHA256 mismatch for install.ps1" }
+.\install.ps1
+```
+
 Or install from source in the current repository:
 
 ```bash
