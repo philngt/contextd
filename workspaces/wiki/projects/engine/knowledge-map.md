@@ -58,6 +58,10 @@ Mọi service trong project `engine` apply ≥ 1 pattern từ:
 
 _(none yet — workspace-level decisions trong `{ws}/decisions/` cover engine-wide concerns.)_
 
+## Thesis
+
+- [THESIS](THESIS.md) — canonical project thesis and non-negotiables for engine governance.
+
 ## Related
 
 - Workspace ADRs: [`../../decisions/`](../../decisions/)
