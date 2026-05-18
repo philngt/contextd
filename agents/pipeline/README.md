@@ -12,7 +12,7 @@ Mô tả cách feed knowledge từ wiki cho LLM agent mà không bị hallucinat
 
 | File | Vai trò |
 |------|---------|
-| **[.claude/commands/use-wiki.md](../../.claude/commands/use-wiki.md)** | **Execution flow chính thức** — spec sống main agent dùng để gọi pipeline. Khi conflict với file khác, file này thắng. |
+| **[.claude/commands/contextd-use.md](../../.claude/commands/contextd-use.md)** | **Execution flow chính thức** — spec sống main agent dùng để gọi pipeline. Khi conflict với file khác, file này thắng. |
 | [multi-agent-pipeline.md](multi-agent-pipeline.md) | Reference: vai trò + I/O schema + lý do tách của từng subagent |
 | [task-to-docs-map.md](task-to-docs-map.md) | Schema của intent JSON (output Stage 1) |
 | [task-to-docs-map.md](task-to-docs-map.md) | Map intent type/component → file wiki cụ thể (input cho Stage 2) |
@@ -20,7 +20,7 @@ Mô tả cách feed knowledge từ wiki cho LLM agent mà không bị hallucinat
 | [prompt-template.md](prompt-template.md) | Output template main agent dùng ở Stage 3 |
 | [validator-rules.md](validator-rules.md) | Rules cho Stage 4 (wiki-reviewer) — engine defaults + workspace override |
 
-`use-wiki.md` định nghĩa **how**; các file pipeline này định nghĩa **what** từng stage cần.
+`contextd-use.md` định nghĩa **how**; các file pipeline này định nghĩa **what** từng stage cần.
 
 ---
 

@@ -34,4 +34,4 @@ Section bổ sung vào `agents/pipeline/prompt-template.md` self-check khi pack 
 
 ## Inclusion logic
 
-Pack loader (`scripts/pack_loader.py`) merge nội dung file này vào prompt context khi build `current-task.md` cho `/use-wiki`.
+Pack loader (`scripts/pack_loader.py`) merge nội dung file này vào prompt context khi build `current-task.md` cho `/contextd-use`.

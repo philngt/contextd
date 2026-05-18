@@ -1,6 +1,6 @@
 {
   "stage": "observations",
-  "updated_at": "2026-05-18T08:40:46+00:00",
+  "updated_at": "2026-05-18T09:22:56+00:00",
   "last_hint_emitted_at": "",
   "clusters": [
     {
@@ -437,6 +437,116 @@
       "last_hinted_at": "",
       "members": [
         "552a7e7fef142eaf"
+      ]
+    },
+    {
+      "id": "ideselection-user-selected-078028",
+      "representative_tokens": [
+        "ide_selection",
+        "user",
+        "selected",
+        "lines",
+        "44",
+        "tools",
+        "workspace",
+        "wiki",
+        "github",
+        "workflows",
+        "release",
+        "yml",
+        "template",
+        "latest",
+        "zip",
+        "related",
+        "current",
+        "task",
+        "chá",
+        "build"
+      ],
+      "count": 1,
+      "first_seen": "2026-05-18T09:13:53+00:00",
+      "last_seen": "2026-05-18T09:13:53+00:00",
+      "last_hinted_at": "",
+      "members": [
+        "8490d204c2b86c0b"
+      ]
+    },
+    {
+      "id": "ideopenedfile-user-opened-bed716",
+      "representative_tokens": [
+        "ide_opened_file",
+        "user",
+        "opened",
+        "file",
+        "tools",
+        "workspace",
+        "wiki",
+        "github",
+        "workflows",
+        "release",
+        "yml",
+        "ide",
+        "related",
+        "current",
+        "task",
+        "tiá",
+        "tá"
+      ],
+      "count": 1,
+      "first_seen": "2026-05-18T09:15:47+00:00",
+      "last_seen": "2026-05-18T09:15:47+00:00",
+      "last_hinted_at": "",
+      "members": [
+        "f104f3a9a08d2d1e"
+      ]
+    },
+    {
+      "id": "c-nh-lu-acd8a9",
+      "representative_tokens": [
+        "cá",
+        "nhá",
+        "luã",
+        "claude",
+        "md"
+      ],
+      "count": 1,
+      "first_seen": "2026-05-18T09:19:17+00:00",
+      "last_seen": "2026-05-18T09:19:17+00:00",
+      "last_hinted_at": "",
+      "members": [
+        "6a08f73153e4ec92"
+      ]
+    },
+    {
+      "id": "ideopenedfile-user-opened-a592fe",
+      "representative_tokens": [
+        "ide_opened_file",
+        "user",
+        "opened",
+        "file",
+        "tools",
+        "workspace",
+        "wiki",
+        "workspaces",
+        "default",
+        "observations",
+        "clusters",
+        "json",
+        "ide",
+        "related",
+        "current",
+        "task",
+        "sá",
+        "luã",
+        "use",
+        "update"
+      ],
+      "count": 1,
+      "first_seen": "2026-05-18T09:22:56+00:00",
+      "last_seen": "2026-05-18T09:22:56+00:00",
+      "last_hinted_at": "",
+      "members": [
+        "2d14bffedfea0cf5"
       ]
     }
   ]

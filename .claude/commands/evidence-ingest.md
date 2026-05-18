@@ -1,6 +1,6 @@
 # Evidence Ingest
 
-Pull raw data từ MCP / API / paste vào `{ws}/evidence/sources/{evid-id}/` để phục vụ `/update-wiki` hoặc `/rebase-wiki`.
+Pull raw data từ MCP / API / paste vào `{ws}/evidence/sources/{evid-id}/` để phục vụ `/contextd-update` hoặc `/contextd-rebase`.
 Raw data **CHỈ** dùng cho wiki — KHÔNG đi vào codebase dự án.
 
 > Step 1 trong pipeline: ingest → analyze → qa → apply.
@@ -172,7 +172,7 @@ Next:
 
 - Trước khi cập nhật wiki dựa trên một nguồn external (changelog, ticket, incident report, expert paste).
 - Khi muốn audit trail rõ ràng từ "data source" → "wiki change".
-- KHI KHÔNG NÊN: nếu chỉ cập nhật wiki từ git diff/code changes → dùng `/update-wiki` trực tiếp, không cần evidence flow.
+- KHI KHÔNG NÊN: nếu chỉ cập nhật wiki từ git diff/code changes → dùng `/contextd-update` trực tiếp, không cần evidence flow.
 
 ---
 

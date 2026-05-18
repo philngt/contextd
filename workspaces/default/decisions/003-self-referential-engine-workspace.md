@@ -60,7 +60,7 @@ Khi engine spec change → engine spec doc updated. Khi user-facing pattern reus
 ## Impact
 
 - Workspace `wiki` populated với 8 patterns + 8 contracts + 7 services + 4 ADRs (this evidence).
-- Future engine spec changes phải coordinate update với workspace `wiki` artifacts (manual sync via `/update-wiki` hoặc `/rebase-wiki`).
+- Future engine spec changes phải coordinate update với workspace `wiki` artifacts (manual sync via `/contextd-update` hoặc `/contextd-rebase`).
 - Application workspaces (`example-surgery`, etc.) vẫn isolated — KHÔNG copy patterns từ `wiki` workspace sang automatically.
 
 ## Why Not Project-Level

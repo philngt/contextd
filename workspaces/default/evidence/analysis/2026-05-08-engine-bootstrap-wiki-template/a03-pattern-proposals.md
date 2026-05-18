@@ -15,7 +15,7 @@ Workspace baseline: `{ws}/platform/patterns/` rỗng → mọi proposal status =
 - `/contextd-trace` `(.claude/commands/contextd-trace.md)` (Bước 0)
 - `/contextd-viz` `(.claude/commands/contextd-viz.md)` (Bước 0)
 - `/contextd-eval` `(.claude/commands/contextd-eval.md)` (Bước 0)
-- `/use-wiki` `(.claude/commands/use-wiki.md)` (Bước 0)
+- `/contextd-use` `(.claude/commands/contextd-use.md)` (Bước 0)
 - `/obsidian-ingest` `(.claude/commands/obsidian-ingest.md)` (Bước 0)
 - `/evidence-qa` `(.claude/commands/evidence-qa.md)` (Bước 0)
 - `/evidence-apply` `(.claude/commands/evidence-apply.md)` (Bước 0)
@@ -23,8 +23,8 @@ Workspace baseline: `{ws}/platform/patterns/` rỗng → mọi proposal status =
 - `/list-workspaces` `(.claude/commands/list-workspaces.md)` (Bước 0)
 - `/switch-workspace` `(.claude/commands/switch-workspace.md)` (Bước 0)
 - `/new-workspace` `(.claude/commands/new-workspace.md)` (Bước 0)
-- `/rebase-wiki` `(.claude/commands/rebase-wiki.md)` (Bước 0)
-- `/update-wiki` `(.claude/commands/update-wiki.md)` (Bước 0)
+- `/contextd-rebase` `(.claude/commands/contextd-rebase.md)` (Bước 0)
+- `/contextd-update` `(.claude/commands/contextd-update.md)` (Bước 0)
 
 ### Canonical structure
 ```
@@ -234,7 +234,7 @@ Canonicalize thành `{ws}/platform/patterns/citation-rule.md` HOẶC promote th�
 ## P-007 — multi-stage-subagent-pipeline  [NEW]
 
 ### Occurrences
-- `/use-wiki` 5-stage flow `(.claude/commands/use-wiki.md)`
+- `/contextd-use` 5-stage flow `(.claude/commands/contextd-use.md)`
 - `agents/pipeline/README.md` Section "Pipeline (5 stage)" `(agents/pipeline/README.md:L27-L46)`
 - `agents/pipeline/multi-agent-pipeline.md` (full spec — I/O schemas)
 - `agents/pipeline/PIPELINE-VISUAL.md` (Mermaid diagram)

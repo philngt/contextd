@@ -110,23 +110,37 @@ echo ""
 
 # --- 1b. migrate legacy wiki-*.md commands (pre-contextd rename) ---
 
-LEGACY_CMDS=(
-  wiki-backup wiki-detect wiki-eval wiki-explain wiki-report
-  wiki-restore wiki-setup wiki-trace wiki-upgrade wiki-version wiki-viz
+# Map of legacy_name -> new_name. Most are `wiki-X` -> `contextd-X`,
+# but the verbs use-wiki/update-wiki/rebase-wiki collapse the suffix.
+declare -A LEGACY_MAP=(
+  [wiki-backup]=contextd-backup
+  [wiki-detect]=contextd-detect
+  [wiki-eval]=contextd-eval
+  [wiki-explain]=contextd-explain
+  [wiki-report]=contextd-report
+  [wiki-restore]=contextd-restore
+  [wiki-setup]=contextd-setup
+  [wiki-trace]=contextd-trace
+  [wiki-upgrade]=contextd-upgrade
+  [wiki-version]=contextd-version
+  [wiki-viz]=contextd-viz
+  [use-wiki]=contextd-use
+  [update-wiki]=contextd-update
+  [rebase-wiki]=contextd-rebase
 )
 LEGACY_FOUND=0
-for legacy in "${LEGACY_CMDS[@]}"; do
+for legacy in "${!LEGACY_MAP[@]}"; do
   legacy_path="$GLOBAL_COMMANDS/${legacy}.md"
   if [[ -f "$legacy_path" ]]; then
     LEGACY_FOUND=1
-    echo "  [REMOVED]   ${legacy}.md  (renamed → contextd-${legacy#wiki-}.md)"
+    echo "  [REMOVED]   ${legacy}.md  (renamed → ${LEGACY_MAP[$legacy]}.md)"
     run rm -f "$legacy_path"
   fi
 done
 if [[ $LEGACY_FOUND -eq 1 ]]; then
   echo ""
   echo "  ⚠ Migration notice:"
-  echo "    Slash commands /wiki-* đã đổi tên thành /contextd-*."
+  echo "    Slash commands /wiki-*, /use-wiki, /update-wiki, /rebase-wiki đã đổi tên thành /contextd-*."
   echo "    Workspace mẫu 'wiki' đã đổi tên thành 'default'."
   echo "    Nếu codebase nào có .claude/wiki.json với \"workspace\": \"wiki\","
   echo "    cập nhật thành \"workspace\": \"default\" (hoặc chạy lại /switch-workspace)."
@@ -197,4 +211,4 @@ echo "Test thử:"
 echo "  cd /path/to/your/codebase"
 echo "  /contextd-setup           # tạo .claude/wiki.json cho codebase đó"
 echo "  /list-workspaces      # xem có workspace nào trong wiki-template"
-echo "  /use-wiki \"...task...\"  # dùng pipeline với context từ workspace active"
+echo "  /contextd-use \"...task...\"  # dùng pipeline với context từ workspace active"

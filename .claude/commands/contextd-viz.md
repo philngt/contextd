@@ -71,7 +71,7 @@ KHÔNG tự mở browser — để user kiểm soát (tránh side-effect không 
 - Tự exit khi `run.json.final_verdict` không còn `INCOMPLETE`, hoặc Ctrl+C, hoặc timeout 10 phút.
 - HTML có `<meta http-equiv="refresh" content="2">` → browser tự reload mỗi 2 giây.
 
-UX khuyến nghị: mở 2 terminal — một chạy `/use-wiki "..."`, một chạy `/contextd-viz --watch`. Browser mở sẵn `trace.html`.
+UX khuyến nghị: mở 2 terminal — một chạy `/contextd-use "..."`, một chạy `/contextd-viz --watch`. Browser mở sẵn `trace.html`.
 
 ---
 
@@ -95,7 +95,7 @@ Cho mode `--all`: in tổng số runs + path index.
 
 - **Read-only trên trace JSON** — script chỉ đọc, không sửa file `runs/{run_id}/*.json`. Output file mới (`trace.html`, `index.html`) ghi vào cùng thư mục với trace.
 - **Workspace lock**: index HTML highlight runs có `workspace_at_run != workspace_active` thành mờ (xám), không xoá. Per-run HTML hiện banner cảnh báo nếu mismatch.
-- **KHÔNG block pipeline**: viewer là on-demand, không hook tự động chạy. Pipeline (`/use-wiki`) vẫn hoạt động bình thường nếu render fail.
+- **KHÔNG block pipeline**: viewer là on-demand, không hook tự động chạy. Pipeline (`/contextd-use`) vẫn hoạt động bình thường nếu render fail.
 - **Không leak ra ngoài project_dir**: HTML output chỉ ghi vào `{project_dir}/.claude/runs/`. Không gửi metric ra external service. Mermaid load qua CDN nhưng không gửi data — fallback offline có sẵn.
 - **Run_id không xuất hiện trong commit**: file `.claude/runs/` đã được khuyến cáo gitignore (xem [observability.md#L52](../../agents/pipeline/observability.md#L52)).
 - **Không tự mở browser**: chỉ in `file://` link để user click/copy.
@@ -106,10 +106,10 @@ Cho mode `--all`: in tổng số runs + path index.
 
 | Tình huống | Lệnh phù hợp |
 |---|---|
-| Vừa chạy `/use-wiki`, muốn debug 1 run | `/contextd-viz --last` |
+| Vừa chạy `/contextd-use`, muốn debug 1 run | `/contextd-viz --last` |
 | Muốn xem 1 run cũ | `/contextd-viz {run_id}` |
 | Muốn so sánh nhiều runs theo workspace/date/verdict | `/contextd-viz --all` |
-| Đang chạy `/use-wiki` ở terminal khác, muốn xem live | `/contextd-viz --watch` (terminal mới) |
+| Đang chạy `/contextd-use` ở terminal khác, muốn xem live | `/contextd-viz --watch` (terminal mới) |
 | Aggregate metrics → text report | dùng `/contextd-eval` thay (Markdown, nhanh hơn) |
 | Markdown timeline 1 run trong terminal | dùng `/contextd-trace --last` (không HTML) |
 

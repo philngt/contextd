@@ -51,7 +51,7 @@ Question priorities:
 - **Default suggestion**: PAIR.
 
 ### q-007  [P0]  Pattern P-007 multi-stage-subagent-pipeline (FLAGSHIP)
-- **Question**: P-007 là **flagship pattern** đại diện engine identity (5-stage `/use-wiki` flow). Có nên đặt làm pattern ĐẦU TIÊN trong `{ws}/patterns-index.md` (top of list)?
+- **Question**: P-007 là **flagship pattern** đại diện engine identity (5-stage `/contextd-use` flow). Có nên đặt làm pattern ĐẦU TIÊN trong `{ws}/patterns-index.md` (top of list)?
 - **Reason**: G-001 blocking + identity statement.
 - **Source**: `a03-pattern-proposals.md` P-007
 - **Default suggestion**: YES — top of patterns-index, cross-reference từ workspace.md.
@@ -135,7 +135,7 @@ Question priorities:
 - **Default suggestion**: KEEP monolithic — shared sections (CORE 4, CORE 8) easier to maintain trong 1 file. Revisit nếu thêm variant thứ 3.
 
 ### q-019  [P1]  Pre-apply: fix `/contextd-viz` orphan trong README index
-- **Question**: G-006 — `/contextd-viz` missing from `.claude/commands/README.md` Section "Pipeline observability". Fix qua `/update-wiki` trong cùng phiên này hay tách phiên riêng?
+- **Question**: G-006 — `/contextd-viz` missing from `.claude/commands/README.md` Section "Pipeline observability". Fix qua `/contextd-update` trong cùng phiên này hay tách phiên riêng?
 - **Reason**: G-006 — không block evidence-apply nhưng break onboarding clarity.
 - **Source**: `08-knowledge-gaps.md` G-006
 - **Default suggestion**: Tách phiên — không trộn doc fix với evidence-apply. Mark P1 todo.

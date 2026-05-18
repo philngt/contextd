@@ -12,7 +12,7 @@ Your job is to implement features correctly according to the knowledge base in t
 - **Project name**: `contextd` (a scoped context daemon for AI coding agents).
 - **Knowledge base noun**: still called "wiki" throughout the docs — it refers to the body of contracts, patterns, domains, and project knowledge under `workspaces/{ws}/`. Treat "wiki" as the *content*, `contextd` as the *engine*.
 - **Default workspace name**: `default` (was `wiki` before the rename).
-- **Slash commands**: engine commands use the `/contextd-*` prefix (e.g. `/contextd-setup`, `/contextd-eval`). Generic verbs `/use-wiki`, `/update-wiki`, `/rebase-wiki` keep their names (the verb is about the knowledge base, not the engine).
+- **Slash commands**: all engine commands use the `/contextd-*` prefix (e.g. `/contextd-setup`, `/contextd-use`, `/contextd-update`, `/contextd-rebase`, `/contextd-eval`). Legacy names `/wiki-*`, `/use-wiki`, `/update-wiki`, `/rebase-wiki` are removed at install time by the installer migration step.
 - **Legacy filenames kept for v0.x compatibility** (deferred to v1.0): `.claude/wiki.json`, `~/.claude/wiki-global.json`, `~/.claude/wiki-install-meta.json`, `wiki-template/` zip root, `lint-wiki.py`, `check-patterns-index.py`. Do not rename these in this version.
 
 ---

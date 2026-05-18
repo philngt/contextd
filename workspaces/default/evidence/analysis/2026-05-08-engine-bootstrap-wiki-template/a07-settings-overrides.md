@@ -23,8 +23,8 @@ Based on engine pattern P-007 (5-stage subagent pipeline), hooks **có thể** �
 | Event | Expected matcher | Inferred purpose | Citation |
 |-------|------------------|------------------|----------|
 | `PreToolUse` | Bash, Edit, Write | Validator before destructive ops (per Pattern P-007 Stage 4 / wiki-reviewer concept) | `(.claude/agents/wiki-reviewer.md:L2-L5)` |
-| `PostToolUse` | Edit, Write | Trigger `/update-wiki` auto-sync? OR emit trace events | `(.claude/commands/update-wiki.md:L1)`, `(agents/pipeline/observability.md:L1)` |
-| `UserPromptSubmit` | (any) | Could enforce `/use-wiki` Stage 1 (planner) before main agent codes | `(.claude/commands/use-wiki.md:L1)` |
+| `PostToolUse` | Edit, Write | Trigger `/contextd-update` auto-sync? OR emit trace events | `(.claude/commands/contextd-update.md:L1)`, `(agents/pipeline/observability.md:L1)` |
+| `UserPromptSubmit` | (any) | Could enforce `/contextd-use` Stage 1 (planner) before main agent codes | `(.claude/commands/contextd-use.md:L1)` |
 | `Stop` | (any) | Could emit final trace event for `/contextd-trace` consumption | `(.claude/commands/contextd-trace.md:L1)` |
 
 **Note**: These are **HYPOTHETICAL** surface points — no evidence trong raw.md confirms hooks actually configured. Need `--allow-configs` rerun to validate.

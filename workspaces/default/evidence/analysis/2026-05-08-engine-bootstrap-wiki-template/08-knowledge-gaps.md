@@ -70,7 +70,7 @@ Workspace baseline: `{ws}/{patterns-index.md, platform/patterns/, platform/contr
 - **Source in code**:
   - `(.claude/commands/contextd-viz.md:L1)` — file exists, has heading "# Wiki Viz"
   - `(.claude/commands/README.md:L54-L61)` — Pipeline observability section list 2 commands (contextd-trace, contextd-eval), missing contextd-viz
-- **Resolution**: `/update-wiki` add row vào README.md. KHÔNG cần ADR (sửa stale doc, không phải decision).
+- **Resolution**: `/contextd-update` add row vào README.md. KHÔNG cần ADR (sửa stale doc, không phải decision).
 
 ---
 
@@ -81,7 +81,7 @@ Workspace baseline: `{ws}/{patterns-index.md, platform/patterns/, platform/contr
 - **Affected**: `(agents/pipeline/README.md:L13-L23)` — table list 7/16 pipeline support docs.
 - **Missing rows**: `code-analysis-prompts.md`, `code-snapshot-conventions.md`, `evidence-state-rules.md`, `qa-batching.md`, `raw-storage-conventions.md`, `report-prompts.md`, `observability.md`, `critical-analysis-prompts.md`, `PIPELINE-VISUAL.md` (already mentioned but in different anchor).
 - **Source in code**: `(agents/pipeline/README.md:L13-L23)` vs actual files in `agents/pipeline/` (16 .md files).
-- **Resolution**: `/update-wiki` extend table. Low urgency — không break engine, chỉ harder to navigate.
+- **Resolution**: `/contextd-update` extend table. Low urgency — không break engine, chỉ harder to navigate.
 
 ### G-008 — Section 3 (configs) + Section 8 (hooks) chưa analyze  [NICE-TO-HAVE]
 - **Type**: missing-data
@@ -128,5 +128,5 @@ Total = 10 gaps.
 - **G-001 + G-002 + G-005 (pattern–contract pairs)** nên resolve cùng batch (cross-reference dependency).
 - **G-003** depend trên P1 decision về doc grouping strategy → block `/evidence-apply --prompt a05`.
 - **G-004** standalone — có thể resolve sớm (introduce agentic-engine variant ADR).
-- **G-006** không block evidence-apply (khác workspace path) — có thể fix riêng qua `/update-wiki`.
+- **G-006** không block evidence-apply (khác workspace path) — có thể fix riêng qua `/contextd-update`.
 - **NICE gaps** không block apply; có thể defer.

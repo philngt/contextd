@@ -18,7 +18,7 @@ Boundary rule:
 | Service doc | Covers | Pattern refs |
 |-------------|--------|--------------|
 | [services/workspace-ops.md](services/workspace-ops.md) | `/contextd-setup`, `/contextd-detect`, `/switch-workspace`, `/new-workspace`, `/list-workspaces` | P-001 workspace-resolve, P-002 askuser-confirm |
-| [services/wiki-usage.md](services/wiki-usage.md) | `/use-wiki`, `/update-wiki`, `/rebase-wiki` | P-007 multi-stage-pipeline |
+| [services/wiki-usage.md](services/wiki-usage.md) | `/contextd-use`, `/contextd-update`, `/contextd-rebase` | P-007 multi-stage-pipeline |
 | [services/codebase-analysis.md](services/codebase-analysis.md) | `/code-analyze` | P-001/P-002/P-003/P-004/P-008 |
 | [services/reporting.md](services/reporting.md) | `/contextd-report` | P-001 |
 | [services/observability.md](services/observability.md) | `/contextd-trace`, `/contextd-eval`, `/contextd-viz` | P-001 |
@@ -40,7 +40,7 @@ Mọi service trong project `engine` apply ≥ 1 pattern từ:
 - [`redaction-post-pass`](../../platform/patterns/redaction-post-pass.md) — secret scan post-build.
 - [`evidence-state-machine`](../../platform/patterns/evidence-state-machine.md) — DAG transition tracking.
 - [`citation-rule`](../../platform/patterns/citation-rule.md) — citation format invariant.
-- [`multi-stage-subagent-pipeline`](../../platform/patterns/multi-stage-subagent-pipeline.md) — 5-stage `/use-wiki` flow.
+- [`multi-stage-subagent-pipeline`](../../platform/patterns/multi-stage-subagent-pipeline.md) — 5-stage `/contextd-use` flow.
 - [`variant-discriminated-dispatcher`](../../platform/patterns/variant-discriminated-dispatcher.md) — variant routing.
 
 ## Contracts applied

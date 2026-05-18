@@ -54,7 +54,7 @@ self_contained: true                  # NO external deps (CSS inline, no remote 
 
 ## Notes
 
-- Output là **presentation document** — KHÔNG phải input cho code generation (đó là `/use-wiki`).
+- Output là **presentation document** — KHÔNG phải input cho code generation (đó là `/contextd-use`).
 - Self-contained design: mở browser xem ngay, không cần dev server.
 - Gap markers (`nodata`) hữu dụng để audit content coverage qua quarterly snapshots.
 

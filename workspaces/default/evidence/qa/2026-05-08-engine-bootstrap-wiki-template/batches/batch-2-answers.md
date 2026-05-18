@@ -64,7 +64,7 @@
 **Evidence cited**:
 - `(workspaces/default/evidence/analysis/2026-05-08-engine-bootstrap-wiki-template/a03-pattern-proposals.md#P-007)`
 - `(agents/pipeline/README.md:L27-L46)` — 5-stage diagram
-- `(.claude/commands/use-wiki.md:L1)` — implementation
+- `(.claude/commands/contextd-use.md:L1)` — implementation
 
 **Note**: Apply step phải skip "FLAGSHIP top of patterns-index" + skip workspace.md cross-ref. Pattern doc bình thường.
 

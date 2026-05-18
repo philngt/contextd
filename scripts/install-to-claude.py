@@ -154,25 +154,37 @@ def main() -> None:
         args.dry_run,
     )
 
-    # 1b. Migrate legacy wiki-*.md commands (pre-contextd rename)
-    legacy_cmds = [
-        "wiki-backup", "wiki-detect", "wiki-eval", "wiki-explain", "wiki-report",
-        "wiki-restore", "wiki-setup", "wiki-trace", "wiki-upgrade",
-        "wiki-version", "wiki-viz",
-    ]
+    # 1b. Migrate legacy command files (pre-contextd rename)
+    # Map legacy_name -> new_name. Most prefixes flip wiki-X -> contextd-X,
+    # but the verbs use-wiki / update-wiki / rebase-wiki collapse the suffix.
+    legacy_map = {
+        "wiki-backup": "contextd-backup",
+        "wiki-detect": "contextd-detect",
+        "wiki-eval": "contextd-eval",
+        "wiki-explain": "contextd-explain",
+        "wiki-report": "contextd-report",
+        "wiki-restore": "contextd-restore",
+        "wiki-setup": "contextd-setup",
+        "wiki-trace": "contextd-trace",
+        "wiki-upgrade": "contextd-upgrade",
+        "wiki-version": "contextd-version",
+        "wiki-viz": "contextd-viz",
+        "use-wiki": "contextd-use",
+        "update-wiki": "contextd-update",
+        "rebase-wiki": "contextd-rebase",
+    }
     legacy_found = False
-    for legacy in legacy_cmds:
+    for legacy, new_name in legacy_map.items():
         legacy_path = global_commands / f"{legacy}.md"
         if legacy_path.exists():
             legacy_found = True
-            new_name = "contextd-" + legacy[len("wiki-"):]
             print(f"  [REMOVED]   {legacy}.md  (renamed → {new_name}.md)")
             if not args.dry_run:
                 legacy_path.unlink()
     if legacy_found:
         print()
         print("  ⚠ Migration notice:")
-        print("    Slash commands /wiki-* đã đổi tên thành /contextd-*.")
+        print("    Slash commands /wiki-*, /use-wiki, /update-wiki, /rebase-wiki đã đổi tên thành /contextd-*.")
         print("    Workspace mẫu 'wiki' đã đổi tên thành 'default'.")
         print("    Nếu codebase nào có .claude/wiki.json với \"workspace\": \"wiki\",")
         print("    cập nhật thành \"workspace\": \"default\" (hoặc chạy lại /switch-workspace).")
@@ -195,7 +207,7 @@ def main() -> None:
     print("  cd /path/to/your/codebase")
     print("  /contextd-setup           # tạo .claude/wiki.json cho codebase đó")
     print("  /list-workspaces      # xem có workspace nào trong wiki-template")
-    print('  /use-wiki "...task..."  # dùng pipeline với context từ workspace active')
+    print('  /contextd-use "...task..."  # dùng pipeline với context từ workspace active')
 
 
 if __name__ == "__main__":

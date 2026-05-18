@@ -305,15 +305,15 @@
         <div class="step-content">
           <h4>Write wiki-aligned code for larger tasks</h4>
           <p>Before EVERY task (implement feature, fix bug, design, incident, review), run
-            <code>/use-wiki</code> to run a pre-check workflow before coding and reduce mistakes.</p>
-          <pre><code>/use-wiki implement payment refund flow with idempotency</code></pre>
+            <code>/contextd-use</code> to run a pre-check workflow before coding and reduce mistakes.</p>
+          <pre><code>/contextd-use implement payment refund flow with idempotency</code></pre>
           <p>Goal: keep code aligned with team agreements and avoid invented APIs.</p>
         </div>
       </div>
 
       <div class="callout tip">
-        <strong>💡 Next:</strong> After code is merged, run <code>/update-wiki</code> to sync wiki updates.
-        Run <code>/rebase-wiki</code> periodically to fix wiki/code drift.
+        <strong>💡 Next:</strong> After code is merged, run <code>/contextd-update</code> to sync wiki updates.
+        Run <code>/contextd-rebase</code> periodically to fix wiki/code drift.
       </div>
     </div>
 
@@ -356,7 +356,7 @@
 
       <div class="callout tip">
         <strong>💡 Next:</strong> Run <code>/contextd-eval</code> periodically to measure wiki quality
-        (hallucination rate, knowledge gaps, plan-block rate). If you suspect drift, run <code>/rebase-wiki</code>.
+        (hallucination rate, knowledge gaps, plan-block rate). If you suspect drift, run <code>/contextd-rebase</code>.
       </div>
     </div>
 
@@ -425,7 +425,7 @@
         Pattern = preferred implementation approach — should be reused, with exceptions only when justified.</dd>
 
       <dt>Slash command vs internal workflow</dt>
-      <dd>Commands (<code>/use-wiki</code>, <code>/find</code>, ...) are what you invoke directly.
+      <dd>Commands (<code>/contextd-use</code>, <code>/find</code>, ...) are what you invoke directly.
         Internal workflow (planner, context-selector, reviewer, ...) runs automatically in the background.</dd>
 
       <dt>Evidence ingestion workflow</dt>
@@ -459,10 +459,10 @@
       <table class="cmd-table">
         <thead><tr><th>Command</th><th>Purpose</th><th>When to use</th></tr></thead>
         <tbody>
-          <tr><td class="cmd-name">/use-wiki<span class="cmd-tag tech">tech</span></td><td>Load the right wiki context before Claude writes code</td><td>Before each task: implement, bug fix, design, review</td></tr>
+          <tr><td class="cmd-name">/contextd-use<span class="cmd-tag tech">tech</span></td><td>Load the right wiki context before Claude writes code</td><td>Before each task: implement, bug fix, design, review</td></tr>
           <tr><td class="cmd-name">/find {keywords}<span class="cmd-tag tech">tech</span></td><td>Find related rules and docs quickly</td><td>Use when you know the keyword but need the exact file</td></tr>
-          <tr><td class="cmd-name">/update-wiki<span class="cmd-tag tech">tech</span></td><td>Save important code changes back to wiki</td><td>Run after merge so wiki stays up to date</td></tr>
-          <tr><td class="cmd-name">/rebase-wiki<span class="cmd-tag maintainer">maint</span></td><td>Check wiki against code and suggest fixes</td><td>Run weekly/monthly, or when wiki looks outdated</td></tr>
+          <tr><td class="cmd-name">/contextd-update<span class="cmd-tag tech">tech</span></td><td>Save important code changes back to wiki</td><td>Run after merge so wiki stays up to date</td></tr>
+          <tr><td class="cmd-name">/contextd-rebase<span class="cmd-tag maintainer">maint</span></td><td>Check wiki against code and suggest fixes</td><td>Run weekly/monthly, or when wiki looks outdated</td></tr>
         </tbody>
       </table>
     </div>
@@ -527,7 +527,7 @@
       <table class="cmd-table">
         <thead><tr><th>Command</th><th>Purpose</th><th>When to use</th></tr></thead>
         <tbody>
-          <tr><td class="cmd-name">/contextd-trace {run_id}<span class="cmd-tag maintainer">maint</span></td><td>Render Markdown timeline 1 run pipeline (5 stage)</td><td>When <code>/use-wiki</code> output is wrong — debug stage divergence</td></tr>
+          <tr><td class="cmd-name">/contextd-trace {run_id}<span class="cmd-tag maintainer">maint</span></td><td>Render Markdown timeline 1 run pipeline (5 stage)</td><td>When <code>/contextd-use</code> output is wrong — debug stage divergence</td></tr>
           <tr><td class="cmd-name">/contextd-eval<span class="cmd-tag maintainer">maint</span></td><td>Metrics: hallucination rate, knowledge gaps, violation score</td><td>Periodic wiki quality check</td></tr>
           <tr><td class="cmd-name">/contextd-viz<span class="cmd-tag maintainer">maint</span></td><td>HTML viewer + live trace watch</td><td>Visual inspection</td></tr>
         </tbody>
@@ -604,8 +604,8 @@
       <div class="faq-body">
         <p>Use two commands:</p>
         <ul>
-          <li><code>/update-wiki</code> — run after each merge</li>
-          <li><code>/rebase-wiki</code> — run regularly for a full check</li>
+          <li><code>/contextd-update</code> — run after each merge</li>
+          <li><code>/contextd-rebase</code> — run regularly for a full check</li>
         </ul>
         <p>Use <code>/contextd-eval</code> to see quality metrics and missing knowledge.</p>
       </div>
@@ -640,7 +640,7 @@
       <div class="faq-body">
         <p>No. Most people only need 3-4 commands:</p>
         <ul>
-          <li><strong>Daily engineering</strong>: <code>/use-wiki</code>, <code>/find</code>, <code>/update-wiki</code></li>
+          <li><strong>Daily engineering</strong>: <code>/contextd-use</code>, <code>/find</code>, <code>/contextd-update</code></li>
           <li><strong>Daily non-tech</strong>: <code>/product-brief</code>, <code>/business-view</code>, <code>/contextd-explain</code></li>
           <li><strong>One-time setup</strong>: <code>/contextd-setup</code> or <code>/new-workspace</code></li>
         </ul>

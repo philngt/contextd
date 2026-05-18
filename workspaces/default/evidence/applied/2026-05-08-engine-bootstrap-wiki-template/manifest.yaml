@@ -147,7 +147,7 @@ validator:
   no_p0_p1_deferred: pass
   citations_complete: pass
   affects_paths_in_workspace: pass_with_note
-  affects_paths_note: "F-023 (.claude/commands/README.md) explicitly excluded — engine-level path, marked NOT in apply manifest by verified-facts.md. Will be handled in separate session via /update-wiki."
+  affects_paths_note: "F-023 (.claude/commands/README.md) explicitly excluded — engine-level path, marked NOT in apply manifest by verified-facts.md. Will be handled in separate session via /contextd-update."
   contradictions_resolved: not_applicable
   contradictions_note: "agentic-engine pipeline doesn't generate 02-contradiction.md. Mini Contradiction Hunter ran across all batches — found 0 conflicts."
 
@@ -173,7 +173,7 @@ action_items_post_apply:
     description: "Add /contextd-viz row vào .claude/commands/README.md Section 'Pipeline observability'"
     target_path: ".claude/commands/README.md"
     target_scope: "engine-level (NOT in workspace path)"
-    command_to_run: "/update-wiki --scope .claude/commands/README.md"
+    command_to_run: "/contextd-update --scope .claude/commands/README.md"
     blocking: false
 
 unresolved_blockers: []

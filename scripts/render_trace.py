@@ -654,7 +654,7 @@ def render_index_html(runs_data: list[dict], workspace_active: str | None, runs_
     )
 
     if not rows:
-        body_main = '<p class="muted empty">Chưa có run nào. Chạy <code>/use-wiki "..."</code> để có run đầu tiên.</p>'
+        body_main = '<p class="muted empty">Chưa có run nào. Chạy <code>/contextd-use "..."</code> để có run đầu tiên.</p>'
     else:
         body_main = f"""
 <div class="filters">

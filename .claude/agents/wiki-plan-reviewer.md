@@ -106,7 +106,7 @@ BLOCK
 - Contracts missing: {list}
 - Conflicts: {count}
 - Blocking gaps: {count}
-- Recommendation: {fix what before re-running /use-wiki}
+- Recommendation: {fix what before re-running /contextd-use}
 ```
 
 ## Phần B — Trace JSON (cuối output, đúng 1 fenced ```json block)

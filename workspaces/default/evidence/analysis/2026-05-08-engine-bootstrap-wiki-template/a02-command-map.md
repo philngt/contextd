@@ -21,7 +21,7 @@ Workspace baseline: `{ws}/projects/` rỗng → mọi entry-point status = `[NEW
 - **inputs**: none
 - **outputs**: report only (no file changes)
 - **calls**: reads `.claude/wiki.json`, `{wiki_root}/workspaces/{ws}/workspace.md`
-- **called_by**: user khi `/use-wiki` lỗi resolve
+- **called_by**: user khi `/contextd-use` lỗi resolve
 
 ### E-003 — `/switch-workspace {name}`  [NEW]
 - **type**: slash-command
@@ -46,7 +46,7 @@ Workspace baseline: `{ws}/projects/` rỗng → mọi entry-point status = `[NEW
 - **outputs**: report only
 - **calls**: scan `{wiki_root}/workspaces/*/workspace.md`
 
-### E-006 — `/use-wiki`  [NEW]
+### E-006 — `/contextd-use`  [NEW]
 - **type**: slash-command
 - **purpose**: Chạy 5-stage pipeline (planner → context-selector → plan-reviewer → main agent code → reviewer) trước khi viết code wiki-aware `(raw.md#section-4)`
 - **inputs**: task description (free-text)
@@ -60,7 +60,7 @@ Workspace baseline: `{ws}/projects/` rỗng → mọi entry-point status = `[NEW
   - templates: `prompt-template.md` (Stage 3 output template)
 - **called_by**: user trước MỌI task implement_feature/fix_bug/design/incident/review
 
-### E-007 — `/update-wiki`  [NEW]
+### E-007 — `/contextd-update`  [NEW]
 - **type**: slash-command
 - **purpose**: Sync wiki với code đã thay đổi (git diff → curator áp dụng) `(raw.md#section-4)`
 - **inputs**: optional `--scope`
@@ -68,7 +68,7 @@ Workspace baseline: `{ws}/projects/` rỗng → mọi entry-point status = `[NEW
 - **calls**: sub-agent `wiki-curator` (E-A4)
 - **called_by**: user sau khi code merge
 
-### E-008 — `/rebase-wiki`  [NEW]
+### E-008 — `/contextd-rebase`  [NEW]
 - **type**: slash-command
 - **purpose**: Quét wiki vs codebase thực tế để vá mọi chỗ wiki nói khác code chạy `(raw.md#section-4)`
 - **inputs**: none
@@ -169,7 +169,7 @@ Workspace baseline: `{ws}/projects/` rỗng → mọi entry-point status = `[NEW
 - **role**: Phân tích task của user và xác định patterns, contracts, domain, components cần áp dụng theo wiki
 - **tools allowed**: Read, Glob, Grep `(.claude/agents/wiki-planner.md:L4)`
 - **model**: sonnet `(.claude/agents/wiki-planner.md:L5)`
-- **invoked_by**: command `/use-wiki` Stage 1 (`E-006`) `(raw.md#section-5.1)`
+- **invoked_by**: command `/contextd-use` Stage 1 (`E-006`) `(raw.md#section-5.1)`
 - **output schema**: intent JSON `(agents/pipeline/intent-parser.md:L1)`
 
 ### A-002 — `wiki-context-selector`  [NEW]
@@ -177,7 +177,7 @@ Workspace baseline: `{ws}/projects/` rỗng → mọi entry-point status = `[NEW
 - **role**: Map intent JSON từ wiki-planner sang danh sách file wiki cụ thể, slice section liên quan, và ghi `.claude/context/current-task.md`
 - **tools allowed**: Read, Glob, Grep, Write `(.claude/agents/wiki-context-selector.md:L4)`
 - **model**: sonnet
-- **invoked_by**: `/use-wiki` Stage 2 (sau `wiki-planner`)
+- **invoked_by**: `/contextd-use` Stage 2 (sau `wiki-planner`)
 - **calls**: spec `context-retrieval-map.md`, `context-filter.md`
 
 ### A-003 — `wiki-plan-reviewer`  [NEW]
@@ -185,7 +185,7 @@ Workspace baseline: `{ws}/projects/` rỗng → mọi entry-point status = `[NEW
 - **role**: Review intent JSON + context đã retrieve trước khi main agent code. Phát hiện sớm conflict/gap/pattern không tồn tại để chặn code sai
 - **tools allowed**: Read, Grep, Glob `(.claude/agents/wiki-plan-reviewer.md:L4)`
 - **model**: sonnet
-- **invoked_by**: `/use-wiki` Stage 2.5 (gate trước Builder)
+- **invoked_by**: `/contextd-use` Stage 2.5 (gate trước Builder)
 - **output**: APPROVED / BLOCK + reasons
 
 ### A-004 — `wiki-curator`  [NEW]
@@ -193,14 +193,14 @@ Workspace baseline: `{ws}/projects/` rỗng → mọi entry-point status = `[NEW
 - **role**: Cập nhật wiki sau khi code thay đổi — pattern mới, contract mới, service mới, ADR mới
 - **tools allowed**: Read, Edit, Write, Glob, Grep `(.claude/agents/wiki-curator.md:L4)`
 - **model**: sonnet
-- **invoked_by**: commands `/update-wiki` (E-007), `/rebase-wiki` (E-008), `/evidence-apply` (E-018)
+- **invoked_by**: commands `/contextd-update` (E-007), `/contextd-rebase` (E-008), `/evidence-apply` (E-018)
 
 ### A-005 — `wiki-reviewer`  [NEW]
 - **type**: subagent
 - **role**: Đối chiếu output của builder/main agent với contracts, patterns, domain rules trong `.claude/context/current-task.md` và `validator-rules.md`
 - **tools allowed**: Read, Grep, Glob `(.claude/agents/wiki-reviewer.md:L4)`
 - **model**: sonnet
-- **invoked_by**: `/use-wiki` Stage 4 (optional, validator)
+- **invoked_by**: `/contextd-use` Stage 4 (optional, validator)
 - **output**: violation report (no edits — read-only)
 
 ## System prompt docs (3 docs — not invokable subagents)
@@ -213,7 +213,7 @@ Workspace baseline: `{ws}/projects/` rỗng → mọi entry-point status = `[NEW
 
 ## Cross-reference summary
 
-- **5-stage `/use-wiki` pipeline**: E-006 invokes A-001 → A-002 → A-003 → main agent (no subagent) → A-005 (optional). `(raw.md#section-6.1)`
+- **5-stage `/contextd-use` pipeline**: E-006 invokes A-001 → A-002 → A-003 → main agent (no subagent) → A-005 (optional). `(raw.md#section-6.1)`
 - **Wiki edit pipeline**: E-007/E-008/E-018 all delegate to A-004 (wiki-curator) — central edit authority. `(raw.md#section-4.2, section-4.6)`
 - **Evidence ingest pipeline**: E-014 (generic) ← wrapped by E-015 (Obsidian batch) and E-009 (code/agentic-engine wrapper). All write to `{ws}/evidence/sources/{id}/`. `(raw.md#section-6.3)`
 - **Evidence analyze→qa→apply chain**: E-016 → E-017 → E-018 sequential, dispatched by `source_type` + `code_variant`. `(raw.md#section-4.6)`

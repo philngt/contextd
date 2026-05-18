@@ -7,7 +7,7 @@
 
 ## q-019 — /contextd-viz orphan README fix
 - **Status**: answered | **By**: self | **Via**: code-analyst-recommend (●●●) | **Confidence**: high
-- **Answer**: Tách phiên. Apply evidence này trước. Sau đó chạy `/update-wiki --scope .claude/commands/README.md` để add row cho `/contextd-viz` Section "Pipeline observability". KHÔNG tạo ADR (bug fix only).
+- **Answer**: Tách phiên. Apply evidence này trước. Sau đó chạy `/contextd-update --scope .claude/commands/README.md` để add row cho `/contextd-viz` Section "Pipeline observability". KHÔNG tạo ADR (bug fix only).
 - **Cited**: `(a06-decision-drafts.md#D-005)`, `(08-knowledge-gaps.md#G-006)`
 
 ## q-020 — Pipeline support docs README table extend

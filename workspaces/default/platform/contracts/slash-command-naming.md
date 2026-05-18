@@ -25,7 +25,7 @@ Cho commands MỚI: prefer "subject-verb" convention (consistency với `evidenc
 
 19/19 commands conform RULE:
 - Workspace ops: `/contextd-setup`, `/contextd-detect`, `/switch-workspace`, `/new-workspace`, `/list-workspaces` `(.claude/commands/README.md:L16-L20)`
-- Wiki usage: `/use-wiki`, `/update-wiki`, `/rebase-wiki` `(.claude/commands/README.md:L28-L30)`
+- Wiki usage: `/contextd-use`, `/contextd-update`, `/contextd-rebase` `(.claude/commands/README.md:L28-L30)`
 - Codebase: `/code-analyze` `(.claude/commands/README.md:L38)`
 - Reporting: `/contextd-report` `(.claude/commands/README.md:L48)`
 - Observability: `/contextd-trace`, `/contextd-eval`, `/contextd-viz` `(.claude/commands/contextd-viz.md:L1)`

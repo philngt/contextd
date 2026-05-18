@@ -1,6 +1,6 @@
 # Quickstart — Go Live in 5 Minutes
 
-For developers who just cloned `wiki-template`. This gets you from `git clone` to your first `/use-wiki` run.
+For developers who just cloned `wiki-template`. This gets you from `git clone` to your first `/contextd-use` run.
 
 > Read this right after cloning the repo. Goal: a working wiki setup for one codebase in about 5 minutes.
 
@@ -87,10 +87,10 @@ It snapshots codebase metadata (without copying source), sends it through the ev
 
 ---
 
-## Step 5 — Run your first task with `/use-wiki`
+## Step 5 — Run your first task with `/contextd-use`
 
 ```text
-/use-wiki "Add a Kafka consumer for surgery file processed events"
+/contextd-use "Add a Kafka consumer for surgery file processed events"
 ```
 
 The pipeline runs 5 stages:
@@ -113,7 +113,7 @@ Instead of running the full pipeline:
 /find idempotency
 ```
 
-Returns top candidates + snippets. Faster than `/use-wiki` for lookup-only tasks.
+Returns top candidates + snippets. Faster than `/contextd-use` for lookup-only tasks.
 
 ---
 
@@ -122,8 +122,8 @@ Returns top candidates + snippets. Faster than `/use-wiki` for lookup-only tasks
 Sync wiki with your code changes:
 
 ```text
-/update-wiki                 # incremental sync (git diff → wiki edits)
-/rebase-wiki                 # periodic verification: wiki vs codebase
+/contextd-update                 # incremental sync (git diff → wiki edits)
+/contextd-rebase                 # periodic verification: wiki vs codebase
 ```
 
 ---
@@ -140,9 +140,9 @@ Sync wiki with your code changes:
 
 | Symptom | Fix |
 |---|---|
-| `/use-wiki` returns "no workspace" | Run `/switch-workspace` or `/contextd-setup`. |
+| `/contextd-use` returns "no workspace" | Run `/switch-workspace` or `/contextd-setup`. |
 | Slash commands do not appear | Re-run `bash scripts/install-to-claude.sh`. |
 | Pattern not found | Run `/find <keyword>` to confirm; workspace may not have that pattern yet. |
-| Wiki references files renamed in code | Run `/rebase-wiki` to resync. |
+| Wiki references files renamed in code | Run `/contextd-rebase` to resync. |
 | Legacy codebase onboarding with empty wiki | Run `/code-analyze` to bootstrap. |
 | Need to ingest an external changelog/incident report | Run `/evidence-ingest --source paste --label "{topic}"`. |

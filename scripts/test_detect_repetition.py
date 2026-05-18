@@ -131,11 +131,11 @@ def test_cluster_covered_by():
     cl = Cluster(id="x", representative_tokens=["rebase", "wiki", "merge"],
                  count=4, first_seen=now_iso(), last_seen=now_iso())
     artifact_kw = {
-        "command:rebase-wiki": {"rebase", "wiki", "sync", "merge"},
+        "command:contextd-rebase": {"rebase", "wiki", "sync", "merge"},
         "command:unrelated": {"foo", "bar"},
     }
     label = cluster_covered_by(cl, artifact_kw, 0.5)
-    assert label == "command:rebase-wiki", label
+    assert label == "command:contextd-rebase", label
 
     # No coverage when overlap is low.
     cl2 = Cluster(id="y", representative_tokens=["deploy", "kubernetes", "rollout"],
@@ -177,7 +177,7 @@ def test_hint_text_is_short():
     """Per-turn token cost — hint must stay terse (<120 chars)."""
     from lib.repetition import build_hint
     cl = Cluster(
-        id="rebase-wiki-merge-a1b2c3",
+        id="contextd-rebase-merge-a1b2c3",
         representative_tokens=["rebase", "wiki", "merge", "code", "review"],
         count=7, first_seen=now_iso(), last_seen=now_iso(),
     )
@@ -304,8 +304,8 @@ def test_e2e_covered_by_artifact():
         # Install a workspace-level slash command whose description matches.
         ws_cmd_dir = root / "workspaces" / "_test-ws" / ".claude" / "commands"
         ws_cmd_dir.mkdir(parents=True)
-        (ws_cmd_dir / "rebase-wiki.md").write_text(
-            "---\nname: rebase-wiki\ndescription: rebase wiki sau khi merge code\n---\n",
+        (ws_cmd_dir / "contextd-rebase.md").write_text(
+            "---\nname: contextd-rebase\ndescription: rebase wiki sau khi merge code\n---\n",
             encoding="utf-8",
         )
         prompts = [

@@ -1,9 +1,9 @@
 # Evidence Apply
 
-Feed `verified-facts.md` (+ optional `10-final-report.md`) vào logic của `/update-wiki` hoặc `/rebase-wiki`. Tạo audit trail tại `applied/{evid-id}/manifest.yaml`.
+Feed `verified-facts.md` (+ optional `10-final-report.md`) vào logic của `/contextd-update` hoặc `/contextd-rebase`. Tạo audit trail tại `applied/{evid-id}/manifest.yaml`.
 
 > Step 4 trong pipeline: ingest → analyze → qa → **apply**.
-> Reference: [agents/pipeline/evidence-lifecycle.md](../../agents/pipeline/evidence-lifecycle.md), [update-wiki.md](update-wiki.md), [rebase-wiki.md](rebase-wiki.md).
+> Reference: [agents/pipeline/evidence-lifecycle.md](../../agents/pipeline/evidence-lifecycle.md), [contextd-update.md](contextd-update.md), [contextd-rebase.md](contextd-rebase.md).
 
 ---
 
@@ -93,10 +93,10 @@ Sources   :
 Authority order:
   Contracts > Verified facts (this evidence) > Platform Patterns > Project Docs > Domain Knowledge
 
-Apply via: /{update-wiki|rebase-wiki} workflow rules.
+Apply via: /{contextd-update|contextd-rebase} workflow rules.
 ```
 
-## Bước 5 — Invoke update-wiki / rebase-wiki logic (checkpointed)
+## Bước 5 — Invoke contextd-update / contextd-rebase logic (checkpointed)
 
 Mỗi sub-step dưới đây map 1-1 với entry `steps[]` trong `checkpoint.json`. Sau mỗi sub-step finish → flush checkpoint (xem Bước 0.5). Resume sẽ đọc `current_step` + `resume_token` để skip.
 
@@ -137,13 +137,13 @@ Nếu thiếu → checkpoint mark sub-step `blocked`, `interrupted_reason = "cre
 
 ### Curator delegation vs inline mode
 
-Default flow: edit wiki delegate qua `wiki-curator` subagent (theo update-wiki.md Bước 3).
+Default flow: edit wiki delegate qua `wiki-curator` subagent (theo contextd-update.md Bước 3).
 
 **Fallback `--inline` flag** — khi curator subagent unavailable (vd test mode, subagent file bị xóa, môi trường không hỗ trợ Agent tool):
 
 - Pass `--inline` → main agent edit trực tiếp file wiki (skip curator delegation).
 - Khi inline:
-  - Main agent BẮT BUỘC tự verify path sandbox trước MỖI Edit/Write call (giống Bước 4 Path Sandbox Verification của update-wiki.md).
+  - Main agent BẮT BUỘC tự verify path sandbox trước MỖI Edit/Write call (giống Bước 4 Path Sandbox Verification của contextd-update.md).
   - Ghi `inline_apply: true` + lý do vào manifest.yaml.
   - Output `## Wiki Updated` table phải vẫn liệt kê absolute paths như curator format (audit trail không thay đổi).
 - Default (không `--inline`): nếu curator unavailable → STOP với error `CURATOR UNAVAILABLE — chạy lại với --inline nếu chấp nhận inline edit (giảm safety layer 1)`.
@@ -151,7 +151,7 @@ Default flow: edit wiki delegate qua `wiki-curator` subagent (theo update-wiki.m
 
 ### Mode: `update`
 
-Run [update-wiki.md](update-wiki.md) **Bước 1–5** với evidence là input chính. Map sub-steps:
+Run [contextd-update.md](contextd-update.md) **Bước 1–5** với evidence là input chính. Map sub-steps:
 
 | Sub-step                       | checkpoint `step` value                  | Resume granularity      |
 |--------------------------------|------------------------------------------|-------------------------|
@@ -162,14 +162,14 @@ Run [update-wiki.md](update-wiki.md) **Bước 1–5** với evidence là input 
 
 ### Mode: `rebase`
 
-Run [rebase-wiki.md](rebase-wiki.md) **Bước 1–8** với rule bổ sung:
+Run [contextd-rebase.md](contextd-rebase.md) **Bước 1–8** với rule bổ sung:
 - Conflict code ≠ verified-facts → **verified-facts thắng**.
 - Conflict wiki hiện tại ≠ verified-facts → wiki update theo facts.
 - Conflict code ≠ wiki HIỆN TẠI và KHÔNG có fact cover → fall back behavior cũ.
 
 Map sub-steps (chi tiết hơn vì rebase có nhiều khía cạnh per file):
 
-| Sub-step rebase-wiki                                    | checkpoint `step` value          | Resume granularity         |
+| Sub-step contextd-rebase                                    | checkpoint `step` value          | Resume granularity         |
 |---------------------------------------------------------|----------------------------------|----------------------------|
 | Bước 1: list service docs + patterns + contracts        | `rebase_list_targets`            | atomic                     |
 | Bước 2a: verify Config Overrides (per service file)     | `rebase_verify_config_overrides` | per file                   |
@@ -233,7 +233,7 @@ Tạo `{ws}/evidence/applied/{id}/manifest.yaml` từ template `templates/eviden
 - `deferred_questions[]` (P2/P3 deferred OK)
 - `unresolved_blockers: []` (phải rỗng vì đã pass validator)
 
-Ghi `applied/{id}/diff-summary.md` theo format Bước 8 báo cáo của [rebase-wiki.md](rebase-wiki.md):
+Ghi `applied/{id}/diff-summary.md` theo format Bước 8 báo cáo của [contextd-rebase.md](contextd-rebase.md):
 ```markdown
 ## Apply Report — workspace `{active}` — evidence `{id}` — {date}
 

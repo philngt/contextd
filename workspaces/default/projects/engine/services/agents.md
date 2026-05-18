@@ -8,11 +8,11 @@ Catalog 5 sub-agents định nghĩa trong `.claude/agents/` của engine. Mỗi 
 
 | Name | Role | Tools | Model | Invoked by | Source |
 |------|------|-------|-------|------------|--------|
-| `wiki-planner` | Phân tích task, xác định patterns/contracts/domain/components cần áp dụng | Read, Glob, Grep | sonnet | `/use-wiki` Stage 1 | `.claude/agents/wiki-planner.md` |
-| `wiki-context-selector` | Map intent JSON → file wiki cụ thể, slice section, ghi `current-task.md` | Read, Glob, Grep, Write | sonnet | `/use-wiki` Stage 2 | `.claude/agents/wiki-context-selector.md` |
-| `wiki-plan-reviewer` | Review intent + context retrieved, APPROVED/BLOCK gate | Read, Grep, Glob | sonnet | `/use-wiki` Stage 2.5 | `.claude/agents/wiki-plan-reviewer.md` |
-| `wiki-curator` | Edit wiki khi code/evidence change — pattern/contract/service/ADR | Read, Edit, Write, Glob, Grep | sonnet | `/update-wiki`, `/rebase-wiki`, `/evidence-apply` | `.claude/agents/wiki-curator.md` |
-| `wiki-reviewer` | Đối chiếu code output vs context theo `validator-rules.md` (read-only) | Read, Grep, Glob | sonnet | `/use-wiki` Stage 4 (optional) | `.claude/agents/wiki-reviewer.md` |
+| `wiki-planner` | Phân tích task, xác định patterns/contracts/domain/components cần áp dụng | Read, Glob, Grep | sonnet | `/contextd-use` Stage 1 | `.claude/agents/wiki-planner.md` |
+| `wiki-context-selector` | Map intent JSON → file wiki cụ thể, slice section, ghi `current-task.md` | Read, Glob, Grep, Write | sonnet | `/contextd-use` Stage 2 | `.claude/agents/wiki-context-selector.md` |
+| `wiki-plan-reviewer` | Review intent + context retrieved, APPROVED/BLOCK gate | Read, Grep, Glob | sonnet | `/contextd-use` Stage 2.5 | `.claude/agents/wiki-plan-reviewer.md` |
+| `wiki-curator` | Edit wiki khi code/evidence change — pattern/contract/service/ADR | Read, Edit, Write, Glob, Grep | sonnet | `/contextd-update`, `/contextd-rebase`, `/evidence-apply` | `.claude/agents/wiki-curator.md` |
+| `wiki-reviewer` | Đối chiếu code output vs context theo `validator-rules.md` (read-only) | Read, Grep, Glob | sonnet | `/contextd-use` Stage 4 (optional) | `.claude/agents/wiki-reviewer.md` |
 
 ## Tools allowlist principle (observed, not yet contract — see G-009)
 
@@ -27,14 +27,14 @@ Catalog 5 sub-agents định nghĩa trong `.claude/agents/` của engine. Mỗi 
 ## Invocation patterns
 
 ```
-/use-wiki:
+/contextd-use:
   Stage 1: planner
   Stage 2: context-selector
   Stage 2.5: plan-reviewer (BLOCKING gate)
   Stage 3: main agent (NOT subagent)
   Stage 4: reviewer (optional, read-only)
 
-/update-wiki, /rebase-wiki, /evidence-apply:
+/contextd-update, /contextd-rebase, /evidence-apply:
   delegate to: wiki-curator
   fallback: --inline (main agent direct edit, mất 1 safety layer)
 ```
@@ -90,7 +90,7 @@ required_frontmatter_fields: [name, description, tools, model]
 
 - Contract: [../../platform/contracts/sub-agent-frontmatter-schema.md](../../platform/contracts/sub-agent-frontmatter-schema.md)
 - Pattern: [../../platform/patterns/multi-stage-subagent-pipeline.md](../../platform/patterns/multi-stage-subagent-pipeline.md) (5-stage flow uses 4 of 5 sub-agents)
-- Service: [wiki-usage.md](wiki-usage.md) (`/use-wiki`, `/update-wiki`, `/rebase-wiki` invoke sub-agents)
+- Service: [wiki-usage.md](wiki-usage.md) (`/contextd-use`, `/contextd-update`, `/contextd-rebase` invoke sub-agents)
 - Service: [evidence-pipeline.md](evidence-pipeline.md) (`/evidence-apply` invokes wiki-curator)
 - Engine source: `.claude/agents/wiki-{planner,context-selector,plan-reviewer,curator,reviewer}.md`
 - Engine spec: `agents/pipeline/multi-agent-pipeline.md` (full I/O schema)

@@ -68,7 +68,7 @@ list_workspaces_format: table_with_active_marker
 ## Notes
 
 - `/contextd-setup` là entry-point onboard codebase mới vào wiki — first-run interactive.
-- `/contextd-detect` là sanity check sau setup hoặc khi `/use-wiki` lỗi resolve.
+- `/contextd-detect` là sanity check sau setup hoặc khi `/contextd-use` lỗi resolve.
 - 5 commands này KHÔNG depend vào evidence pipeline — pure workspace state ops.
 
 ## Related

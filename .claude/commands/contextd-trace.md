@@ -1,6 +1,6 @@
 # Wiki Trace
 
-View 1 run cụ thể của pipeline đã chạy (qua `/use-wiki`). Đọc các trace JSON dưới `{project_dir}/.claude/runs/{run_id}/` → render Markdown timeline để debug nhanh.
+View 1 run cụ thể của pipeline đã chạy (qua `/contextd-use`). Đọc các trace JSON dưới `{project_dir}/.claude/runs/{run_id}/` → render Markdown timeline để debug nhanh.
 
 > Read-only. KHÔNG sửa file run nào.
 > Cần HTML viewer (collapsible cards, side-by-side retrieved-vs-used, Mermaid)? Dùng [`/contextd-viz`](contextd-viz.md) — sister command output HTML thay vì Markdown.

@@ -249,7 +249,7 @@ Code analysis from raw.md Section 4.5: `/contextd-viz` listed as observability c
 N/A — bug fix, KHÔNG cần ADR. Track via PR description or commit message.
 
 ### Status
-RESOLVED-PENDING-FIX — fix qua `/update-wiki` trong phiên riêng.
+RESOLVED-PENDING-FIX — fix qua `/contextd-update` trong phiên riêng.
 
 ---
 

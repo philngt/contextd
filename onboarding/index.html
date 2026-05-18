@@ -305,15 +305,15 @@
         <div class="step-content">
           <h4>Viết code theo wiki cho task lớn</h4>
           <p>Trước MỌI task (implement feature, fix bug, design, incident, review), gõ
-            <code>/use-wiki</code> để chạy quy trình kiểm tra trước khi viết code, giúp giảm sai sót.</p>
-          <pre><code>/use-wiki implement payment refund flow with idempotency</code></pre>
+            <code>/contextd-use</code> để chạy quy trình kiểm tra trước khi viết code, giúp giảm sai sót.</p>
+          <pre><code>/contextd-use implement payment refund flow with idempotency</code></pre>
           <p>Mục tiêu: code bám đúng quy tắc của team, tránh tạo ra phần không được thống nhất.</p>
         </div>
       </div>
 
       <div class="callout tip">
-        <strong>💡 Tiếp theo:</strong> Sau khi code merge, gõ <code>/update-wiki</code> để wiki cập nhật theo code mới.
-        Định kỳ chạy <code>/rebase-wiki</code> để sửa chỗ wiki khác so với code thật.
+        <strong>💡 Tiếp theo:</strong> Sau khi code merge, gõ <code>/contextd-update</code> để wiki cập nhật theo code mới.
+        Định kỳ chạy <code>/contextd-rebase</code> để sửa chỗ wiki khác so với code thật.
       </div>
     </div>
 
@@ -356,7 +356,7 @@
 
       <div class="callout tip">
         <strong>💡 Tiếp theo:</strong> Định kỳ chạy <code>/contextd-eval</code> để xem hiệu quả wiki
-        (hallucination rate, knowledge gaps, plan-block rate). Khi nghi wiki lệch so với code → <code>/rebase-wiki</code>.
+        (hallucination rate, knowledge gaps, plan-block rate). Khi nghi wiki lệch so với code → <code>/contextd-rebase</code>.
       </div>
     </div>
 
@@ -425,7 +425,7 @@
         Cách làm = phương pháp tốt nhất — nên tái sử dụng, có thể ngoại lệ nếu có lý do chính đáng.</dd>
 
       <dt>Lệnh (Slash command) vs Quy trình nội bộ</dt>
-      <dd>Lệnh (<code>/use-wiki</code>, <code>/find</code>, ...) = lệnh bạn gọi trực tiếp.
+      <dd>Lệnh (<code>/contextd-use</code>, <code>/find</code>, ...) = lệnh bạn gọi trực tiếp.
         Quy trình nội bộ (planner, context-selector, reviewer, ...) = các bước chạy tự động bên trong,
         bạn không cần quan tâm.</dd>
 
@@ -460,10 +460,10 @@
       <table class="cmd-table">
         <thead><tr><th>Lệnh</th><th>Mục đích</th><th>Khi nào</th></tr></thead>
         <tbody>
-          <tr><td class="cmd-name">/use-wiki<span class="cmd-tag tech">tech</span></td><td>5-stage pipeline (planner → context → review → code → reviewer)</td><td>Trước MỌI task: implement, fix bug, design, review</td></tr>
+          <tr><td class="cmd-name">/contextd-use<span class="cmd-tag tech">tech</span></td><td>5-stage pipeline (planner → context → review → code → reviewer)</td><td>Trước MỌI task: implement, fix bug, design, review</td></tr>
           <tr><td class="cmd-name">/find {keywords}<span class="cmd-tag tech">tech</span></td><td>Tìm nhanh quy tắc/thoả thuận/dịch vụ, 5 kết quả phù hợp nhất</td><td>Tìm nhanh khi đã biết mình cần gì</td></tr>
-          <tr><td class="cmd-name">/update-wiki<span class="cmd-tag tech">tech</span></td><td>Sync wiki với code đã thay đổi (git diff → curator áp dụng)</td><td>Sau khi merge code, để wiki không bị lệch</td></tr>
-          <tr><td class="cmd-name">/rebase-wiki<span class="cmd-tag maintainer">maint</span></td><td>Quét toàn bộ wiki vs code, sửa chỗ wiki khác so với code thật</td><td>Định kỳ (tuần/tháng), hoặc khi nghi drift lớn</td></tr>
+          <tr><td class="cmd-name">/contextd-update<span class="cmd-tag tech">tech</span></td><td>Sync wiki với code đã thay đổi (git diff → curator áp dụng)</td><td>Sau khi merge code, để wiki không bị lệch</td></tr>
+          <tr><td class="cmd-name">/contextd-rebase<span class="cmd-tag maintainer">maint</span></td><td>Quét toàn bộ wiki vs code, sửa chỗ wiki khác so với code thật</td><td>Định kỳ (tuần/tháng), hoặc khi nghi drift lớn</td></tr>
         </tbody>
       </table>
     </div>
@@ -528,7 +528,7 @@
       <table class="cmd-table">
         <thead><tr><th>Lệnh</th><th>Mục đích</th><th>Khi nào</th></tr></thead>
         <tbody>
-          <tr><td class="cmd-name">/contextd-trace {run_id}<span class="cmd-tag maintainer">maint</span></td><td>Render Markdown timeline 1 run pipeline (5 stage)</td><td>Khi output <code>/use-wiki</code> sai — debug stage divergence</td></tr>
+          <tr><td class="cmd-name">/contextd-trace {run_id}<span class="cmd-tag maintainer">maint</span></td><td>Render Markdown timeline 1 run pipeline (5 stage)</td><td>Khi output <code>/contextd-use</code> sai — debug stage divergence</td></tr>
           <tr><td class="cmd-name">/contextd-eval<span class="cmd-tag maintainer">maint</span></td><td>Thống kê: tỷ lệ AI bịa, khoảng trống kiến thức, điểm vi phạm</td><td>Định kỳ kiểm tra hiệu quả wiki</td></tr>
           <tr><td class="cmd-name">/contextd-viz<span class="cmd-tag maintainer">maint</span></td><td>HTML viewer + live watch cho trace</td><td>Kiểm tra trực quan</td></tr>
         </tbody>
@@ -605,8 +605,8 @@
       <div class="faq-body">
         <p>2 lệnh:</p>
         <ul>
-          <li><code>/update-wiki</code> — sau mỗi code merge, áp git diff vào wiki</li>
-          <li><code>/rebase-wiki</code> — định kỳ quét toàn bộ wiki so với code, sửa chỗ lệch</li>
+          <li><code>/contextd-update</code> — sau mỗi code merge, áp git diff vào wiki</li>
+          <li><code>/contextd-rebase</code> — định kỳ quét toàn bộ wiki so với code, sửa chỗ lệch</li>
         </ul>
         <p>Để evaluate hiệu quả wiki: <code>/contextd-eval</code> — báo cáo tỷ lệ AI bịa, khoảng trống kiến thức.</p>
       </div>
@@ -641,7 +641,7 @@
       <div class="faq-body">
         <p>Không. 80% use case chỉ cần 3-4 lệnh:</p>
         <ul>
-          <li><strong>Engineer hằng ngày</strong>: <code>/use-wiki</code>, <code>/find</code>, <code>/update-wiki</code></li>
+          <li><strong>Engineer hằng ngày</strong>: <code>/contextd-use</code>, <code>/find</code>, <code>/contextd-update</code></li>
           <li><strong>Non-tech hằng ngày</strong>: <code>/product-brief</code>, <code>/business-view</code>, <code>/contextd-explain</code></li>
           <li><strong>Setup 1 lần</strong>: <code>/contextd-setup</code> hoặc <code>/new-workspace</code></li>
         </ul>

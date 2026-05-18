@@ -1,12 +1,12 @@
 # Pattern: multi-stage-subagent-pipeline
 
-> Pattern doc — apply per `/use-wiki` flow. **Note**: NOT marked as flagship in patterns-index (per ADR 003 — workspace user override during Q&A q-007).
+> Pattern doc — apply per `/contextd-use` flow. **Note**: NOT marked as flagship in patterns-index (per ADR 003 — workspace user override during Q&A q-007).
 
 ## Context
 
 Khi user task implement_feature / fix_bug / design / incident / review wiki-aware code, naïvely throw all wiki vào prompt → noise, hallucination, ignored knowledge. Pattern multi-stage subagent pipeline filters, ranks, and validates context trước khi Builder agent thấy.
 
-5-stage flow (+ optional Stage 4) reused trong `/use-wiki` command.
+5-stage flow (+ optional Stage 4) reused trong `/contextd-use` command.
 
 ## Flow
 
@@ -113,7 +113,7 @@ trace_schema: "templates/run-trace.schema.json"
 
 ## Used By
 
-- `/use-wiki` command (`.claude/commands/use-wiki.md`) — primary implementation.
+- `/contextd-use` command (`.claude/commands/contextd-use.md`) — primary implementation.
 - Engine specs:
   - `agents/pipeline/README.md` (Section "Pipeline (5 stage)")
   - `agents/pipeline/multi-agent-pipeline.md` (full I/O schema)

@@ -11,7 +11,7 @@ Examples:
 - `/find ratelimit` → bất kỳ pattern/contract/service nào nhắc đến rate limit
 - `/find idempotency` → cross-cutting principles + pack-specific rules
 
-> Khác `/use-wiki`: KHÔNG planner/selector/reviewer subagent, KHÔNG ghi context-file. Chỉ trả top-5 candidate + 1-2 dòng snippet. Lightweight.
+> Khác `/contextd-use`: KHÔNG planner/selector/reviewer subagent, KHÔNG ghi context-file. Chỉ trả top-5 candidate + 1-2 dòng snippet. Lightweight.
 
 ---
 
@@ -82,7 +82,7 @@ Nếu 0 match:
 No match. Try:
   - Broader keyword (vd "kafka" thay vì "kafka-consumer-batch-retry")
   - Check workspace: workspace_active = {active or "none"}
-  - Suggest: /list-workspaces, hoặc /use-wiki "{original query}" để full pipeline
+  - Suggest: /list-workspaces, hoặc /contextd-use "{original query}" để full pipeline
 ```
 
 ---
@@ -94,7 +94,7 @@ After top-5:
 ```
 Next steps:
   - Open a file: just paste path
-  - Full context analysis: /use-wiki "{query}"
+  - Full context analysis: /contextd-use "{query}"
   - See full pattern table: cat {ws}/patterns-index.md
 ```
 
@@ -111,9 +111,9 @@ Next steps:
 
 - "Tôi nhớ workspace này có pattern X, đường dẫn là gì?"
 - "Có constraint nào về idempotency trong stack tôi không?"
-- Quick lookup trước khi mở task đầy đủ với `/use-wiki`.
+- Quick lookup trước khi mở task đầy đủ với `/contextd-use`.
 
 Không nên dùng:
-- Task implement code (dùng `/use-wiki`).
+- Task implement code (dùng `/contextd-use`).
 - Audit toàn bộ wiki (dùng `/contextd-eval`).
-- Tìm theo intent có domain logic phức tạp (`/use-wiki` planner sẽ tốt hơn).
+- Tìm theo intent có domain logic phức tạp (`/contextd-use` planner sẽ tốt hơn).

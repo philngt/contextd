@@ -83,7 +83,7 @@ Subagent sẽ chạy 4 check (pattern/contract tồn tại, context đủ compon
 - `APPROVED` (có thể kèm `## Warnings`) → tiếp tục Bước 3
 - `BLOCK` kèm `## Issues` → STOP pipeline, báo user, KHÔNG tự sửa context
 
-**Nếu BLOCK do pattern/contract thiếu** → đề xuất user `/update-wiki` để tạo trước, hoặc brief lại task để dùng pattern đã có.
+**Nếu BLOCK do pattern/contract thiếu** → đề xuất user `/contextd-update` để tạo trước, hoặc brief lại task để dùng pattern đã có.
 
 **Nếu BLOCK do conflict nội tại** → cần update wiki để giải quyết conflict, KHÔNG tự bypass.
 

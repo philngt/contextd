@@ -1,6 +1,6 @@
 ---
 name: wiki-curator
-description: Cập nhật wiki sau khi code thay đổi — pattern mới, contract mới, service mới, ADR mới. DÙNG KHI user gọi /update-wiki hoặc khi cần đồng bộ wiki sau merge. KHÔNG DÙNG để chỉnh code project.
+description: Cập nhật wiki sau khi code thay đổi — pattern mới, contract mới, service mới, ADR mới. DÙNG KHI user gọi /contextd-update hoặc khi cần đồng bộ wiki sau merge. KHÔNG DÙNG để chỉnh code project.
 tools: Read, Edit, Write, Glob, Grep
 model: sonnet
 ---

@@ -23,7 +23,7 @@ Theo [agents/pipeline/workspace-resolution.md](../../agents/pipeline/workspace-r
 ```
 ID                          | Count | First seen | Last seen  | Hinted | Theme
 --------------------------- | ----- | ---------- | ---------- | ------ | -----
-rebase-wiki-merge-a1b2c3    |     7 | 2026-04-10 | 2026-05-14 | yes    | rebase wiki merge
+contextd-rebase-merge-a1b2c3    |     7 | 2026-04-10 | 2026-05-14 | yes    | rebase wiki merge
 deploy-staging-x9y8z7       |     4 | 2026-04-22 | 2026-05-12 | no     | deploy staging k8s
 ...
 ```

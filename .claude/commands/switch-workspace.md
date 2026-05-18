@@ -46,7 +46,7 @@ Nếu (2) hoặc (3) fail → STOP:
 
 KHÔNG ghi gì khi validate fail.
 
-4. Parse `## Packs` trong `{wiki_root}/workspaces/{name}/workspace.md` → `target_packs[]`. Với mỗi pack verify `{wiki_root}/packs/{pack}/pack.yaml` tồn tại. Pack thiếu → đánh dấu `missing` trong output Bước 4 (KHÔNG block switch — đồng bộ với behaviour của `/new-workspace` Bước 4 và `/use-wiki` Bước 0.7).
+4. Parse `## Packs` trong `{wiki_root}/workspaces/{name}/workspace.md` → `target_packs[]`. Với mỗi pack verify `{wiki_root}/packs/{pack}/pack.yaml` tồn tại. Pack thiếu → đánh dấu `missing` trong output Bước 4 (KHÔNG block switch — đồng bộ với behaviour của `/new-workspace` Bước 4 và `/contextd-use` Bước 0.7).
 
 ## Bước 3 — Cập nhật `<cwd>/.claude/wiki.json`
 
@@ -70,10 +70,10 @@ Tạo `<cwd>/.claude/wiki.json` minimal:
 }
 ```
 
-In cảnh báo nổi bật và **chặn flow `/use-wiki`** cho tới khi user chạy `/contextd-setup`:
+In cảnh báo nổi bật và **chặn flow `/contextd-use`** cho tới khi user chạy `/contextd-setup`:
 
 ```
-⚠ Đã tạo .claude/wiki.json minimal. Pipeline /use-wiki sẽ KHÔNG hoạt động đúng cho tới khi
+⚠ Đã tạo .claude/wiki.json minimal. Pipeline /contextd-use sẽ KHÔNG hoạt động đúng cho tới khi
   các field knowledge_map / domain được fill.
 
   Bước tiếp theo BẮT BUỘC: /contextd-setup
@@ -109,7 +109,7 @@ Khi cần regenerate:
 
 ```
 ⚠ .claude/context/current-task.md đang ghi context cho workspace/pack set cũ.
-  Chạy /use-wiki để regenerate trước khi tiếp tục code.
+  Chạy /contextd-use để regenerate trước khi tiếp tục code.
 ```
 
 ## Bước 6 — (Optional) Set global default

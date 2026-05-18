@@ -63,7 +63,7 @@
 - **Confidence**: high
 - **Source**: q-007 (self, user-override) — answered 2026-05-08
 - **Affects**: `{ws}/platform/patterns/multi-stage-subagent-pipeline.md` (create)
-- **Statement**: 5-stage `/use-wiki` flow: Stage 0 (workspace resolve) → Stage 1 (planner) → Stage 2 (context-selector) → Stage 2.5 (plan-reviewer gate) → Stage 3 (Builder) → Stage 4 (reviewer optional).
+- **Statement**: 5-stage `/contextd-use` flow: Stage 0 (workspace resolve) → Stage 1 (planner) → Stage 2 (context-selector) → Stage 2.5 (plan-reviewer gate) → Stage 3 (Builder) → Stage 4 (reviewer optional).
 - **Apply**: Use a03#P-007 canonical structure. **DO NOT** mark as flagship in `{ws}/patterns-index.md`. **DO NOT** cross-reference từ `{ws}/workspace.md`. Pattern listed normally trong patterns-index (alphabetical hoặc grouping bình thường).
 - **Index**: Add row (normal position, không top).
 
@@ -214,7 +214,7 @@
 - **Confidence**: high
 - **Source**: q-019 (self) — answered 2026-05-08
 - **Affects**: `.claude/commands/README.md` (edit, ENGINE-LEVEL — không phải workspace path)
-- **Statement**: TÁCH PHIÊN. Sau evidence-apply done, run `/update-wiki --scope .claude/commands/README.md` để add row cho `/contextd-viz` Section "Pipeline observability". KHÔNG tạo ADR (bug fix only). KHÔNG include trong evidence-apply manifest này.
+- **Statement**: TÁCH PHIÊN. Sau evidence-apply done, run `/contextd-update --scope .claude/commands/README.md` để add row cho `/contextd-viz` Section "Pipeline observability". KHÔNG tạo ADR (bug fix only). KHÔNG include trong evidence-apply manifest này.
 
 ---
 
@@ -222,7 +222,7 @@
 
 | q-id | Priority | Status | Reason | Resolution path |
 |------|----------|--------|--------|-----------------|
-| q-020 | P2 | deferred | Pipeline support docs README table outdated (G-007 nice) | Defer phiên riêng, run `/update-wiki` extend table |
+| q-020 | P2 | deferred | Pipeline support docs README table outdated (G-007 nice) | Defer phiên riêng, run `/contextd-update` extend table |
 | q-021 | P2 | deferred | Tools allowlist principle C-008a sample size concern (G-009) | Defer until sample ≥ 8 sub-agents |
 | q-022 | P2 | deferred | Configs/hooks unanalyzed (G-008 nice) | Future rerun `/code-analyze --allow-configs` → new evid-id `refresh-wiki-template-{date}` |
 | q-023 | P3 | deferred | Counter-arg: pattern overlap với spec docs | Stop check user choice. ADR D-003 already covers boundary rule |

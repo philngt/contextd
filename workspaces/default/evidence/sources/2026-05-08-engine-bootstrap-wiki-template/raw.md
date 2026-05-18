@@ -79,9 +79,9 @@ _(Configs skipped — rerun with --allow-configs to include)_
 
 | Name | Purpose | Inputs | Outputs | Mode | Citation |
 |------|---------|--------|---------|------|----------|
-| `/use-wiki` | Chạy 5-stage pipeline (planner → context-selector → plan-reviewer → main agent code → reviewer) trước khi viết bất kỳ code wiki-aware nào | task description | invokes 5 sub-agents; writes `.claude/context/current-task.md`; emits trace `.claude/runs/{run_id}/` | interactive | `(.claude/commands/use-wiki.md:L1)`, `(.claude/commands/README.md:L28)` |
-| `/update-wiki` | Sync wiki với code đã thay đổi (git diff → curator áp dụng) | optional `--scope` | edits files trong `{ws}/...` qua wiki-curator subagent | interactive | `(.claude/commands/update-wiki.md:L1)`, `(.claude/commands/README.md:L29)` |
-| `/rebase-wiki` | Quét wiki vs codebase thực tế để vá mọi chỗ wiki nói khác code chạy | none | edits files trong `{ws}/...` qua wiki-curator | interactive | `(.claude/commands/rebase-wiki.md:L1)`, `(.claude/commands/README.md:L30)` |
+| `/contextd-use` | Chạy 5-stage pipeline (planner → context-selector → plan-reviewer → main agent code → reviewer) trước khi viết bất kỳ code wiki-aware nào | task description | invokes 5 sub-agents; writes `.claude/context/current-task.md`; emits trace `.claude/runs/{run_id}/` | interactive | `(.claude/commands/contextd-use.md:L1)`, `(.claude/commands/README.md:L28)` |
+| `/contextd-update` | Sync wiki với code đã thay đổi (git diff → curator áp dụng) | optional `--scope` | edits files trong `{ws}/...` qua wiki-curator subagent | interactive | `(.claude/commands/contextd-update.md:L1)`, `(.claude/commands/README.md:L29)` |
+| `/contextd-rebase` | Quét wiki vs codebase thực tế để vá mọi chỗ wiki nói khác code chạy | none | edits files trong `{ws}/...` qua wiki-curator | interactive | `(.claude/commands/contextd-rebase.md:L1)`, `(.claude/commands/README.md:L30)` |
 
 ### 4.3 Codebase analysis `(.claude/commands/README.md:L34-L40)`
 
@@ -130,7 +130,7 @@ _(Configs skipped — rerun with --allow-configs to include)_
 | `wiki-planner` | Phân tích task của user và xác định patterns, contracts, domain, components cần áp dụng theo wiki | Read, Glob, Grep | DÙNG KHI bắt đầu một task mới (implement_feature, fix_bug, design, incident, review) trước bất kỳ retrieval hoặc code nào. KHÔNG DÙNG để sinh code hay đọc nhiều file. | `(.claude/agents/wiki-planner.md:L2-L5)` |
 | `wiki-context-selector` | Map intent JSON từ wiki-planner sang danh sách file wiki cụ thể, slice section liên quan, và ghi `.claude/context/current-task.md` | Read, Glob, Grep, Write | DÙNG NGAY SAU wiki-planner. KHÔNG DÙNG để phân tích task hay sinh code. | `(.claude/agents/wiki-context-selector.md:L2-L5)` |
 | `wiki-plan-reviewer` | Review intent JSON + context đã retrieve trước khi main agent code. Phát hiện sớm conflict/gap/pattern không tồn tại để chặn code sai | Read, Grep, Glob | DÙNG NGAY SAU wiki-context-selector và TRƯỚC khi main agent bắt đầu Implementation. KHÔNG DÙNG để review code đã sinh (đó là việc của wiki-reviewer). | `(.claude/agents/wiki-plan-reviewer.md:L2-L5)` |
-| `wiki-curator` | Cập nhật wiki sau khi code thay đổi — pattern mới, contract mới, service mới, ADR mới | Read, Edit, Write, Glob, Grep | DÙNG KHI user gọi /update-wiki hoặc khi cần đồng bộ wiki sau merge. KHÔNG DÙNG để chỉnh code project. | `(.claude/agents/wiki-curator.md:L2-L5)` |
+| `wiki-curator` | Cập nhật wiki sau khi code thay đổi — pattern mới, contract mới, service mới, ADR mới | Read, Edit, Write, Glob, Grep | DÙNG KHI user gọi /contextd-update hoặc khi cần đồng bộ wiki sau merge. KHÔNG DÙNG để chỉnh code project. | `(.claude/agents/wiki-curator.md:L2-L5)` |
 | `wiki-reviewer` | Đối chiếu output của builder/main agent với contracts, patterns, domain rules trong `.claude/context/current-task.md` và validator-rules.md | Read, Grep, Glob | DÙNG SAU KHI code đã được sinh, trước khi merge/commit. KHÔNG DÙNG để sửa code — chỉ báo cáo violation. | `(.claude/agents/wiki-reviewer.md:L2-L5)` |
 
 > Tất cả 5 sub-agents declared `model: sonnet`.
@@ -219,7 +219,7 @@ Mỗi workspace có cấu trúc giống nhau, áp dụng inside `{wiki_root}/wor
 |------|----------------------|---------|----------|
 | `workspace.md` | Markdown — workspace metadata skeleton | `/new-workspace`, `/contextd-setup` | `(templates/workspace.md:L1)` |
 | `service.md` | Markdown — service doc skeleton | `/evidence-apply` (S5 service drafts), manual create | `(templates/service.md:L1)` |
-| `pattern.md` | Markdown — platform/agent pattern doc skeleton | `/evidence-apply`, `/update-wiki` | `(templates/pattern.md:L1)` |
+| `pattern.md` | Markdown — platform/agent pattern doc skeleton | `/evidence-apply`, `/contextd-update` | `(templates/pattern.md:L1)` |
 | `adr.md` | Markdown — architecture decision record skeleton | `/evidence-apply` (C6/A6 decision drafts), manual | `(templates/adr.md:L1)` |
 | `runbook.md` | Markdown — incident runbook skeleton | manual create after incident | `(templates/runbook.md:L1)` |
 

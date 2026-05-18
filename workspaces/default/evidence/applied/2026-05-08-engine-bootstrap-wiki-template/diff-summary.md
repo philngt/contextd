@@ -17,7 +17,7 @@
 - [platform/patterns/askuser-confirm-preview.md](../../platform/patterns/askuser-confirm-preview.md) — UX preview/confirm pattern (citation: q-002)
 - [platform/patterns/citation-rule.md](../../platform/patterns/citation-rule.md) — citation format implementation skeleton; PAIR with `citation-format` contract (citation: q-006)
 - [platform/patterns/evidence-state-machine.md](../../platform/patterns/evidence-state-machine.md) — 7-state DAG implementation; PAIR with `evidence-state-machine-transitions` contract (citation: q-005)
-- [platform/patterns/multi-stage-subagent-pipeline.md](../../platform/patterns/multi-stage-subagent-pipeline.md) — 5-stage `/use-wiki` flow; **NOT marked flagship** per user override q-007 (citation: q-007 user override)
+- [platform/patterns/multi-stage-subagent-pipeline.md](../../platform/patterns/multi-stage-subagent-pipeline.md) — 5-stage `/contextd-use` flow; **NOT marked flagship** per user override q-007 (citation: q-007 user override)
 - [platform/patterns/redaction-post-pass.md](../../platform/patterns/redaction-post-pass.md) — secret scan post-build (citation: q-004)
 - [platform/patterns/secrets-blocklist-gate.md](../../platform/patterns/secrets-blocklist-gate.md) — 5-tier config guard pre-read (citation: q-003)
 - [platform/patterns/variant-discriminated-dispatcher.md](../../platform/patterns/variant-discriminated-dispatcher.md) — v1 single-instance pattern (citation: q-008)
@@ -38,7 +38,7 @@
 
 - [projects/engine/knowledge-map.md](../../projects/engine/knowledge-map.md) — project map with 7 service docs + 8 patterns + 8 contracts cross-references (citations: q-015, q-016)
 - [projects/engine/services/workspace-ops.md](../../projects/engine/services/workspace-ops.md) — 5 commands (`/contextd-setup`, `/contextd-detect`, `/switch-workspace`, `/new-workspace`, `/list-workspaces`) (citation: F-017a)
-- [projects/engine/services/wiki-usage.md](../../projects/engine/services/wiki-usage.md) — 3 commands (`/use-wiki`, `/update-wiki`, `/rebase-wiki`) (citation: F-017b)
+- [projects/engine/services/wiki-usage.md](../../projects/engine/services/wiki-usage.md) — 3 commands (`/contextd-use`, `/contextd-update`, `/contextd-rebase`) (citation: F-017b)
 - [projects/engine/services/codebase-analysis.md](../../projects/engine/services/codebase-analysis.md) — `/code-analyze` with 5 patterns applied (citation: F-017c)
 - [projects/engine/services/reporting.md](../../projects/engine/services/reporting.md) — `/contextd-report` (citation: F-017d)
 - [projects/engine/services/observability.md](../../projects/engine/services/observability.md) — 3 commands (`/contextd-trace`, `/contextd-eval`, `/contextd-viz`) (citation: F-017e)
@@ -64,7 +64,7 @@ _(none — all 22 in-scope facts applied)_
 
 - F-023 — `.claude/commands/README.md` (`/contextd-viz` orphan README index fix). Engine-level path, NOT in `{ws}/`. Marked in verified-facts.md "NOT in this apply manifest". Run separately:
   ```
-  /update-wiki --scope .claude/commands/README.md
+  /contextd-update --scope .claude/commands/README.md
   ```
 
 ### Warnings
@@ -77,7 +77,7 @@ _(none — all 22 in-scope facts applied)_
 
 ### Deferred (P2/P3 — informational)
 
-- q-020 (P2): Pipeline support docs README table extend (`agents/pipeline/README.md` — engine-level, separate `/update-wiki` session)
+- q-020 (P2): Pipeline support docs README table extend (`agents/pipeline/README.md` — engine-level, separate `/contextd-update` session)
 - q-021 (P2): Tools allowlist principle C-008a — defer until sample ≥ 8 sub-agents
 - q-022 (P2): Rerun `/code-analyze --allow-configs` for Section 3/8 — separate session, will create new evid-id `refresh-wiki-template-{date}`
 - q-023 (P3): Counter-arg overlap với engine spec docs — boundary rule documented in ADR-003
@@ -91,7 +91,7 @@ _(none — all 22 in-scope facts applied)_
 
 ```
 # Action item F-023 (separate session):
-/update-wiki --scope .claude/commands/README.md
+/contextd-update --scope .claude/commands/README.md
 
 # Future improvements:
 /code-analyze --ref . --variant agentic-engine --allow-configs    # populate Section 3/8 (q-022)

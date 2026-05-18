@@ -125,12 +125,12 @@
 **Kết luận**: NÊN THÊM (top of patterns-index)
 **Độ tin cậy**: CAO ●●●
 
-**Lý do phân tích**: P-007 là 5-stage `/use-wiki` flow — flagship của engine identity. Coverage: 1 implementation chính + nhiều spec docs reference (multi-agent-pipeline.md, PIPELINE-VISUAL.md). Đặt làm pattern đầu tiên trong patterns-index làm bài giới thiệu engine.
+**Lý do phân tích**: P-007 là 5-stage `/contextd-use` flow — flagship của engine identity. Coverage: 1 implementation chính + nhiều spec docs reference (multi-agent-pipeline.md, PIPELINE-VISUAL.md). Đặt làm pattern đầu tiên trong patterns-index làm bài giới thiệu engine.
 
 **Trích dẫn chính**:
 - `(a03-pattern-proposals.md#P-007)`
 - `(agents/pipeline/README.md:L27-L46)` — 5-stage diagram
-- `(.claude/commands/use-wiki.md:L1)` — implementation
+- `(.claude/commands/contextd-use.md:L1)` — implementation
 
 **Đề xuất câu trả lời**:
 > Có, thêm với vị trí top trong `{ws}/patterns-index.md`. Pattern doc tại `{ws}/platform/patterns/multi-stage-subagent-pipeline.md`. Cross-reference từ `{ws}/workspace.md` (workspace overview). Đây là flagship — mọi command wiki-aware nên follow.
@@ -323,14 +323,14 @@
 **Kết luận**: Tách phiên
 **Độ tin cậy**: CAO ●●●
 
-**Lý do phân tích**: G-006 không block evidence-apply (file path khác workspace). Trộn doc fix với evidence-apply tăng complexity. Tách: chạy `/update-wiki` riêng sau khi evidence-apply done.
+**Lý do phân tích**: G-006 không block evidence-apply (file path khác workspace). Trộn doc fix với evidence-apply tăng complexity. Tách: chạy `/contextd-update` riêng sau khi evidence-apply done.
 
 **Trích dẫn chính**:
 - `(a06-decision-drafts.md#D-005)`
 - `(08-knowledge-gaps.md#G-006)`
 
 **Đề xuất câu trả lời**:
-> Tách phiên. Apply evidence này trước. Sau đó chạy `/update-wiki --scope .claude/commands/README.md` để add row cho `/contextd-viz` Section "Pipeline observability". KHÔNG tạo ADR (bug fix only).
+> Tách phiên. Apply evidence này trước. Sau đó chạy `/contextd-update --scope .claude/commands/README.md` để add row cho `/contextd-viz` Section "Pipeline observability". KHÔNG tạo ADR (bug fix only).
 
 ---
 
