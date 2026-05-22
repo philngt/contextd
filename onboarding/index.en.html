@@ -431,7 +431,7 @@
       <dd>Each company/project gets its own workspace folder. Knowledge is never mixed across workspaces, because each organization has different rules. The active workspace is defined in <code>.claude/wiki.json</code>.</dd>
 
       <dt>Pack (technology-specific knowledge bundle)</dt>
-      <dd>Wiki-template is stack-agnostic. Specialized knowledge (Kafka, REST, React, AI app, product, etc.) lives in <code>packs</code>. Enable/disable packs in <code>/contextd-setup</code> pack selection, or edit <code>workspace.md</code>. There are currently 12 packs (see section below).</dd>
+      <dd>Wiki-template is stack-agnostic. Specialized knowledge (Kafka, REST, React, AI app, product, etc.) lives in <code>packs</code>. Enable/disable packs in <code>/contextd-setup</code> pack selection, or edit <code>workspace.md</code>. There are currently 13 packs (see section below).</dd>
 
       <dt>Contract vs Pattern</dt>
       <dd>Priority order: <strong>Contract &gt; Pattern &gt; Project docs &gt; Domain knowledge</strong>.
@@ -609,6 +609,7 @@ implement spec at workspaces/{ws}/tools/{slug}-spec.md
         <tr><td class="cmd-name">pack-event-driven</td><td><span class="cmd-tag tech">stable</span></td><td>Event processing: Kafka, MQTT, RabbitMQ — retries, DLQ handling</td></tr>
         <tr><td class="cmd-name">pack-web-api</td><td><span class="cmd-tag tech">stable</span></td><td>Web APIs: REST/GraphQL/gRPC — input validation, error shape, no information leakage</td></tr>
         <tr><td class="cmd-name">pack-frontend-react</td><td><span class="cmd-tag tech">stable</span></td><td>React + Next.js — hooks rules, a11y, effect cleanup, list keys, server/client boundary</td></tr>
+        <tr><td class="cmd-name">pack-ui-ux</td><td><span class="cmd-tag beta">beta v0.1</span></td><td>UI/UX design — design system, design tokens, WCAG 2.1 AA accessibility, user flows, UX writing. Pairs with <code>pack-frontend-react</code> (design doc ↔ code impl)</td></tr>
         <tr><td class="cmd-name">pack-ai-app</td><td><span class="cmd-tag tech">stable</span></td><td>AI apps: prompt caching, structured output, testing, privacy safety</td></tr>
         <tr><td class="cmd-name">pack-agentic</td><td><span class="cmd-tag tech">stable</span></td><td>AI agents: loops, tool use, multi-agent orchestration — bounded steps, safe retries</td></tr>
         <tr><td class="cmd-name">pack-claude-plugin-dev</td><td><span class="cmd-tag tech">stable</span></td><td>Claude Code plugin development — commands, subagents, skills, hooks</td></tr>

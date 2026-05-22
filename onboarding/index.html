@@ -431,7 +431,7 @@
       <dd>Mỗi công ty/dự án bạn làm = 1 thư mục riêng. Kiến thức KHÔNG được trộn giữa các workspace — vì công ty A và B có quy tắc khác nhau, nếu trộn AI sẽ áp sai. Workspace đang dùng nằm trong <code>.claude/wiki.json</code>.</dd>
 
       <dt>Pack (gói kiến thức theo công nghệ)</dt>
-      <dd>Wiki-template hoạt động với mọi công nghệ. Kiến thức đặc thù (Kafka, REST, React, AI app, product...) nằm trong các <code>packs</code>. Bật/tắt qua <code>/contextd-setup</code> bước chọn packs (giao diện tick), hoặc sửa file <code>workspace.md</code>. Hiện có 12 packs, xem section bên dưới.</dd>
+      <dd>Wiki-template hoạt động với mọi công nghệ. Kiến thức đặc thù (Kafka, REST, React, AI app, product...) nằm trong các <code>packs</code>. Bật/tắt qua <code>/contextd-setup</code> bước chọn packs (giao diện tick), hoặc sửa file <code>workspace.md</code>. Hiện có 13 packs, xem section bên dưới.</dd>
 
       <dt>Thoả thuận (Contract) vs Cách làm (Pattern)</dt>
       <dd>Thứ tự ưu tiên: <strong>Thoả thuận &gt; Cách làm &gt; Tài liệu dự án &gt; Kiến thức chuyên môn</strong>.
@@ -610,6 +610,7 @@ implement spec at workspaces/{ws}/tools/{slug}-spec.md
         <tr><td class="cmd-name">pack-event-driven</td><td><span class="cmd-tag tech">stable</span></td><td>Xử lý sự kiện: Kafka, MQTT, RabbitMQ — hàng đợi thử lại, xử lý lỗi</td></tr>
         <tr><td class="cmd-name">pack-web-api</td><td><span class="cmd-tag tech">stable</span></td><td>API web: REST/GraphQL/gRPC — kiểm tra đầu vào, mã lỗi, không lộ thông tin</td></tr>
         <tr><td class="cmd-name">pack-frontend-react</td><td><span class="cmd-tag tech">stable</span></td><td>React + Next.js — hooks rules, a11y, effect cleanup, list keys, server/client boundary</td></tr>
+        <tr><td class="cmd-name">pack-ui-ux</td><td><span class="cmd-tag beta">beta v0.1</span></td><td>UI/UX design — design system, design tokens, WCAG 2.1 AA accessibility, user flows, UX writing. Pairs với <code>pack-frontend-react</code> (design doc ↔ code impl)</td></tr>
         <tr><td class="cmd-name">pack-ai-app</td><td><span class="cmd-tag tech">stable</span></td><td>Ứng dụng AI: prompt caching, output có cấu trúc, kiểm thử, không lộ dữ liệu cá nhân</td></tr>
         <tr><td class="cmd-name">pack-agentic</td><td><span class="cmd-tag tech">stable</span></td><td>AI Agent: vòng lặp, dùng công cụ, đa agent — giới hạn bước, công cụ lặp lại an toàn</td></tr>
         <tr><td class="cmd-name">pack-claude-plugin-dev</td><td><span class="cmd-tag tech">stable</span></td><td>Phát triển plugin cho Claude Code — lệnh, agent con, kỹ năng, hook</td></tr>
