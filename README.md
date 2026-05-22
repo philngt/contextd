@@ -3,7 +3,7 @@
 
 Strict per-project knowledge isolation. Layered packs. Deterministic retrieval.
 
-Designed for developers running Claude Code across multiple projects/companies who need agents that don't mix context between repos. If Claude starts borrowing knowledge from the wrong codebase, `contextd` gives you scoped, repeatable, contract-driven context.
+Designed for developers using AI coding agents across multiple projects/companies who need agents that don't mix context between repos. Current first-class runtime support is Claude Code; CLI and reference exports are planned to make the same workspace knowledge usable by Codex, Cursor, and other agents.
 
 
 ## Onboarding
@@ -23,8 +23,8 @@ Designed for developers running Claude Code across multiple projects/companies w
 3. **Packs are cognitive scaffolds, not just templates**  
    Packs are reusable reasoning modules that shape task framing, validation, and execution quality.
 
-4. **Claude Code-first support**  
-   Official support currently targets Claude Code only (CLI + IDE extension).
+4. **Claude Code-first support — with a runtime-agnostic direction**  
+   Official support currently targets Claude Code only (CLI + IDE extension). The architecture is planned to evolve toward a runtime-neutral context engine so the same workspace knowledge can be consumed by other agents via CLI export and manifest-based bundles.
 
 5. **Deterministic knowledge priority**  
    Contracts > Platform Patterns > Project Documentation > Domain Knowledge.
@@ -49,13 +49,37 @@ Use is provided under the repository license ([MIT](LICENSE)) and is offered **"
 
 ## Support & Compatibility
 
-- **Runtime support**: Claude Code only (CLI and IDE extension).
+| Capability | Status |
+|---|---|
+| Claude Code slash commands | Stable |
+| Claude Code subagents | Stable |
+| Workspace/packs markdown engine | Stable |
+| CLI: resolve/find/bundle | Planned |
+| Plain markdown bundle export | Planned |
+| Codex skill/plugin export | Planned |
+| Cursor rules export | Planned |
+
+**System requirements**
 - macOS/Linux: `bash` required.
 - Windows: PowerShell + Git Bash or WSL recommended for shell installer execution.
 - Write access to `~/.claude/` required.
 - Release installer prerequisites: `curl` or `wget`, plus `unzip`.
 
-If broader runtime support is needed later, maintain a clear compatibility matrix per runtime.
+## Roadmap: Runtime-Agnostic Context
+
+contextd is moving toward a markdown-first context engine:
+
+1. **CLI core**: `contextd resolve`, `contextd find`, `contextd bundle`
+2. **Manifest index**: `.contextd/manifest.json`
+3. **Runtime export**: plain markdown, Codex skill/plugin, Cursor rules, Claude Code artifacts
+
+The existing `.claude/commands` and `.claude/agents` remain canonical until the export flow is proven.
+
+## Non-goals
+
+- contextd is not a vector database.
+- contextd does not require MCP for the planned multi-runtime path.
+- contextd does not replace the coding agent; it prepares scoped, auditable context for the agent.
 
 ## Mental Model
 
@@ -69,8 +93,9 @@ wiki-template/
 └── workspaces/     ← N workspaces, each with platform/domains/projects/... data
     └── {name}/...
 
-# Active workspace is per-codebase, stored in <project>/.claude/wiki.json.workspace
+# Active workspace is per-codebase, currently stored in <project>/.claude/wiki.json
 # (there is no global pointer file inside wiki-template)
+# A future runtime-neutral config path may be added, but existing Claude Code users will not be broken.
 ```
 
 ## Packs (Stack-specific Knowledge)
