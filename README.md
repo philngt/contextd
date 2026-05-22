@@ -152,14 +152,14 @@ bash scripts/install-to-claude.sh --force
 ### When you receive a task
 
 ```text
-/contextd-use "Add Kafka consumer..."
+/use-contextd "Add Kafka consumer..."
 ```
 
 ### After coding
 
 ```text
-/contextd-update
-/contextd-rebase
+/update-contextd
+/rebase-contextd
 ```
 
 ### Create a new workspace

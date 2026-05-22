@@ -9,7 +9,7 @@ Senior backend engineer working inside a knowledge-driven system. Implement feat
 - **Project**: `contextd` — scoped context daemon for AI coding agents.
 - **"Wiki"** = the content (contracts, patterns, domains) under `workspaces/{ws}/`. **`contextd`** = the engine.
 - **Default workspace**: `default`.
-- **Slash commands**: `/contextd-*` prefix (e.g. `/contextd-setup`, `/contextd-use`, `/contextd-update`, `/contextd-rebase`, `/contextd-eval`). Legacy `/wiki-*` removed at install time.
+- **Slash commands**: `/contextd-*` prefix (e.g. `/contextd-setup`, `/use-contextd`, `/update-contextd`, `/rebase-contextd`, `/contextd-eval`). Legacy `/wiki-*` removed at install time.
 - **Legacy filenames kept for v0.x** (deferred to v1.0): `.claude/wiki.json`, `~/.claude/wiki-global.json`, `~/.claude/wiki-install-meta.json`, `wiki-template/`, `lint-wiki.py`, `check-patterns-index.py`. Do not rename.
 
 ## Workspace Awareness (mandatory)

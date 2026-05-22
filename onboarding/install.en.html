@@ -124,6 +124,13 @@
     <a href="#update">Update</a>
     <a href="index.en.html">← Onboarding</a>
   </div>
+  <div class="toc" style="margin-top:6px">
+    <a href="#troubleshoot-windows" style="font-size:12px;padding:4px 10px">🪟 Windows / Bash</a>
+    <a href="#troubleshoot-commands" style="font-size:12px;padding:4px 10px">🔍 No commands</a>
+    <a href="#troubleshoot-wiki-root" style="font-size:12px;padding:4px 10px">📂 wiki_root error</a>
+    <a href="#troubleshoot-workspace" style="font-size:12px;padding:4px 10px">🏢 Workspace not found</a>
+    <a href="#troubleshoot-permission" style="font-size:12px;padding:4px 10px">🔒 Permission error</a>
+  </div>
 
   <!-- ============ PRE-FLIGHT ============ -->
   <section class="block" id="preflight">
@@ -248,12 +255,12 @@ unzip contextd-latest.zip -d /d/tool</code></pre>
         </div>
 
         <div class="os-panel active" data-os="linux">
-          <pre><code>git clone &lt;wiki-template-repo&gt; ~/wiki
+          <pre><code>git clone https://github.com/tanphuc16797/workspace-wiki ~/wiki
 cd ~/wiki</code></pre>
         </div>
 
         <div class="os-panel" data-os="windows">
-          <pre><code>git clone &lt;wiki-template-repo&gt; /d/tool/wiki-template
+          <pre><code>git clone https://github.com/tanphuc16797/workspace-wiki /d/tool/wiki-template
 cd /d/tool/wiki-template</code></pre>
           <p style="font-size:13px;color:#57606a">In Git Bash, Windows path <code>D:\tool\</code> is written as <code>/d/tool/</code> (forward slash).</p>
         </div>
@@ -331,7 +338,7 @@ cat ~/.claude/wiki-global.json</code></pre>
         </ul>
 
         <div class="callout tip">
-          <strong>💡 You only run this once per project.</strong> After that, the wiki just works — you can use slash commands normally (<code>/contextd-use</code>, <code>/find</code>, <code>/tool-design</code>, ...).
+          <strong>💡 You only run this once per project.</strong> After that, the wiki just works — you can use slash commands normally (<code>/use-contextd</code>, <code>/find</code>, <code>/tool-design</code>, ...).
         </div>
 
         <p style="margin-top:16px">Next: open <a href="index.en.html">index.html</a> and choose a persona path (PM / Engineer / Wiki Owner / Solo Builder).</p>
@@ -343,7 +350,7 @@ cat ~/.claude/wiki-global.json</code></pre>
   <section class="block" id="troubleshoot">
     <h2>🔧 Common issues</h2>
 
-    <h3 style="margin-top:20px;font-size:17px">Windows without Bash</h3>
+    <h3 id="troubleshoot-windows" style="margin-top:20px;font-size:17px">Windows without Bash</h3>
     <div class="callout warn">
       <p>If you do not have Git Bash or WSL, use these 4 manual steps:</p>
       <ol style="margin-top:8px">
@@ -354,16 +361,16 @@ cat ~/.claude/wiki-global.json</code></pre>
   ...
 }</pre>
         </li>
-        <li>Copy folders <code>.claude\commands\</code> and <code>agents\</code> to <code>%USERPROFILE%\.claude\</code>:
+        <li>Copy folders <code>.claude\commands\</code> and <code>.claude\agents\</code> to <code>%USERPROFILE%\.claude\</code>:
           <pre style="margin:8px 0">xcopy /E /I /Y .claude\commands %USERPROFILE%\.claude\commands
-xcopy /E /I /Y agents %USERPROFILE%\.claude\agents</pre>
+xcopy /E /I /Y .claude\agents %USERPROFILE%\.claude\agents</pre>
         </li>
         <li>Verify: <code>type %USERPROFILE%\.claude\wiki-global.json</code></li>
       </ol>
       <p style="margin-top:8px"><strong>Recommended</strong>: install <a href="https://git-scm.com/download/win">Git for Windows</a> (free) to get Git Bash → installer runs with one simple command.</p>
     </div>
 
-    <h3 style="margin-top:24px;font-size:17px">Commands do not appear in Claude Code</h3>
+    <h3 id="troubleshoot-commands" style="margin-top:24px;font-size:17px">Commands do not appear in Claude Code</h3>
     <ul>
       <li>Check whether <code>~/.claude/commands/</code> contains <code>.md</code> files (e.g. <code>contextd-setup.md</code>)</li>
       <li>Restart Claude Code (CLI: run <code>/exit</code> then reopen; IDE: reload window)</li>
@@ -371,20 +378,20 @@ xcopy /E /I /Y agents %USERPROFILE%\.claude\agents</pre>
       <li>Check Claude Code logs for errors (CLI: stderr; IDE: Output panel)</li>
     </ul>
 
-    <h3 style="margin-top:24px;font-size:17px">Error <code>wiki_root not found</code> when running slash commands</h3>
+    <h3 id="troubleshoot-wiki-root" style="margin-top:24px;font-size:17px">Error <code>wiki_root not found</code> when running slash commands</h3>
     <ul>
       <li>Open <code>~/.claude/wiki-global.json</code> and confirm <code>"wiki_root"</code> is an absolute path (do NOT use <code>~</code> or relative paths)</li>
       <li>Path must point to the wiki-template repo root (the folder containing <code>CLAUDE.md</code>, <code>packs/</code>, <code>workspaces/</code>)</li>
       <li>Verify the path exists: <code>ls "$(jq -r .wiki_root ~/.claude/wiki-global.json)"</code></li>
     </ul>
 
-    <h3 style="margin-top:24px;font-size:17px"><code>/contextd-setup</code> shows "workspace not found"</h3>
+    <h3 id="troubleshoot-workspace" style="margin-top:24px;font-size:17px"><code>/contextd-setup</code> shows "workspace not found"</h3>
     <ul>
       <li>No workspace exists yet — run <code>/new-workspace {name}</code> first (e.g. <code>/new-workspace acme-corp</code>)</li>
       <li>Or list available workspaces: <code>/list-workspaces</code></li>
     </ul>
 
-    <h3 style="margin-top:24px;font-size:17px">Permission error when running installer</h3>
+    <h3 id="troubleshoot-permission" style="margin-top:24px;font-size:17px">Permission error when running installer</h3>
     <ul>
       <li>Linux/macOS: <code>chmod +x scripts/install-to-claude.sh</code> then run again</li>
       <li>Or force with bash: <code>bash scripts/install-to-claude.sh</code> (no executable bit required)</li>
@@ -467,6 +474,14 @@ bash scripts/install-to-claude.sh   # idempotent — updates everything</code></
       if (p.dataset.os === os) p.classList.add('active');
     });
   }
+  // Scroll spy: keep URL hash in sync with visible section
+  (function(){
+    const els = document.querySelectorAll('section[id], h3[id]');
+    const spy = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){ if(e.isIntersecting) history.replaceState(null,'','#'+e.target.id); });
+    }, {rootMargin:'-20% 0px -70% 0px'});
+    els.forEach(function(el){ spy.observe(el); });
+  })();
 </script>
 </body>
 </html>

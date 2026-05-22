@@ -1,4 +1,4 @@
-# /contextd-update — Cập nhật wiki sau khi code thay đổi
+# /update-contextd — Cập nhật wiki sau khi code thay đổi
 
 Chạy skill này sau khi thay đổi code để giữ wiki **của workspace active** đồng bộ với thực tế. Phần ghi/sửa file wiki được delegate cho subagent `contextd-curator` — main agent chỉ làm khâu khám phá thay đổi và xác nhận.
 
@@ -38,7 +38,7 @@ Trước khi đi vào Bước 1 (collect change_summary từ git diff), kiểm t
    - Load `{ws}/evidence/{id}/qa/verified-facts.md` + `analysis/{id}/02-contradiction.md` + `analysis/{id}/08-knowledge-gaps.md`.
    - Augment `change_summary` ở Bước 1 bằng "Verified facts" block (mỗi fact → 1 dòng action cho curator).
    - **Authority order**: Contracts > Verified facts > Platform Patterns > Project Docs > Domain Knowledge.
-   - Ưu tiên cách: chạy `/evidence-apply --id {id} --mode update` (wrap contextd-update và tự ghi `applied/{id}/manifest.yaml` audit trail).
+   - Ưu tiên cách: chạy `/evidence-apply --id {id} --mode update` (wrap update-contextd và tự ghi `applied/{id}/manifest.yaml` audit trail).
 
 Reference: [agents/pipeline/evidence-lifecycle.md](../../agents/pipeline/evidence-lifecycle.md), [evidence-apply.md](evidence-apply.md).
 

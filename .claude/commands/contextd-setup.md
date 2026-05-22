@@ -81,7 +81,7 @@ Chạy detection tương tự `/contextd-detect` nhưng scope vào `{wiki_root}/
 - `eclipse-paho` / mqtt libs → hint: pattern `mqtt-routing` + contract `mqtt-topic-contract`
 - `spring-data` / `jpa` → component: `db`
 
-> Nếu pattern/contract gợi ý KHÔNG tồn tại trong workspace → đánh dấu `(missing — chạy /contextd-update để tạo)` trong message confirm; không lưu vào wiki.json.
+> Nếu pattern/contract gợi ý KHÔNG tồn tại trong workspace → đánh dấu `(missing — chạy /update-contextd để tạo)` trong message confirm; không lưu vào wiki.json.
 
 **Detect domain từ package names:**
 - Tìm thư mục/package trùng tên với `{wiki_root}/{ws}/domains/*/`
@@ -216,7 +216,7 @@ Xác nhận:
    Project  : {project}
 
 Bước tiếp theo:
-  /contextd-use      → bắt đầu làm task với context từ wiki workspace {workspace}
+  /use-contextd      → bắt đầu làm task với context từ wiki workspace {workspace}
   /contextd-detect   → kiểm tra lại config vừa tạo
   /code-analyze  → bootstrap wiki từ codebase này (sinh patterns/services/decisions từ source code)
 ```

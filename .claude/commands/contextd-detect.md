@@ -1,6 +1,6 @@
 # /contextd-detect — Detect contextd Install
 
-Skill này chạy tự động khi `/contextd-use` không tìm thấy `.claude/wiki.json` của codebase, hoặc gọi trực tiếp để kiểm tra trạng thái tích hợp wiki của dự án hiện tại.
+Skill này chạy tự động khi `/use-contextd` không tìm thấy `.claude/wiki.json` của codebase, hoặc gọi trực tiếp để kiểm tra trạng thái tích hợp wiki của dự án hiện tại.
 
 > Wiki giờ tổ chức theo workspace. Mọi path scan/validate đều scope trong `{wiki_root}/workspaces/{workspace}/` — KHÔNG cross-workspace.
 
@@ -89,7 +89,7 @@ Tìm các dấu hiệu trong dự án hiện tại:
 | `spring-web` hoặc `feign` hoặc `axios` | component: `http` |
 | `spring-data` hoặc `jpa` hoặc `sequelize` | component: `db` |
 
-> Pattern/contract đề xuất phải tồn tại trong workspace candidate. Nếu workspace candidate chưa có → đánh dấu "(missing in workspace {ws})" và gợi ý tạo bằng `/contextd-update` sau.
+> Pattern/contract đề xuất phải tồn tại trong workspace candidate. Nếu workspace candidate chưa có → đánh dấu "(missing in workspace {ws})" và gợi ý tạo bằng `/update-contextd` sau.
 
 **Scan package names / file paths** để detect domain:
 
@@ -134,7 +134,7 @@ Nếu không detect được gì:
 
 ## Khi nào nên chạy
 
-- Tự động: được gọi bởi `/contextd-use` khi không tìm thấy `.claude/wiki.json` của codebase
+- Tự động: được gọi bởi `/use-contextd` khi không tìm thấy `.claude/wiki.json` của codebase
 - Thủ công: khi muốn kiểm tra config wiki của dự án hiện tại
 - Sau khi thêm dependency mới vào dự án (để check đề xuất pattern mới)
 - Sau khi thêm/đổi workspace trong wiki-template (xác nhận project vẫn trỏ đúng workspace)

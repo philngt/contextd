@@ -169,9 +169,9 @@ def main() -> None:
         "wiki-upgrade": "contextd-upgrade",
         "wiki-version": "contextd-version",
         "wiki-viz": "contextd-viz",
-        "use-wiki": "contextd-use",
-        "update-wiki": "contextd-update",
-        "rebase-wiki": "contextd-rebase",
+        "use-wiki": "use-contextd",
+        "update-wiki": "update-contextd",
+        "rebase-wiki": "rebase-contextd",
     }
     legacy_found = False
     for legacy, new_name in legacy_map.items():
@@ -233,7 +233,7 @@ def main() -> None:
     print("  cd /path/to/your/codebase")
     print("  /contextd-setup           # tạo .claude/wiki.json cho codebase đó")
     print("  /list-workspaces      # xem có workspace nào trong wiki-template")
-    print('  /contextd-use "...task..."  # dùng pipeline với context từ workspace active')
+    print('  /use-contextd "...task..."  # dùng pipeline với context từ workspace active')
 
 
 if __name__ == "__main__":

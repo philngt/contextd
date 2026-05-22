@@ -284,6 +284,20 @@ Full ADR trong <details>. {{ADR_BODY}} = HTML đã convert (drop H1).
 <!--[/FRAGMENT: service-details]-->
 
 
+<!--[FRAGMENT: pack-subsection-file]
+Dùng cho mỗi file trong pack-conditional sub-section.
+{{PACK_NAME}} = tên pack (vd "pack-ba", "pack-security")
+{{PATH}}      = path relative từ {ws}/reports/ (vd "../platform/security/threat-model.md")
+{{FILENAME}}  = display name (vd "threat-model.md")
+{{BODY}}      = HTML đã convert từ file content (drop H1)
+-->
+<div class="pack-subsection" data-pack="{{PACK_NAME}}">
+  <a class="cite" href="{{PATH}}">{{FILENAME}}</a>
+  {{BODY}}
+</div>
+<!--[/FRAGMENT: pack-subsection-file]-->
+
+
 <!--[FRAGMENT: footer]
 Replace toàn bộ <footer> trong skeleton (đã có sẵn) — chỉ dùng nếu cần override.
 -->

@@ -367,7 +367,7 @@ Next:
 - **Chuẩn bị**: copy `templates/bundle.yaml` → điền repos + docs → `/code-analyze --bundle <dir>`.
 
 **KHI KHÔNG NÊN**:
-- Chỉ thay đổi 1-2 file lẻ → dùng `/contextd-update` direct (không cần evidence flow).
+- Chỉ thay đổi 1-2 file lẻ → dùng `/update-contextd` direct (không cần evidence flow).
 - Codebase nhỏ < 5 file → viết tay nhanh hơn.
 - Cần verify với external doc (Confluence, ticket) chứ không phải code → dùng `/evidence-ingest --source paste|api|mcp`.
 - Bundle với nhiều repo lớn và scope rộng → raw.md vượt 300KB. Thu hẹp scope từng repo trong `bundle.yaml`.

@@ -14,6 +14,8 @@ workspaces/*/eval/results/*
 # clusters.json + suppressions.json CÓ thể commit (chỉ token + id).
 workspaces/*/.observations/prompts.jsonl
 workspaces/*/.observations/*.lock
+workspaces/*
+!workspaces/default
 
 # Release artifacts — built by scripts/package-release.sh
 # Distribute via GitHub Releases / S3 / file server, không commit binary

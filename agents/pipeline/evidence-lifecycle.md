@@ -2,6 +2,8 @@
 
 Reference cho `/evidence-{ingest,analyze,qa,apply,archive}`. State machine, transitions, invariants.
 
+> **Note**: `/evidence-archive` is **planned — not yet implemented**. The `applied → archived` transition is part of the designed state machine but no command file exists yet under `.claude/commands/`. Until implemented, archival is manual (move folder to `archive/` by hand).
+
 ---
 
 ## State machine
@@ -45,7 +47,7 @@ Mirror chi tiết tại `{ws}/evidence/qa/{evid-id}/todo.json`.
 | `qa_in_progress → qa_done`              | `/evidence-qa`         | All P0/P1 status ∈ {answered, skipped, deferred}; NO awaiting_external | `verified-facts.md` written                       |
 | `qa_awaiting_external → qa_done`        | `/evidence-qa --resume`| All external resolved + condition above                       | `verified-facts.md` written                             |
 | `qa_done → applied`                     | `/evidence-apply`      | Validator gates pass; wiki edits done                         | `applied/{id}/manifest.yaml` written                    |
-| `applied → archived`                    | `/evidence-archive`    | User confirm OR `--older-than` policy                         | folder moved to `archive/`                              |
+| `applied → archived`                    | `/evidence-archive` *(planned)* | User confirm OR `--older-than` policy                         | folder moved to `archive/`                              |
 
 ---
 

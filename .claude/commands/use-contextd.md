@@ -1,4 +1,4 @@
-# /contextd-use — Sử dụng wiki cho task mới
+# /use-contextd — Sử dụng wiki cho task mới
 
 Chạy pipeline này trước khi viết bất kỳ dòng code nào. Pipeline delegate hai bước nặng (intent parsing + context retrieval) cho subagent chuyên biệt để giữ context window của main agent sạch và tránh agent chính tự "trượt" vai trò.
 
@@ -71,7 +71,7 @@ Nếu confirm không xuất hiện hoặc file `current-task.md` không được
 **Xử lý verdict**:
 - `APPROVED` → tiếp tục Bước 3. Nếu có `## Warnings` → đọc trước khi code.
 - `BLOCK` → STOP pipeline, báo user. KHÔNG tự sửa context.
-  - BLOCK do pattern/contract thiếu → đề xuất user `/contextd-update` để tạo trước, hoặc brief lại task.
+  - BLOCK do pattern/contract thiếu → đề xuất user `/update-contextd` để tạo trước, hoặc brief lại task.
   - BLOCK do conflict nội tại → cần update wiki giải quyết conflict, KHÔNG tự bypass.
 
 ---

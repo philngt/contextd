@@ -268,7 +268,7 @@ Next:
 
 - Hằng tuần: scan `RAW/` clip, promote những note đã chín vào wiki.
 - Sau session brainstorm trên Obsidian, muốn đẩy 1-2 note vào pipeline.
-- Trước `/contextd-update` lớn: chuyển hết note relevant thành evidence để có audit trail.
+- Trước `/update-contextd` lớn: chuyển hết note relevant thành evidence để có audit trail.
 
 KHI KHÔNG NÊN:
 - Note còn raw / chưa filter — promote sớm sẽ làm noise pipeline. Tự xem lại nội dung trước.

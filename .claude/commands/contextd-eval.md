@@ -21,7 +21,7 @@ Aggregate trace JSON từ nhiều run dưới `{project_dir}/.claude/runs/` → 
 
 Theo [workspace-resolution.md Profile A](../../agents/pipeline/workspace-resolution.md#profile-a--active-workspace-required). Set: `wiki_json_dir` (= `project_dir`), `workspace_active`, `effective_wiki_root`, `{ws}`. Đồng thời:
 
-- Validate `{project_dir}/.claude/runs/` tồn tại. Nếu không → STOP `No runs found. Chạy /contextd-use ít nhất 1 lần trước.`.
+- Validate `{project_dir}/.claude/runs/` tồn tại. Nếu không → STOP `No runs found. Chạy /use-contextd ít nhất 1 lần trước.`.
 
 ---
 

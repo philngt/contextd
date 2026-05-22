@@ -82,6 +82,7 @@ Khi chuyển nội dung file `.md` sang HTML, áp dụng map sau:
 | Status badge (3 variants) | `adr-status-badge-{ok,warn,neutral}` | status text |
 | 1 ADR full content | `adr-full` | adr body |
 | 1 runbook block | `section-runbook` | short desc + body |
+| 1 file trong pack sub-section | `pack-subsection-file` | pack name + title + file body |
 | Footer (đã có sẵn trong skeleton) | `footer` (nếu cần override) | — |
 
 ## Section composition rules
@@ -261,6 +262,225 @@ Mermaid state diagram trong workflow.md → `<pre class="mermaid-fallback">` + n
 <details><summary>Full runbook</summary>
   <div class="details-body">{full content drop H1}</div>
 </details>
+```
+
+---
+
+---
+
+## Pack-conditional sub-sections
+
+Inject vào **cuối body** của section tương ứng sau khi gen section chính. Dùng fragment `pack-subsection-file` cho mỗi file trong group.
+
+Logic chung cho mỗi pack:
+```
+IF pack NOT IN effective_packs → skip
+IF pack IN effective_packs AND all globs = 0 file:
+  inject: <!-- pack:{name} -->
+          <h3>{title} <span class="badge warn">No data</span></h3>
+          <p class="nodata">Pack {name} active but no content found in this workspace.</p>
+IF pack IN effective_packs AND has files:
+  inject: <!-- pack:{name} -->
+          <h3>{title}</h3>
+          {loop files → pack-subsection-file fragment}
+```
+
+---
+
+### pack-event-driven → Architecture (append)
+
+**Glob**:
+- `{ws}/platform/patterns/kafka*.md`
+- `{ws}/platform/patterns/mqtt*.md`
+- `{ws}/platform/patterns/batch*.md`
+
+**Sub-section title**: `Event Processing Layer`
+
+**Cấu trúc** (mỗi file là 1 `pack-subsection-file`):
+```html
+<!-- pack:event-driven -->
+<h3>Event Processing Layer</h3>
+<h4>{file title}</h4>
+<a class="cite" href="../platform/patterns/{file}">{file}</a>
+{convert content drop H1}
+```
+
+---
+
+### pack-ui-ux → Architecture (append, sau web-api nếu cũng active)
+
+**Glob**:
+- `{ws}/platform/design/design-system.md` (nếu tồn tại)
+- `{ws}/platform/design/tokens.md` (nếu tồn tại)
+- `{ws}/platform/design/a11y.md` (nếu tồn tại)
+- `{ws}/platform/design/ux-writing.md` (nếu tồn tại)
+- `{ws}/domains/*/flows/*.md`
+- `{ws}/design/decisions/*.md`
+
+**Sub-section title**: `Design System & UX`
+
+**Cấu trúc**:
+```html
+<!-- pack:ui-ux -->
+<h3>Design System &amp; UX</h3>
+
+<h4>Design System</h4>
+<a class="cite" href="../platform/design/design-system.md">design-system.md</a>
+{convert content drop H1}
+
+<h4>Design Tokens</h4>
+<a class="cite" href="../platform/design/tokens.md">tokens.md</a>
+{convert content drop H1}
+
+<h4>Accessibility</h4>
+<a class="cite" href="../platform/design/a11y.md">a11y.md</a>
+{convert content drop H1}
+
+<h4>UX Writing</h4>
+<a class="cite" href="../platform/design/ux-writing.md">ux-writing.md</a>
+{convert content drop H1}
+
+<h4>User Flows</h4>
+{loop flows/* — mỗi flow 1 pack-subsection-file, group theo domain}
+
+<h4>Design Decisions</h4>
+{loop design/decisions/* — mỗi ADR 1 pack-subsection-file}
+```
+
+Nếu `platform/design/` không tồn tại → inject toàn bộ sub-section là nodata với note:
+```html
+<p class="nodata">Pack pack-ui-ux active but <code>platform/design/</code> not found.
+Create <code>platform/design/design-system.md</code> to get started.</p>
+```
+
+---
+
+### pack-web-api → Architecture (append, sau event-driven nếu cũng active)
+
+**Glob**:
+- `{ws}/platform/contracts/api*.md`
+- `{ws}/platform/patterns/api*.md`
+
+**Sub-section title**: `API Layer`
+
+---
+
+### pack-product → Overview (append)
+
+**Glob**:
+- `{ws}/product/briefs/*.md`
+- `{ws}/product/okrs/*.md`
+- `{ws}/product/roadmap.md` (nếu tồn tại)
+- `{ws}/product/personas/*.md`
+- `{ws}/product/journeys/*.md`
+- `{ws}/product/metrics.md` (nếu tồn tại)
+
+**Sub-section title**: `Product Context`
+
+**Cấu trúc**: group files theo sub-folder:
+```html
+<!-- pack:product -->
+<h3>Product Context</h3>
+<h4>Briefs</h4>
+{loop briefs}
+<h4>OKRs &amp; Roadmap</h4>
+{loop okrs + roadmap}
+<h4>Personas &amp; Journeys</h4>
+{loop personas + journeys}
+<h4>Metrics</h4>
+{metrics file nếu có}
+```
+
+---
+
+### pack-ba → Domains (append)
+
+**Glob**:
+- `{ws}/domains/*/requirements.md`
+- `{ws}/ba/acceptance-criteria/*.md`
+- `{ws}/domains/*/process*.md`
+
+**Sub-section title**: `Business Analysis`
+
+**Cấu trúc**:
+```html
+<!-- pack:ba -->
+<h3>Business Analysis</h3>
+<h4>Requirements</h4>
+{loop requirements files}
+<h4>Acceptance Criteria</h4>
+{loop acceptance files}
+<h4>Process Maps</h4>
+{loop process files}
+```
+
+---
+
+### pack-dba → Domains (append, sau pack-ba nếu cũng active)
+
+**Glob**:
+- `{ws}/domains/*/schema*.md`
+- `{ws}/domains/*/backup*.md`
+- `{ws}/dba/*.md`
+
+**Sub-section title**: `Database Operations`
+
+**Cấu trúc**:
+```html
+<!-- pack:dba -->
+<h3>Database Operations</h3>
+<h4>Schema Management</h4>
+{loop schema files}
+<h4>Backup &amp; Restore</h4>
+{loop backup files}
+<h4>DBA Runbooks</h4>
+{loop dba/* files}
+```
+
+---
+
+### pack-security → ADRs (append)
+
+**Glob**:
+- `{ws}/platform/security/*.md`
+- `{ws}/domains/*/threat-model.md`
+- `{ws}/security/findings/*.md`
+
+**Sub-section title**: `Security & Threat Model`
+
+**Cấu trúc**:
+```html
+<!-- pack:security -->
+<h3>Security &amp; Threat Model</h3>
+<h4>Threat Models</h4>
+{loop threat-model files}
+<h4>Security Controls</h4>
+{loop platform/security files}
+<h4>Findings</h4>
+{loop findings files}
+```
+
+---
+
+### pack-qc → Runbooks (append)
+
+**Glob**:
+- `{ws}/platform/quality/*.md`
+- `{ws}/testing/*.md`
+- `{ws}/defects/*.md`
+
+**Sub-section title**: `Quality & Testing`
+
+**Cấu trúc**:
+```html
+<!-- pack:qc -->
+<h3>Quality &amp; Testing</h3>
+<h4>Test Strategy</h4>
+{loop quality files}
+<h4>Test Execution</h4>
+{loop testing files}
+<h4>Defect Tracking</h4>
+{loop defects files}
 ```
 
 ---

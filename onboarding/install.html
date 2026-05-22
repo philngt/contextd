@@ -124,6 +124,13 @@
     <a href="#update">Update</a>
     <a href="index.html">← Onboarding</a>
   </div>
+  <div class="toc" style="margin-top:6px">
+    <a href="#troubleshoot-windows" style="font-size:12px;padding:4px 10px">🪟 Windows / Bash</a>
+    <a href="#troubleshoot-commands" style="font-size:12px;padding:4px 10px">🔍 Lệnh không hiện</a>
+    <a href="#troubleshoot-wiki-root" style="font-size:12px;padding:4px 10px">📂 Lỗi wiki_root</a>
+    <a href="#troubleshoot-workspace" style="font-size:12px;padding:4px 10px">🏢 Workspace not found</a>
+    <a href="#troubleshoot-permission" style="font-size:12px;padding:4px 10px">🔒 Lỗi quyền</a>
+  </div>
 
   <!-- ============ PRE-FLIGHT ============ -->
   <section class="block" id="preflight">
@@ -248,12 +255,12 @@ unzip contextd-latest.zip -d /d/tool</code></pre>
         </div>
 
         <div class="os-panel active" data-os="linux">
-          <pre><code>git clone &lt;wiki-template-repo&gt; ~/wiki
+          <pre><code>git clone https://github.com/tanphuc16797/workspace-wiki ~/wiki
 cd ~/wiki</code></pre>
         </div>
 
         <div class="os-panel" data-os="windows">
-          <pre><code>git clone &lt;wiki-template-repo&gt; /d/tool/wiki-template
+          <pre><code>git clone https://github.com/tanphuc16797/workspace-wiki /d/tool/wiki-template
 cd /d/tool/wiki-template</code></pre>
           <p style="font-size:13px;color:#57606a">Trong Git Bash, Windows path <code>D:\tool\</code> viết là <code>/d/tool/</code> (forward slash).</p>
         </div>
@@ -331,7 +338,7 @@ cat ~/.claude/wiki-global.json</code></pre>
         </ul>
 
         <div class="callout tip">
-          <strong>💡 Mỗi dự án chỉ cần chạy 1 lần.</strong> Sau đó wiki tự work — bạn chỉ gõ slash command bình thường (<code>/contextd-use</code>, <code>/find</code>, <code>/tool-design</code>, ...).
+          <strong>💡 Mỗi dự án chỉ cần chạy 1 lần.</strong> Sau đó wiki tự work — bạn chỉ gõ slash command bình thường (<code>/use-contextd</code>, <code>/find</code>, <code>/tool-design</code>, ...).
         </div>
 
         <p style="margin-top:16px">Tiếp theo: mở <a href="index.html">index.html</a> để chọn đường đi theo persona (PM / Engineer / Wiki Owner / Solo Builder).</p>
@@ -343,7 +350,7 @@ cat ~/.claude/wiki-global.json</code></pre>
   <section class="block" id="troubleshoot">
     <h2>🔧 Khi gặp lỗi thường gặp</h2>
 
-    <h3 style="margin-top:20px;font-size:17px">Windows không có Bash</h3>
+    <h3 id="troubleshoot-windows" style="margin-top:20px;font-size:17px">Windows không có Bash</h3>
     <div class="callout warn">
       <p>Nếu bạn chưa có Git Bash hoặc WSL, làm thủ công 4 bước sau:</p>
       <ol style="margin-top:8px">
@@ -354,16 +361,16 @@ cat ~/.claude/wiki-global.json</code></pre>
   ...
 }</pre>
         </li>
-        <li>Copy folder <code>.claude\commands\</code> và <code>agents\</code> sang <code>%USERPROFILE%\.claude\</code>:
+        <li>Copy folder <code>.claude\commands\</code> và <code>.claude\agents\</code> sang <code>%USERPROFILE%\.claude\</code>:
           <pre style="margin:8px 0">xcopy /E /I /Y .claude\commands %USERPROFILE%\.claude\commands
-xcopy /E /I /Y agents %USERPROFILE%\.claude\agents</pre>
+xcopy /E /I /Y .claude\agents %USERPROFILE%\.claude\agents</pre>
         </li>
         <li>Verify: <code>type %USERPROFILE%\.claude\wiki-global.json</code></li>
       </ol>
       <p style="margin-top:8px"><strong>Khuyên dùng</strong>: cài <a href="https://git-scm.com/download/win">Git for Windows</a> (free) để có Git Bash → installer chạy 1 lệnh đơn giản hơn nhiều.</p>
     </div>
 
-    <h3 style="margin-top:24px;font-size:17px">Lệnh không hiện trong Claude Code</h3>
+    <h3 id="troubleshoot-commands" style="margin-top:24px;font-size:17px">Lệnh không hiện trong Claude Code</h3>
     <ul>
       <li>Check folder <code>~/.claude/commands/</code> có file <code>.md</code> không (vd <code>contextd-setup.md</code>)</li>
       <li>Restart Claude Code (CLI: gõ <code>/exit</code> rồi mở lại; IDE: reload window)</li>
@@ -371,20 +378,20 @@ xcopy /E /I /Y agents %USERPROFILE%\.claude\agents</pre>
       <li>Check log Claude Code có error nào không (CLI: stderr; IDE: Output panel)</li>
     </ul>
 
-    <h3 style="margin-top:24px;font-size:17px">Lỗi <code>wiki_root not found</code> khi gõ slash</h3>
+    <h3 id="troubleshoot-wiki-root" style="margin-top:24px;font-size:17px">Lỗi <code>wiki_root not found</code> khi gõ slash</h3>
     <ul>
       <li>Mở <code>~/.claude/wiki-global.json</code>, confirm <code>"wiki_root"</code> là absolute path (KHÔNG dùng <code>~</code>, KHÔNG dùng relative)</li>
       <li>Path phải tới folder gốc của repo wiki-template (folder chứa <code>CLAUDE.md</code>, <code>packs/</code>, <code>workspaces/</code>)</li>
       <li>Verify path tồn tại: <code>ls "$(jq -r .wiki_root ~/.claude/wiki-global.json)"</code></li>
     </ul>
 
-    <h3 style="margin-top:24px;font-size:17px"><code>/contextd-setup</code> báo "workspace not found"</h3>
+    <h3 id="troubleshoot-workspace" style="margin-top:24px;font-size:17px"><code>/contextd-setup</code> báo "workspace not found"</h3>
     <ul>
       <li>Chưa có workspace nào — chạy <code>/new-workspace {name}</code> trước (vd <code>/new-workspace acme-corp</code>)</li>
       <li>Hoặc list workspaces có sẵn: <code>/list-workspaces</code></li>
     </ul>
 
-    <h3 style="margin-top:24px;font-size:17px">Lỗi quyền khi chạy trình cài đặt</h3>
+    <h3 id="troubleshoot-permission" style="margin-top:24px;font-size:17px">Lỗi quyền khi chạy trình cài đặt</h3>
     <ul>
       <li>Linux/macOS: <code>chmod +x scripts/install-to-claude.sh</code> rồi chạy lại</li>
       <li>Hoặc force bash: <code>bash scripts/install-to-claude.sh</code> (không cần executable bit)</li>
@@ -467,6 +474,14 @@ bash scripts/install-to-claude.sh   # idempotent — cập nhật tất cả</co
       if (p.dataset.os === os) p.classList.add('active');
     });
   }
+  // Scroll spy: keep URL hash in sync with visible section
+  (function(){
+    const els = document.querySelectorAll('section[id], h3[id]');
+    const spy = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){ if(e.isIntersecting) history.replaceState(null,'','#'+e.target.id); });
+    }, {rootMargin:'-20% 0px -70% 0px'});
+    els.forEach(function(el){ spy.observe(el); });
+  })();
 </script>
 </body>
 </html>

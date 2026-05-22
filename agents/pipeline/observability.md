@@ -15,7 +15,7 @@ Builder (main agent, không phải subagent) vẫn tự ghi `04-builder.json` qu
 
 Slash command `/contextd-eval` aggregate runs. Slash command `/contextd-trace` view 1 run cụ thể.
 
-> Đây là **lớp đo lường tách rời** — pipeline chính (`/contextd-use`) vẫn chạy bình thường nếu trace fail. Hook timeout sau 5s, lỗi parse → log stderr, KHÔNG block pipeline.
+> Đây là **lớp đo lường tách rời** — pipeline chính (`/use-contextd`) vẫn chạy bình thường nếu trace fail. Hook timeout sau 5s, lỗi parse → log stderr, KHÔNG block pipeline.
 
 ---
 
@@ -30,7 +30,7 @@ Slash command `/contextd-eval` aggregate runs. Slash command `/contextd-trace` v
 - `slug` = 4-6 từ đầu của `user_task`, lowercase, ký tự không phải `[a-z0-9]` thay bằng `-`, gộp `--` → `-`, trim, max 40 ký tự.
 - Ví dụ: `2026-05-07-141503-add-rest-endpoint-admin`
 
-Các stage sau **nhận `run_id` từ caller** (main agent hoặc `/contextd-use` slash command) qua input parameters. KHÔNG sinh lại.
+Các stage sau **nhận `run_id` từ caller** (main agent hoặc `/use-contextd` slash command) qua input parameters. KHÔNG sinh lại.
 
 ---
 
@@ -58,7 +58,7 @@ Các stage sau **nhận `run_id` từ caller** (main agent hoặc `/contextd-use
 
 Common fields (mọi stage): `run_id`, `stage`, `ts`, `workspace_at_run`, `duration_ms` (optional).
 
-Worked example đầy đủ 4 stage cho 1 task: xem 1 run thực tế tại `{project_dir}/.claude/runs/{run_id}/` (sinh bởi `/contextd-use`).
+Worked example đầy đủ 4 stage cho 1 task: xem 1 run thực tế tại `{project_dir}/.claude/runs/{run_id}/` (sinh bởi `/use-contextd`).
 
 ---
 
@@ -133,7 +133,7 @@ Output: `{ws}/reports/contextd-eval-{YYYY-MM-DD}.md` — markdown bảng.
 Golden tasks **per-workspace** — mỗi workspace định nghĩa fixture riêng tại `{ws}/eval/golden-tasks/`. Mỗi task có rubric trong `expected.md`. Lý do: pattern/contract của workspace A không áp dụng cho workspace B → fixture không thể share.
 
 Chạy 2 lần:
-- **A — wiki-on**: `/contextd-use` đầy đủ.
+- **A — wiki-on**: `/use-contextd` đầy đủ.
 - **B — wiki-off**: ghi đè `current-task.md` thành stub trống (`## Referenced Docs: (none)`, `## Knowledge Gaps: all sections missing — wiki-off mode`), rồi gọi builder thẳng.
 
 Sau khi cả A và B chạy xong, copy [templates/task-scorecard.md](../../templates/task-scorecard.md) (skeleton chung của engine), chấm theo 10 tiêu chí. Lưu kết quả vào `{ws}/eval/results/{date}-{task-id}.md`.
@@ -165,7 +165,7 @@ Trace emit cho 3 subagent (`contextd-planner`, `contextd-context-selector`, `con
 }
 ```
 
-Khi user chạy `/contextd-use` từ trong wiki-template, mỗi lần Task tool kết thúc → hook chạy, parse subagent output, ghi trace.
+Khi user chạy `/use-contextd` từ trong wiki-template, mỗi lần Task tool kết thúc → hook chạy, parse subagent output, ghi trace.
 
 ### Trong codebase khác (production usage)
 
@@ -176,7 +176,7 @@ Codebase A có `.claude/wiki.json` trỏ tới wiki-template ở `D:\tool\wiki-t
    { "type": "command", "command": "python D:\\tool\\wiki-template\\scripts\\emit_trace.py", "timeout": 5 }
    ```
 2. Verify `python` trong PATH (`python --version` ≥ 3.9).
-3. Chạy 1 task qua `/contextd-use`. Sau khi Task tool đầu tiên xong → kiểm `{codebase A}/.claude/runs/{run_id}/01-planner.json`.
+3. Chạy 1 task qua `/use-contextd`. Sau khi Task tool đầu tiên xong → kiểm `{codebase A}/.claude/runs/{run_id}/01-planner.json`.
 
 ### Hook payload (tham khảo)
 

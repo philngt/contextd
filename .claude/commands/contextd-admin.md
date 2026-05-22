@@ -30,9 +30,9 @@ Use this file when you're not sure which admin command you need. Each command is
 
 These are **not** admin commands — they are the commands you reach for during actual work:
 
-- `/contextd-use` — frame a new task against the active workspace
-- `/contextd-update` — sync wiki after code changes
-- `/contextd-rebase` — rebuild wiki snapshot against current code
+- `/use-contextd` — frame a new task against the active workspace
+- `/update-contextd` — sync wiki after code changes
+- `/rebase-contextd` — rebuild wiki snapshot against current code
 - `/contextd-setup` — first-time per-codebase setup
 - `/switch-workspace`, `/list-workspaces`, `/new-workspace`
 - `/code-analyze`, `/evidence-{ingest,analyze,qa,apply}`, `/obsidian-ingest`

@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Changed — Rename three verb commands to `verb-contextd` form
+
+Three slash commands were renamed so the verb leads (matches the legacy `use-wiki / update-wiki / rebase-wiki` aliases the installer already migrates):
+
+| Old | New |
+|---|---|
+| `/contextd-use` | `/use-contextd` |
+| `/contextd-update` | `/update-contextd` |
+| `/contextd-rebase` | `/rebase-contextd` |
+
+Other `/contextd-*` commands (setup, detect, eval, trace, viz, report, version, upgrade, backup, restore, explain, admin) are unchanged — they are nouns/admin tools and stay as `contextd-{noun}`.
+
+Definition files renamed under `.claude/commands/`; references updated across pipeline docs, top-level docs (CLAUDE.md, README.md, QUICKSTART.md), pack prompt overrides, onboarding HTML (EN + VI), and the `slash-command-naming.md` contract's evidence list. Installer `LEGACY_MAP` values in `scripts/install-to-claude.{sh,py}` now point to the new names so users upgrading from the `wiki-*` era still land on the right command.
+
 ### Changed — Intent + trace schema = single source
 
 `templates/run-trace.schema.json` is now the only place that defines stage payload shape. Removed restated JSON examples from:
@@ -69,14 +83,14 @@ Existing `## Source` lines in remaining patterns/contracts still cite the remove
 
 `contextd-plan-reviewer` subagent and its trace stage `03-plan-review` have been removed. The five plan-review checks (planner verify carry-over, pattern/contract in Referenced Docs, component coverage, conflict, gap severity) now run inside `contextd-context-selector`, which already retrieves the docs and writes `current-task.md`. Selector emits `verdict: APPROVED|BLOCK` (plus `issues[]` + `checks_summary`) in the same `02-context.json` trace block.
 
-Rationale: planner + plan-reviewer were both verifying pattern existence (duplicate work); selector already knew what it had retrieved and what was missing. Merging saves one LLM call per `/contextd-use` task and removes ~150 lines of overlapping spec.
+Rationale: planner + plan-reviewer were both verifying pattern existence (duplicate work); selector already knew what it had retrieved and what was missing. Merging saves one LLM call per `/use-contextd` task and removes ~150 lines of overlapping spec.
 
 Impact:
 - **Subagent deleted**: `.claude/agents/contextd-plan-reviewer.md`. `install-to-claude.{py,sh}` now remove it from existing `~/.claude/agents/` installs.
 - **Schema**: `templates/run-trace.schema.json` — `03-plan-review` stage removed from enum + oneOf; `02-context` extended with `verdict` (required), `issues[]`, `checks_summary` fields and `pitfalls` category in `referenced_docs`.
 - **Scripts**: `emit_trace.py`, `render_trace.py` no longer reference `contextd-plan-reviewer` / `03-plan-review.json`. Rollup detects BLOCK from `02-context.verdict`.
-- **Docs**: `agents/pipeline/{multi-agent-pipeline,README,PIPELINE-VISUAL,observability}.md`, `.claude/commands/{contextd-use,contextd-trace,contextd-eval,README}.md`, `templates/task-scorecard.md` updated to 4-stage pipeline.
-- **Workspace evidence/reports under `workspaces/default/`** still reference the old 5-stage layout (historical snapshots); will be reconciled via `/contextd-update` in a follow-up.
+- **Docs**: `agents/pipeline/{multi-agent-pipeline,README,PIPELINE-VISUAL,observability}.md`, `.claude/commands/{use-contextd,contextd-trace,contextd-eval,README}.md`, `templates/task-scorecard.md` updated to 4-stage pipeline.
+- **Workspace evidence/reports under `workspaces/default/`** still reference the old 5-stage layout (historical snapshots); will be reconciled via `/update-contextd` in a follow-up.
 
 ### Changed — Rebrand `workspace-wiki` → `contextd`
 

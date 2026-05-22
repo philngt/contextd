@@ -1,4 +1,4 @@
-# /contextd-rebase — Rebase Wiki Against Code
+# /rebase-contextd — Rebase Wiki Against Code
 
 Chạy skill này định kỳ hoặc khi nghi ngờ wiki **của workspace active** đã lỗi thời so với codebase thực tế.
 Mục tiêu: tìm và vá mọi chỗ wiki nói một kiểu, code chạy một kiểu.
@@ -157,5 +157,5 @@ Tạo báo cáo theo format:
 - Sau mỗi sprint hoặc release của workspace
 - Khi AI agent tạo ra code sai lặp lại trong workspace này (wiki có thể đã lỗi thời)
 - Khi onboard project mới vào workspace (verify wiki phản ánh đúng codebase)
-- Trước khi dùng `/contextd-use` cho task lớn
+- Trước khi dùng `/use-contextd` cho task lớn
 - Sau khi `/switch-workspace` về workspace lâu không động đến

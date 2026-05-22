@@ -54,7 +54,7 @@ Pack này gộp pentest workflow — self-check chia thành Security Engineering
 
 ## Inclusion logic
 
-Pack loader (`scripts/pack_loader.py`) merge nội dung file này vào prompt context khi build `current-task.md` cho `/contextd-use`.
+Pack loader (`scripts/pack_loader.py`) merge nội dung file này vào prompt context khi build `current-task.md` cho `/use-contextd`.
 
 ## Common Pitfalls (Top 10)
 

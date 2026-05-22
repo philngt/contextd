@@ -65,7 +65,7 @@ Nếu task thuộc QC, ưu tiên evidence-based reasoning, traceability defect�
 
 ## Inclusion logic
 
-Pack loader (`scripts/pack_loader.py`) merge nội dung file này vào prompt context khi build `current-task.md` cho `/contextd-use`.
+Pack loader (`scripts/pack_loader.py`) merge nội dung file này vào prompt context khi build `current-task.md` cho `/use-contextd`.
 
 ## Common Pitfalls (Top 10 × 2)
 

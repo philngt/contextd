@@ -1,6 +1,6 @@
 # Pipeline Visual — How the Wiki Works
 
-> Tài liệu trực quan giải thích **wiki-driven pipeline** vận hành thế nào khi user chạy `/contextd-use "..."`.
+> Tài liệu trực quan giải thích **wiki-driven pipeline** vận hành thế nào khi user chạy `/use-contextd "..."`.
 > Đọc cùng [README.md](README.md), [multi-agent-pipeline.md](multi-agent-pipeline.md), [observability.md](observability.md).
 
 ---
@@ -30,7 +30,7 @@ sequenceDiagram
     participant R as contextd-reviewer
     participant FS as .claude/runs/{run_id}/
 
-    U->>M: /contextd-use "implement X"
+    U->>M: /use-contextd "implement X"
     M->>M: Resolve workspace từ<br/>.claude/wiki.json
     M->>P: Task(subagent=contextd-planner)
     P-->>M: Intent JSON +<br/>```json trace block```
@@ -138,7 +138,7 @@ flowchart TD
 ## Cách "thấy" pipeline đang chạy gì
 
 1. **Mở 2 terminal**:
-   - Terminal A: chạy `/contextd-use "..."` (pipeline chính)
+   - Terminal A: chạy `/use-contextd "..."` (pipeline chính)
    - Terminal B: `ls -la .claude/runs/$(ls -t .claude/runs/ | head -1)/` — refresh để thấy file JSON drop dần
 
 2. **Sau khi run xong** — debug:
@@ -168,7 +168,7 @@ Xem [multi-agent-pipeline.md#L171-L181](multi-agent-pipeline.md#L171-L181) cho e
 - [multi-agent-pipeline.md](multi-agent-pipeline.md) — vai trò + schema từng agent
 - [observability.md](observability.md) — trace schema + hook contract
 - [run-trace.schema.json](../../templates/run-trace.schema.json) — JSON schema cho mọi trace file
-- [.claude/commands/contextd-use.md](../../.claude/commands/contextd-use.md) — execution flow chính thức
+- [.claude/commands/use-contextd.md](../../.claude/commands/use-contextd.md) — execution flow chính thức
 - [.claude/commands/contextd-trace.md](../../.claude/commands/contextd-trace.md) — Markdown 1-run viewer
 - [.claude/commands/contextd-eval.md](../../.claude/commands/contextd-eval.md) — Markdown aggregate
 - `.claude/commands/contextd-viz.md` — HTML viewer (Phase 2, nếu đã add)

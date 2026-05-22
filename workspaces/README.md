@@ -50,7 +50,7 @@ Slash commands resolve workspace **theo cwd** khi chạy:
 | 3 | Nếu chỉ có 1 workspace trong `workspaces/` → dùng nó |
 | 4 | STOP và yêu cầu user `/switch-workspace` hoặc `/contextd-setup` |
 
-> KHÔNG còn file `workspaces/.active` global. Active workspace là per-codebase, không phải per-wiki-repo. Lý do: cùng một wiki-template phục vụ nhiều codebase, mỗi codebase có thể thuộc workspace khác nhau — chạy `/contextd-use` ở 2 codebase khác nhau phải retrieve 2 workspace khác nhau, không phụ thuộc lần `/switch-workspace` gần nhất.
+> KHÔNG còn file `workspaces/.active` global. Active workspace là per-codebase, không phải per-wiki-repo. Lý do: cùng một wiki-template phục vụ nhiều codebase, mỗi codebase có thể thuộc workspace khác nhau — chạy `/use-contextd` ở 2 codebase khác nhau phải retrieve 2 workspace khác nhau, không phụ thuộc lần `/switch-workspace` gần nhất.
 
 ### Khi chạy commands TRONG wiki-template repo
 

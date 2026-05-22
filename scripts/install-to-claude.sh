@@ -124,9 +124,9 @@ declare -A LEGACY_MAP=(
   [wiki-upgrade]=contextd-upgrade
   [wiki-version]=contextd-version
   [wiki-viz]=contextd-viz
-  [use-wiki]=contextd-use
-  [update-wiki]=contextd-update
-  [rebase-wiki]=contextd-rebase
+  [use-wiki]=use-contextd
+  [update-wiki]=update-contextd
+  [rebase-wiki]=rebase-contextd
 )
 LEGACY_FOUND=0
 for legacy in "${!LEGACY_MAP[@]}"; do
@@ -239,4 +239,4 @@ echo "Test thử:"
 echo "  cd /path/to/your/codebase"
 echo "  /contextd-setup           # tạo .claude/wiki.json cho codebase đó"
 echo "  /list-workspaces      # xem có workspace nào trong wiki-template"
-echo "  /contextd-use \"...task...\"  # dùng pipeline với context từ workspace active"
+echo "  /use-contextd \"...task...\"  # dùng pipeline với context từ workspace active"

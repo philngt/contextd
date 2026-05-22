@@ -14,18 +14,18 @@ Slash commands trong `.claude/commands/` PHẢI follow universal naming:
 
 ### Recommendation (non-binding)
 
-Cho commands MỚI: prefer "subject-verb" convention (consistency với `evidence-*`, `wiki-*` groups). Existing commands "verb-subject" pattern (`/list-workspaces`, `/switch-workspace`, `/new-workspace`) KHÔNG cần break — backward-compat.
+Cho commands MỚI: prefer "subject-verb" convention cho admin/noun commands (consistency với `evidence-*`, `contextd-*` admin groups). "Verb-subject" pattern acceptable cho action verbs against a subject (`/use-contextd`, `/update-contextd`, `/rebase-contextd`, `/list-workspaces`, `/switch-workspace`, `/new-workspace`) — backward-compat.
 
 | Convention | Example | Group |
 |------------|---------|-------|
-| subject-verb (PREFERRED for new) | `/contextd-setup`, `/contextd-detect`, `/evidence-ingest`, `/code-analyze` | wiki-*, evidence-*, code-* |
-| verb-subject (acceptable, existing) | `/list-workspaces`, `/switch-workspace`, `/new-workspace` | workspace ops |
+| subject-verb (PREFERRED for admin/noun) | `/contextd-setup`, `/contextd-detect`, `/evidence-ingest`, `/code-analyze` | contextd-*, evidence-*, code-* |
+| verb-subject (acceptable, action verbs) | `/use-contextd`, `/update-contextd`, `/rebase-contextd`, `/list-workspaces`, `/switch-workspace`, `/new-workspace` | wiki actions, workspace ops |
 
 ## Observed evidence
 
 19/19 commands conform RULE:
 - Workspace ops: `/contextd-setup`, `/contextd-detect`, `/switch-workspace`, `/new-workspace`, `/list-workspaces` `(.claude/commands/README.md:L16-L20)`
-- Wiki usage: `/contextd-use`, `/contextd-update`, `/contextd-rebase` `(.claude/commands/README.md:L28-L30)`
+- Wiki usage (verb-subject): `/use-contextd`, `/update-contextd`, `/rebase-contextd` `(.claude/commands/README.md:L28-L30)`
 - Codebase: `/code-analyze` `(.claude/commands/README.md:L38)`
 - Reporting: `/contextd-report` `(.claude/commands/README.md:L48)`
 - Observability: `/contextd-trace`, `/contextd-eval`, `/contextd-viz` `(.claude/commands/contextd-viz.md:L1)`

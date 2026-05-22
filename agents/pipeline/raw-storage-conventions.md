@@ -160,8 +160,8 @@ Lý do: `raw.{ext}` có thể chứa sensitive hoặc rất lớn. `source.yaml`
 | `applied/{evid-id}/`                | Forever           | KHÔNG xóa — audit trail vĩnh viễn                |
 | `archive/{evid-id}/`                | 1 năm             | Sau 1 năm: giữ chỉ `manifest.yaml` + `source.yaml`, xóa raw + analysis |
 
-`/evidence-archive --older-than 90d` để batch archive.
-`/evidence-archive --purge-raw --older-than 365d` để gột raw trong archive.
+`/evidence-archive --older-than 90d` để batch archive. *(planned — not yet implemented; archival hiện tại manual)*
+`/evidence-archive --purge-raw --older-than 365d` để gột raw trong archive. *(planned)*
 
 ---
 

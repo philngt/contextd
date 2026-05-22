@@ -52,7 +52,7 @@ workspaces/{ws}/.observations/
   "updated_at": "2026-05-15T08:42:11+00:00",
   "clusters": [
     {
-      "id": "contextd-rebase-merge-a1b2c3",
+      "id": "rebase-contextd-merge-a1b2c3",
       "representative_tokens": ["rebase","wiki","merge","code","review"],
       "count": 7,
       "first_seen": "2026-04-10T...",
@@ -72,9 +72,9 @@ workspaces/{ws}/.observations/
 
 ```json
 {
-  "dismissed": ["contextd-rebase-merge-a1b2c3"],
+  "dismissed": ["rebase-contextd-merge-a1b2c3"],
   "resolved": [
-    { "cluster_id": "...", "artifact": "workspaces/c7/.claude/commands/contextd-rebase.md", "ts": "..." }
+    { "cluster_id": "...", "artifact": "workspaces/c7/.claude/commands/rebase-contextd.md", "ts": "..." }
   ]
 }
 ```

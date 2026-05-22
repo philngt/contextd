@@ -1,0 +1,25 @@
+name: pack-ui-ux
+version: 0.1.0
+description: UI/UX pack — design system, accessibility (WCAG), user flows, và UX writing conventions.
+
+components:
+  - design-system
+  - accessibility
+  - user-flows
+  - ux-writing
+
+keywords:
+  design-system: [design system, component library, design token, figma, storybook, design spec]
+  accessibility: [a11y, wcag, aria, screen reader, contrast ratio, keyboard navigation, focus trap]
+  user-flows: [user flow, screen flow, wireframe, prototype, interaction design, happy path, edge case]
+  ux-writing: [ux writing, microcopy, content guidelines, tone of voice, copy, placeholder, error message, cta]
+
+files:
+  constraints: agents/constraints.md
+  coding_rules: agents/coding-rules.md
+  validator_rules: agents/pipeline/validator-rules.md
+  retrieval_map: agents/pipeline/retrieval-map.md
+  prompt_overrides: agents/pipeline/prompt-overrides.md
+  common_pitfalls: agents/common-pitfalls.md
+
+conflicts_with: []
