@@ -1,0 +1,201 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "contextd-task-context",
+  "title": "contextd Task Context",
+  "description": "Deterministic, file-backed context artifact for a single agent task.",
+  "type": "object",
+  "required": [
+    "artifact_type",
+    "version",
+    "generated_at",
+    "task",
+    "workspace",
+    "knowledge_root",
+    "intent",
+    "referenced_docs",
+    "gaps",
+    "warnings",
+    "contextPack",
+    "retrieval_policy",
+    "source_hashes"
+  ],
+  "properties": {
+    "artifact_type": {
+      "const": "contextd_task_context.v1"
+    },
+    "version": {
+      "type": "string"
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "task": {
+      "type": "string"
+    },
+    "workspace": {
+      "type": "string"
+    },
+    "project_dir": {
+      "type": ["string", "null"]
+    },
+    "knowledge_root": {
+      "type": "string"
+    },
+    "intent": {
+      "type": "object",
+      "required": ["type", "components", "patterns_needed", "contracts_touched"],
+      "properties": {
+        "type": {
+          "enum": ["implement_feature", "fix_bug", "design", "incident", "review"]
+        },
+        "components": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "domain": {
+          "type": ["string", "null"]
+        },
+        "scope": {
+          "type": ["string", "null"]
+        },
+        "patterns_needed": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "contracts_touched": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "additionalProperties": true
+    },
+    "referenced_docs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["category", "path", "sections", "content", "source_hash"],
+        "properties": {
+          "category": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "sections": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "content": {
+            "type": "string"
+          },
+          "source_hash": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "static_context": {
+      "type": "array",
+      "description": "Deterministic non-volatile sources materialized into context packs, such as workspace profile, engine guidance, and active pack rules.",
+      "items": {
+        "type": "object",
+        "required": ["category", "path", "sections", "content", "source_hash"],
+        "properties": {
+          "category": { "type": "string" },
+          "path": { "type": "string" },
+          "sections": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "content": { "type": "string" },
+          "source_hash": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{64}$"
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "gaps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["category", "missing", "blocking_hint"],
+        "properties": {
+          "category": { "type": "string" },
+          "missing": { "type": "string" },
+          "blocking_hint": { "type": "boolean" }
+        },
+        "additionalProperties": true
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "contextPack": {
+      "type": "object",
+      "required": ["artifact_type", "version", "kind", "packKey", "sourceHash", "status"],
+      "properties": {
+        "artifact_type": { "const": "context_pack_ref" },
+        "version": { "type": "string" },
+        "kind": { "type": "string" },
+        "packKey": { "type": "string" },
+        "ref": { "type": ["string", "null"] },
+        "compiledRef": { "type": ["string", "null"] },
+        "sources": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["path", "category", "source_hash"],
+            "properties": {
+              "path": { "type": "string" },
+              "category": { "type": "string" },
+              "source_hash": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              }
+            },
+            "additionalProperties": true
+          }
+        },
+        "sourceHash": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "status": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "retrieval_policy": {
+      "type": "object",
+      "required": ["mode", "advisory_retrieval", "priority", "max_docs"],
+      "properties": {
+        "mode": { "type": "string" },
+        "advisory_retrieval": { "type": "boolean" },
+        "priority": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "max_docs": { "type": "integer" },
+        "rag_policy": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "source_hashes": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^[a-f0-9]{64}$"
+      }
+    },
+    "materialized": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

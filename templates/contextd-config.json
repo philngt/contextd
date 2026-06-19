@@ -1,0 +1,10 @@
+{
+  "_comment": "Canonical contextd project config. Copy to <project>/.contextd/config.json. Legacy .claude/wiki.json and .Codex/wiki.json remain supported adapters during migration.",
+  "project": "{project-name}",
+  "workspace": "{workspace-name}",
+  "knowledge_root": null,
+  "knowledge_map": "projects/{project-name}/knowledge-map.md",
+  "domain": "{domain-name}",
+  "packs": null,
+  "_packs_comment": "Optional local pack override. null = follow workspace.md ## Packs. array = replace semantics."
+}

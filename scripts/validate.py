@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Layer 1 validator for the wiki-template knowledge engine.
+Layer 1 validator for the contextd knowledge engine.
 
 Engine baseline: stack-agnostic rules (domain workflow, hardcoded config,
 constructor injection, /contextd-report HTML hygiene). Stack-specific rules
@@ -49,7 +49,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import re
 import sys
 from pathlib import Path
@@ -57,48 +56,14 @@ from typing import Dict, List, Optional, Tuple
 
 # Pack loader — sibling module
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent / "lib"))
 import pack_loader  # noqa: E402
+import contextd_resolver  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
-# Workspace + wiki_root resolution
+# Workspace + knowledge_root resolution
 # ---------------------------------------------------------------------------
-
-def find_wiki_json(start_dir: Path) -> Optional[Path]:
-    cur = start_dir.resolve()
-    while True:
-        candidate = cur / ".claude" / "wiki.json"
-        if candidate.is_file():
-            return candidate
-        if cur.parent == cur:
-            return None
-        cur = cur.parent
-
-
-def load_global_wiki_root() -> Optional[str]:
-    home = Path(os.path.expanduser("~"))
-    p = home / ".claude" / "wiki-global.json"
-    if not p.is_file():
-        return None
-    try:
-        data = json.loads(p.read_text(encoding="utf-8"))
-        return data.get("wiki_root")
-    except (json.JSONDecodeError, OSError):
-        return None
-
-
-def resolve_wiki_root(wiki_json_path: Path, raw_value) -> Optional[Path]:
-    if raw_value:
-        p = Path(raw_value)
-        if p.is_absolute():
-            return p.resolve()
-        project_root = wiki_json_path.parent.parent
-        return (project_root / p).resolve()
-    fallback = load_global_wiki_root()
-    if fallback:
-        return Path(fallback).expanduser().resolve()
-    return None
-
 
 def resolve_workspace_context(
     file_path: Path,
@@ -106,20 +71,25 @@ def resolve_workspace_context(
     cli_wiki_root: Optional[str],
 ) -> Tuple[Optional[str], Optional[Path], Optional[str]]:
     workspace = cli_workspace
-    wiki_root = Path(cli_wiki_root).resolve() if cli_wiki_root else None
+    wiki_root = Path(cli_wiki_root).expanduser().resolve() if cli_wiki_root else None
     domain: Optional[str] = None
 
-    wiki_json = find_wiki_json(file_path.parent if file_path.is_file()
-                               else file_path)
-    if wiki_json:
+    start = file_path.parent if file_path.is_file() else file_path
+    resolved = contextd_resolver.resolve(start)
+    if not workspace:
+        workspace = resolved.get("workspace")
+    if not wiki_root:
+        root = resolved.get("knowledge_root") or resolved.get("wiki_root")
+        wiki_root = Path(root).resolve() if root else None
+
+    config_path = resolved.get("config_path") or resolved.get("wiki_json_path")
+    if config_path:
         try:
-            cfg = json.loads(wiki_json.read_text(encoding="utf-8"))
+            cfg = json.loads(Path(config_path).read_text(encoding="utf-8"))
         except (json.JSONDecodeError, OSError):
             cfg = {}
         if not workspace:
             workspace = cfg.get("workspace")
-        if not wiki_root:
-            wiki_root = resolve_wiki_root(wiki_json, cfg.get("wiki_root"))
         domain = cfg.get("domain")
     return workspace, wiki_root, domain
 

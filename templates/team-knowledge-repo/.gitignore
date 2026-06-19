@@ -1,0 +1,12 @@
+# Local-only data — NEVER commit these
+evidence/
+.observations/prompts.jsonl
+.observations/*.lock
+eval/results/*
+!eval/results/.gitkeep
+.claude/
+.DS_Store
+Thumbs.db
+__pycache__/
+*.pyc
+node_modules/

@@ -1,0 +1,113 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "contextd-manifest",
+  "title": "contextd Manifest Schema",
+  "description": "Generated index of commands, agents, packs, and pipeline docs. Canonical sources remain in .claude/commands/, .claude/agents/, and packs/*/.",
+  "type": "object",
+  "required": ["schema_version", "generated_from", "commands", "agents", "packs", "retrieval", "supported_runtimes"],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "generated_at": {
+      "type": ["string", "null"],
+      "format": "date-time"
+    },
+    "generated_from": {
+      "type": "object",
+      "required": ["commands_dir", "agents_dir", "packs_dir"],
+      "properties": {
+        "commands_dir": { "type": "string" },
+        "agents_dir": { "type": "string" },
+        "packs_dir": { "type": "string" },
+        "pipeline_dir": { "type": "string" }
+      }
+    },
+    "commands": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "description", "template_file"],
+        "properties": {
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "template_file": { "type": "string" }
+        }
+      }
+    },
+    "agents": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "description", "template_file"],
+        "properties": {
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "tools": { "type": "string" },
+          "model": { "type": "string" },
+          "template_file": { "type": "string" }
+        }
+      }
+    },
+    "packs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "template_file"],
+        "properties": {
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "version": { "type": "string" },
+          "components": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "template_file": { "type": "string" }
+        }
+      }
+    },
+    "pipeline_docs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "template_file"],
+        "properties": {
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "template_file": { "type": "string" }
+        }
+      }
+    },
+    "schemas": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "template_file"],
+        "properties": {
+          "name": { "type": "string" },
+          "template_file": { "type": "string" }
+        }
+      }
+    },
+    "retrieval": {
+      "type": "object",
+      "required": ["priority", "max_docs", "intent_types"],
+      "properties": {
+        "priority": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "max_docs": { "type": "integer", "minimum": 1 },
+        "intent_types": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "supported_runtimes": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}

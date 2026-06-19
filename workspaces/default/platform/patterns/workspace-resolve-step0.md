@@ -11,24 +11,24 @@ Pattern này lặp lại 15/15 commands trong `.claude/commands/` ngoại trừ 
 ```
 <cwd>
   ↓ scan up parent dirs
-.claude/wiki.json found
+.contextd/config.json found (or legacy adapter)
   ↓ read JSON
-workspace + wiki_root
-  ↓ resolve wiki_root rule
-{effective_wiki_root}
+workspace + knowledge_root
+  ↓ resolve knowledge_root rule
+{effective_knowledge_root}
   ↓
-{ws} = {effective_wiki_root}/workspaces/{workspace}/
+{ws} = {effective_knowledge_root}/workspaces/{workspace}/
   ↓ validate workspace.md exists
 PROCEED
 ```
 
-1. **Find `.claude/wiki.json`**: từ `<cwd>` đi lên parent cho tới khi gặp file. Lưu `wiki_json_dir`.
-2. **Read + resolve `wiki_root`** theo `agents/system-prompt.md` Resolution Rule:
+1. **Find `.contextd/config.json`**: từ `<cwd>` đi lên parent cho tới khi gặp file. Nếu thiếu, fallback legacy `.claude/wiki.json`, rồi `.Codex/wiki.json`. Lưu `config_dir`.
+2. **Read + resolve `knowledge_root`** (`wiki_root` legacy alias) theo `agents/system-prompt.md` Resolution Rule:
    - Absolute path → dùng nguyên.
-   - Relative (`"."`, `"./..."`) → resolve relative TỚI `project_root` (= parent của `.claude/`), KHÔNG phải `.claude/` literal, KHÔNG phải cwd.
-   - `null`/empty → fallback `~/.claude/wiki-global.json#wiki_root`.
-3. **STOP** nếu file thiếu hoặc `.workspace` rỗng → guide user `/switch-workspace` hoặc `/contextd-setup`.
-4. **Set context**: `workspace_active = .workspace`, `effective_wiki_root = <resolved absolute>`, `{ws} = {effective_wiki_root}/workspaces/{workspace_active}/`.
+   - Relative (`"."`, `"./..."`) → resolve relative TỚI `project_root` (= parent của config dir), KHÔNG phải cwd.
+   - `null`/empty → fallback global `.contextd`, rồi legacy globals.
+3. **STOP** nếu config thiếu hoặc `.workspace` rỗng → guide user `contextd migrate-config`, `/switch-workspace`, hoặc `/contextd-setup`.
+4. **Set context**: `workspace_active = .workspace`, `effective_knowledge_root = <resolved absolute>`, `{ws} = {effective_knowledge_root}/workspaces/{workspace_active}/`.
 5. **Validate**: `{ws}/workspace.md` tồn tại. Nếu không → workspace bị broken, STOP.
 
 On failure: STOP với hint specific (file thiếu / workspace empty / workspace.md missing).
@@ -37,25 +37,25 @@ On failure: STOP với hint specific (file thiếu / workspace empty / workspace
 
 ```yaml
 # Pattern là pure invariant — no config keys. Behavior mandated:
-hard_stop_on_missing_wiki_json: true
+hard_stop_on_missing_config: true
 hard_stop_on_empty_workspace_field: true
-fallback_to_global_when_wiki_root_null: true
+fallback_to_global_when_knowledge_root_null: true
 ```
 
 ## Failure Strategy
 
 | Scenario | Action |
 |----------|--------|
-| `.claude/wiki.json` not found | STOP, hint `/contextd-setup` |
+| `.contextd/config.json` and legacy adapters not found | STOP, hint `contextd migrate-config` hoặc `/contextd-setup` |
 | `.workspace` field rỗng/null | STOP, hint `/switch-workspace {name}` |
-| `wiki_root: "."` resolved sai (vd resolved tới `.claude/` literal) | STOP, hint check Resolution Rule |
-| `~/.claude/wiki-global.json` thiếu khi `wiki_root` null | STOP, hint setup global config |
+| `knowledge_root: "."` resolved sai | STOP, hint check Resolution Rule |
+| Global config thiếu khi root null | STOP, hint setup global config |
 | `{ws}/workspace.md` missing | STOP, workspace broken — recreate hoặc switch |
 
 ## Implementation Rules
 
 - KHÔNG đọc/copy knowledge từ workspace khác `{workspace_active}` (engine invariant — workspace sandboxing).
-- KHÔNG guess workspace từ codebase markers — explicit `.claude/wiki.json` là source of truth.
+- KHÔNG guess workspace từ codebase markers — explicit `.contextd/config.json` hoặc legacy adapter là source of truth.
 - KHÔNG bypass Bước 0 cho commands "fast" hay "simple" — invariant universal.
 - Workspace override KHÔNG apply cho pattern này (engine-level invariant).
 
@@ -65,7 +65,7 @@ _(none — pattern là pure invariant, không có override points)_
 
 ## Anti-patterns
 
-- ❌ Use cwd-relative wiki_root resolution (vd `"./workspaces"` resolved tới `<cwd>/workspaces` thay vì `<wiki_json_dir>/workspaces`).
+- ❌ Use cwd-relative knowledge_root resolution (vd `"./workspaces"` resolved tới `<cwd>/workspaces` thay vì project root).
 - ❌ Skip workspace.md existence check (cho phép broken workspace lọt qua).
 - ❌ Cache workspace resolution across commands without re-validation (workspace có thể đổi giữa runs).
 
@@ -78,6 +78,6 @@ _(none — pattern là pure invariant, không có override points)_
 
 ## Related
 
-- Engine spec: `agents/system-prompt.md` (`wiki_root` Resolution Rule)
+- Engine spec: `agents/system-prompt.md` (`knowledge_root` Resolution Rule)
 - Contract: `../contracts/evidence-state-machine-transitions.md` (workspace lock invariant I-2)
 - Source: q-001, evidence `2026-05-08-engine-bootstrap-wiki-template`

@@ -1,9 +1,19 @@
 ---
 name: contextd-planner
-description: Phân tích task của user và xác định patterns, contracts, domain, components cần áp dụng theo wiki. DÙNG KHI bắt đầu một task mới (implement_feature, fix_bug, design, incident, review) trước bất kỳ retrieval hoặc code nào. KHÔNG DÙNG để sinh code hay đọc nhiều file.
+description: Legacy planner reference. Canonical task classification now happens inside `contextd context`, which emits `.contextd/context/current-task.json`. KHÔNG dùng planner này để override artifact.
 tools: Read, Glob, Grep
 model: sonnet
 ---
+
+# Migration Note
+
+Canonical flow:
+
+```bash
+contextd context "{user_task}" --format json
+```
+
+The CLI emits `artifact_type=contextd_task_context.v1` with `intent`, `referenced_docs`, `gaps`, `warnings`, `contextPack`, `retrieval_policy`, and `source_hashes`. Use that artifact before considering this legacy planner prompt.
 
 # Role
 

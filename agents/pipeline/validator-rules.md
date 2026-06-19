@@ -26,7 +26,7 @@ Run these as code or regex against the generated output. Fast, deterministic, ze
 python scripts/validate.py --file <path-to-code-file> [--workspace <name>] [--wiki-root <path>] [--pretty]
 ```
 
-* Workspace + `wiki_root` are auto-resolved from `<cwd-walk-up>/.claude/wiki.json` per [system-prompt.md `wiki_root` Resolution Rule](../system-prompt.md#wiki_root-resolution-rule).
+* Workspace + `knowledge_root` are auto-resolved from `<cwd-walk-up>/.contextd/config.json` per [system-prompt.md Resolution Rule](../system-prompt.md). Legacy `.claude/wiki.json` / `.Codex/wiki.json` and `wiki_root` remain accepted as adapters.
 * Validator reads `## Packs` section from `workspaces/{ws}/workspace.md` and dynamically loads each pack's rule module.
 * Output: JSON `{violations: [...], summary: {errors, warnings}, context: {..., active_packs: [...]}}` on stdout.
 * Exit code: `0` if no errors (warnings allowed), `1` if any errors, `2` for bad invocation.

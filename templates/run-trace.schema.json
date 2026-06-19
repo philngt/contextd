@@ -86,6 +86,20 @@
       "properties": {
         "stage": { "const": "02-context" },
         "context_file": { "type": "string" },
+        "context_artifact": {
+          "type": "string",
+          "description": "Canonical task-context JSON artifact, usually .contextd/context/current-task.json. context_file may be a rendered markdown view."
+        },
+        "context_pack": {
+          "type": "object",
+          "properties": {
+            "packKey": { "type": "string" },
+            "ref": { "type": ["string", "null"] },
+            "sourceHash": { "type": "string" },
+            "status": { "type": "string" }
+          },
+          "additionalProperties": true
+        },
         "referenced_docs": {
           "type": "array",
           "items": {

@@ -1,172 +1,68 @@
-# Multi-Agent Pipeline
+# Context Artifact Pipeline
 
 ## Purpose
 
-Tách công việc của một task wiki-aware ra nhiều agent có vai trò hẹp, thay vì để 1 agent vừa parse intent vừa retrieve context vừa code. Lý do:
+Contextd v1 no longer depends on Claude-specific planner/context-selector subagents as the primary runtime. The canonical pipeline is a deterministic CLI artifact builder:
 
-- Mỗi subagent có context window riêng → main agent không bị nhiễu.
-- Output mỗi stage có schema cố định → dễ audit, dễ resume khi fail.
-- Context-Selector emit verdict (APPROVED/BLOCK) ngay sau retrieval → chặn sai sót trước khi Builder viết code (rẻ hơn fix sau).
+```bash
+contextd context "{user_task}" --format json
+```
 
-> Đây là **reference document** mô tả vai trò + schema của từng agent. **Flow execution thực tế (cách main agent gọi subagent) định nghĩa trong [.claude/commands/use-contextd.md](../../.claude/commands/use-contextd.md)** — đó là spec sống. Khi conflict, use-contextd.md thắng.
+The old multi-agent flow remains useful as design history and as compatibility docs for Claude adapters, but adapters must consume the same JSON shape instead of inventing retrieval rules.
 
----
-
-## Pipeline (4 stage)
+## Canonical Flow
 
 ```
 User Task
    ↓
-[Stage 0] Main agent       → resolve workspace + wiki_root từ <cwd>/.claude/wiki.json
+[Resolver]              .contextd/config.json → legacy adapters → globals
    ↓
-[Stage 1] contextd-planner     → parse task → intent JSON (kèm patterns_verified)
+[Intent Classifier]     task type + components + active packs
    ↓
-[Stage 2] contextd-context-selector → retrieve + slice → ghi current-task.md
-                                  → chạy 5 check → emit verdict APPROVED|BLOCK
+[Retriever]             contracts > patterns > project docs > domain docs
    ↓
-[Stage 3] Main agent (Builder) → đọc current-task.md → code theo prompt-template
+[Filter/Slicer]         agents/pipeline/context-filter.md section policies
    ↓
-[Stage 4] contextd-reviewer (optional) → review code đã sinh vs context
+[Validator]             missing refs become gaps; find/RAG stays advisory
    ↓
-Final Output
+[Artifact Writer]       .contextd/context/current-task.json
+                         .contextd/context/current-task.md
+                         .contextd/context/packs/{packKey}.md
+   ↓
+[Builder/Reviewer]      consume JSON artifact
 ```
 
-> **Lịch sử**: Pipeline trước đây có Stage 2.5 (`contextd-plan-reviewer`) riêng. Đã gộp vào Stage 2 (context-selector) để: (1) loại trùng việc verify pattern (planner + plan-reviewer cùng check), (2) giảm 1 LLM call/task. Xem CHANGELOG.
+## Artifact Contract
 
-**Lưu ý vai trò Builder**: Builder KHÔNG phải subagent độc lập — đó là main agent đóng vai. Lý do: main agent đã có ToolUse permission để Edit/Write code, không cần delegate. Subagent chỉ dùng cho công việc không-code (parse, retrieve, review).
+`current-task.json` is the source of truth and uses `artifact_type = "contextd_task_context.v1"`.
 
----
+Required semantic fields:
 
-## Stage 1 — `contextd-planner`
+- `workspace`
+- `intent`
+- `referenced_docs`
+- `gaps`
+- `warnings`
+- `contextPack`
+- `retrieval_policy`
+- `source_hashes`
 
-**Subagent file**: [.claude/agents/contextd-planner.md](../../.claude/agents/contextd-planner.md)
+`current-task.md` is only a render from JSON for humans and runtimes that prefer markdown.
 
-**Input** (từ main agent):
-- `user_task`: task gốc của user (nguyên văn)
-- `effective_wiki_root`: absolute path tới wiki-template
-- `workspace`: tên workspace active
-- `config_hint`: nội dung `<cwd>/.claude/wiki.json` (nếu có)
+## Compatibility Mapping
 
-**Job**: Đọc `{ws}/patterns-index.md` + `{ws}/workspace.md`, suy ra patterns/contracts/domain/components cần dùng. KHÔNG đọc file pattern detail, KHÔNG sinh code.
+| Legacy stage | New owner |
+|--------------|-----------|
+| Stage 0 resolve `wiki_root` | shared resolver with canonical `knowledge_root` |
+| `contextd-planner` | intent classifier inside `contextd context` |
+| `contextd-context-selector` | deterministic retriever/slicer/artifact writer |
+| `contextd-reviewer` | optional adapter reading `current-task.json` |
+| `.claude/context/current-task.md` | `.contextd/context/current-task.json` plus markdown render |
 
-**Output schema**: Intent JSON — canonical shape ở [run-trace.schema.json](../../templates/run-trace.schema.json) `oneOf[0].intent`. Semantic + field resolution: [task-to-docs-map.md](task-to-docs-map.md).
+## Runtime Adapter Rule
 
-Nếu `intent.missing_knowledge` không rỗng → main agent STOP, hỏi user, KHÔNG tự đoán.
+Claude, Codex, Cursor, and plain exports should all consume the same task-context JSON shape. Adapter-specific prompts may change wording, but they must not change resolution order, doc priority, pack semantics, or workspace isolation.
 
----
+## Advisory Discovery
 
-## Stage 2 — `contextd-context-selector`
-
-**Subagent file**: [.claude/agents/contextd-context-selector.md](../../.claude/agents/contextd-context-selector.md)
-
-**Input** (từ main agent):
-- `intent_json`: output của Stage 1
-- `effective_wiki_root`
-- `project_dir`: cwd hiện tại
-- `user_task`: để gắn vào header context file
-
-**Job**: Map intent → file path cụ thể theo [task-to-docs-map.md](task-to-docs-map.md), slice section theo [context-filter.md](context-filter.md), ghi đè `{project_dir}/.claude/context/current-task.md`. Đồng thời chạy 5 check (planner carry-over, pattern/contract trong Referenced Docs, component coverage, conflict, gap severity) và emit `verdict: APPROVED|BLOCK`.
-
-**Output**: 1 dòng `APPROVED` hoặc `BLOCK: {reason}` + trace JSON cuối. File `current-task.md` chứa toàn bộ context ranked + sliced kèm section `## Plan Review`.
-
-Đây là gate quan trọng — đẩy issue ra phía trước trước khi tốn token cho Stage 3.
-
----
-
-## Stage 3 — Main Agent (Builder)
-
-**Không phải subagent.** Main agent đóng vai builder vì cần ToolUse (Edit/Write/Bash) không có ở subagent.
-
-**Input**: `current-task.md` (single source of truth cho session) + user_task.
-
-**Prompt structure**: Dùng [prompt-template.md](prompt-template.md) — fill các slot từ `## Referenced Docs` của `current-task.md`.
-
-**Output format** (bắt buộc):
-```
-## Understanding
-## Knowledge Mapping   ← link tới section trong current-task.md
-## Design
-## Implementation
-## Edge Cases
-## Assumptions
-```
-
-Mọi quyết định kỹ thuật phải reference được vào 1 entry trong `## Referenced Docs`. Nếu phải vượt ngoài → ghi vào `## Assumptions`.
-
----
-
-## Stage 4 — `contextd-reviewer` (optional)
-
-**Subagent file**: [.claude/agents/contextd-reviewer.md](../../.claude/agents/contextd-reviewer.md)
-
-**Input** (từ main agent, sau khi đã Edit/Write file):
-- `solution_files`: danh sách file vừa sửa
-- `context_file`: `current-task.md`
-- `effective_wiki_root`
-
-**Job**: So sánh code đã sinh với contracts/patterns/domain rules trong context. Báo violation, KHÔNG tự sửa.
-
-**Output**:
-- `APPROVED` → main agent báo user.
-- `Violations Found` → main agent append vào `## Violations` section của `current-task.md`, báo user trước khi commit.
-
-**Bỏ qua Stage 4 khi**: task chỉ là `design`/`review` không sinh code, hoặc fix bug 1 dòng quá nhỏ.
-
----
-
-## Stage 6 — Trace (observability, code-driven)
-
-Mỗi subagent **output 1 fenced ```json block** ở cuối response. **PostToolUse hook** ([scripts/emit_trace.py](../../scripts/emit_trace.py)) tự động trích block đó và ghi `{cwd}/.claude/runs/{run_id}/{stage}.json`. Subagent KHÔNG dùng Write tool cho trace — tiết kiệm token, deterministic. Chi tiết: [observability.md](observability.md).
-
-| Stage | File | Emit mechanism |
-|-------|------|----------------|
-| 1 | `01-planner.json` | hook trích từ contextd-planner output |
-| 2 | `02-context.json` | hook trích từ contextd-context-selector output (gồm `verdict` field) |
-| 3 | `04-builder.json` | main agent self-write (Write tool — main agent không qua hook Task tool) |
-| 4 | `05-review.json` | hook trích từ contextd-reviewer output |
-| roll-up | `run.json` | hook update sau mỗi stage |
-
-Trace **KHÔNG block pipeline**: hook timeout 5s, parse fail → exit 0, log stderr. Trace là lớp đo lường tách rời.
-
-Aggregate qua nhiều run: `/contextd-eval`. View 1 run: `/contextd-trace {run_id}`. Chi tiết: [observability.md](observability.md).
-
----
-
-## When to use this pipeline
-
-Pipeline này dùng cho **mọi task wiki-aware** (implement_feature, fix_bug, design, incident, review). Lý do dùng nhất quán thay vì "single agent cho task đơn giản":
-
-- Context-Selector verdict phát hiện sai sớm → giá trị lớn ngay cả task nhỏ.
-- `current-task.md` ghi lại context → resume session, audit dễ dàng.
-- Subagent có context window riêng → main agent không bị bloat.
-
-**Exception** (single-agent OK):
-- Task không liên quan wiki (typo fix, format file).
-- Task user explicitly nói "no pipeline" hoặc "quick fix".
-
----
-
-## Cost vs Quality trade-off
-
-Pipeline này tốn 2-4 LLM calls cho subagent + main agent call. Đắt hơn single-agent. Đáng khi:
-
-- Codebase có ràng buộc contract chặt (Kafka topic, MQTT format, workflow state).
-- Wiki đã đầy đủ → agent có cái để retrieve thật.
-- Task đủ phức tạp để hallucination tốn kém để fix sau.
-
-Khuyến nghị model:
-- Planner / Context-Selector / Reviewer: model fast/cheap (Haiku, Sonnet) — output schema cố định, không cần creative.
-- Builder (main agent): strongest model có sẵn — chỗ này cần reasoning + code generation chất lượng.
-
----
-
-## Related
-
-- [README.md](README.md) — Pipeline overview + reference index
-- [.claude/commands/use-contextd.md](../../.claude/commands/use-contextd.md) — **Execution flow chính thức** (spec sống)
-- [task-to-docs-map.md](task-to-docs-map.md) — Intent schema chi tiết
-- [task-to-docs-map.md](task-to-docs-map.md) — Map intent → file path
-- [context-filter.md](context-filter.md) — Rank + slice rules
-- [prompt-template.md](prompt-template.md) — Builder prompt structure
-- [validator-rules.md](validator-rules.md) — Rule-based + self-check rules cho Reviewer
-- [observability.md](observability.md) — Trace schema, run-id convention, /contextd-eval & /contextd-trace
+`contextd find` and any future RAG/search mode are advisory only. They may suggest docs to inspect, but they do not override deterministic contracts/patterns selected in `referenced_docs`.

@@ -1,0 +1,56 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "contextd-config",
+  "title": "contextd Config",
+  "description": "Canonical project/global config for contextd. Legacy wiki_root is accepted as an alias for knowledge_root during migration.",
+  "type": "object",
+  "properties": {
+    "project": {
+      "type": "string"
+    },
+    "workspace": {
+      "type": "string",
+      "minLength": 1
+    },
+    "default_workspace": {
+      "type": ["string", "null"]
+    },
+    "knowledge_root": {
+      "type": ["string", "null"]
+    },
+    "wiki_root": {
+      "type": ["string", "null"],
+      "description": "Legacy alias for knowledge_root."
+    },
+    "knowledge_map": {
+      "type": ["string", "null"]
+    },
+    "domain": {
+      "type": ["string", "null"]
+    },
+    "packs": {
+      "type": ["array", "null"],
+      "items": {
+        "type": "string"
+      },
+      "description": "Local pack override. null means follow workspace.md; array means replace semantics."
+    },
+    "compat": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  },
+  "anyOf": [
+    { "required": ["workspace"] },
+    { "required": ["default_workspace"] }
+  ],
+  "allOf": [
+    {
+      "anyOf": [
+        { "required": ["knowledge_root"] },
+        { "required": ["wiki_root"] }
+      ]
+    }
+  ],
+  "additionalProperties": true
+}

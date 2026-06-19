@@ -1,5 +1,5 @@
 {
-  "_comment": "Copy file này vào .claude/wiki.json trong thư mục gốc của dự án (codebase). 'workspace' phải khớp tên thư mục trong wiki-template/workspaces/. Pipeline scan folder trực tiếp cho patterns/contracts/services — KHÔNG cần khai báo array.",
+  "_comment": "Legacy adapter template for .claude/wiki.json or .Codex/wiki.json. Prefer templates/contextd-config.json copied to .contextd/config.json. 'wiki_root' is accepted as alias for canonical 'knowledge_root'.",
   "project": "{project-name}",
   "workspace": "{workspace-name}",
   "wiki_root": null,

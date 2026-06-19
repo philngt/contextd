@@ -1,6 +1,6 @@
 # Quickstart — Go Live in 5 Minutes
 
-For developers who just cloned `wiki-template`. This gets you from `git clone` to your first `/use-contextd` run.
+For developers who just cloned `contextd`. This gets you from `git clone` to your first deterministic `contextd context` or `/use-contextd` run.
 
 > Read this right after cloning the repo. Goal: a working wiki setup for one codebase in about 5 minutes.
 
@@ -9,7 +9,8 @@ For developers who just cloned `wiki-template`. This gets you from `git clone` t
 ## Pre-flight (1 minute)
 
 You need:
-- [Claude Code CLI](https://claude.com/claude-code) or an installed IDE extension.
+- Python >= 3.10 for the contextd CLI.
+- Optional: [Claude Code CLI](https://claude.com/claude-code) or an installed IDE extension for slash-command adapters.
 - Python ≥ 3.9 (for lint/trace scripts; optional for basic wiki usage).
 - Bash shell (Windows: Git Bash or WSL).
 
@@ -20,18 +21,21 @@ cd ~/contextd
 
 ---
 
-## Step 1 — Install once into `~/.claude/`
+## Step 1 — Install the CLI and optional Claude adapter
 
 ```bash
+pip install -e .
 bash scripts/install-to-claude.sh
 ```
 
 This script:
 - Syncs slash commands + subagents to `~/.claude/{commands,agents}/`.
-- Creates `~/.claude/wiki-global.json` with `wiki_root` pointing to this repo.
+- Creates canonical `~/.contextd/config.json` with `knowledge_root` pointing to this repo.
+- Also writes legacy `~/.claude/wiki-global.json` with `wiki_root` for Claude Code adapters during migration.
+- The CLI reads canonical `.contextd/config.json` first, then legacy adapters.
 - Is idempotent — run again after `git pull` to update.
 
-> Verify: `cat ~/.claude/wiki-global.json` and confirm `"wiki_root"` is correct.
+> Verify: `contextd resolve` and confirm `knowledge_root` is correct.
 
 ---
 
@@ -53,7 +57,7 @@ Switch this codebase to the workspace you want:
 /switch-workspace {name}
 ```
 
-> This creates `<your-project>/.claude/wiki.json` with `"workspace": "{name}"`, which is how the wiki maps this codebase.
+> During migration this may create `<your-project>/.claude/wiki.json`. Run `contextd migrate-config` to create canonical `<your-project>/.contextd/config.json`.
 
 ---
 
@@ -87,20 +91,27 @@ It snapshots codebase metadata (without copying source), sends it through the ev
 
 ---
 
-## Step 5 — Run your first task with `/use-contextd`
+## Step 5 — Run your first task
+
+Runtime-neutral CLI:
+
+```bash
+contextd context "Add a Kafka consumer for surgery file processed events" --format json
+```
+
+Claude Code adapter:
 
 ```text
 /use-contextd "Add a Kafka consumer for surgery file processed events"
 ```
 
-The pipeline runs 5 stages:
+The context pipeline:
 1. Planner — parse intent, verify required patterns/contracts exist.
-2. Context selector — retrieve relevant docs, write `.claude/context/current-task.md`.
-3. Plan reviewer — blocks if patterns are missing or conflicting.
-4. Builder — main agent writes code from the prompt template.
-5. Reviewer (optional) — checks violations/hallucinations.
+2. Context builder — retrieve deterministic docs, write `.contextd/context/current-task.json`.
+3. Markdown renderer — produce `.contextd/context/current-task.md` for humans/adapters.
+4. Builder/reviewer — agent uses the context and validator rules.
 
-> Output: generated code + `current-task.md` showing which knowledge was applied.
+> Output: generated code + `current-task.json`/`current-task.md` showing which knowledge was applied.
 
 ---
 
@@ -113,7 +124,14 @@ Instead of running the full pipeline:
 /find idempotency
 ```
 
-Returns top candidates + snippets. Faster than `/use-contextd` for lookup-only tasks.
+Returns advisory candidates + snippets. Deterministic task context and contracts still win.
+
+CLI equivalents:
+
+```bash
+contextd find "kafka consumer" --format json
+contextd contract-path citation-format
+```
 
 ---
 
@@ -124,6 +142,30 @@ Sync wiki with your code changes:
 ```text
 /update-contextd                 # incremental sync (git diff → wiki edits)
 /rebase-contextd                 # periodic verification: wiki vs codebase
+```
+
+---
+
+## Team Setup (Optional)
+
+If your team wants to share workspaces via git, see [docs/team-sync.md](docs/team-sync.md).
+
+Quick start for teams:
+
+```bash
+# 1. Team lead creates a private knowledge repo from template
+cp -r templates/team-knowledge-repo ~/company-wiki
+cd ~/company-wiki && git init && git add . && git commit -m "init"
+
+# 2. Each developer clones the knowledge repo and installs with --knowledge-repo
+git clone <team-repo-url> ~/company-wiki
+cd ~/contextd
+bash scripts/install-to-claude.sh --knowledge-repo ~/company-wiki
+
+# 3. Daily workflow
+/contextd-team-sync pull        # before working
+# ... do work, update wiki ...
+/contextd-team-sync push        # share changes
 ```
 
 ---
@@ -146,3 +188,4 @@ Sync wiki with your code changes:
 | Wiki references files renamed in code | Run `/rebase-contextd` to resync. |
 | Legacy codebase onboarding with empty wiki | Run `/code-analyze` to bootstrap. |
 | Need to ingest an external changelog/incident report | Run `/evidence-ingest --source paste --label "{topic}"`. |
+| Team wants to share workspaces | See [docs/team-sync.md](docs/team-sync.md) and `/contextd-team-sync`. |

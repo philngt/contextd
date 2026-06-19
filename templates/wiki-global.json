@@ -1,5 +1,5 @@
 {
-  "_comment": "Copy file này vào ~/.claude/wiki-global.json và điền đường dẫn thực tế. 'default_workspace' (optional) là fallback nếu .claude/wiki.json của project không khai báo 'workspace'.",
+  "_comment": "Legacy global adapter template for ~/.claude/wiki-global.json. Prefer ~/.contextd/config.json with 'knowledge_root'. 'wiki_root' remains accepted as an alias during migration.",
   "wiki_root": "~/.wiki-template",
   "default_workspace": null,
   "obsidian": {

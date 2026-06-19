@@ -1,46 +1,47 @@
 # /contextd-setup — Setup contextd for a Codebase
 
-Tạo hoặc cập nhật file `.claude/wiki.json` cho dự án (codebase) hiện tại.
-Chạy một lần khi bắt đầu tích hợp wiki vào một dự án mới — hoặc lại khi đổi workspace.
+Tạo hoặc cập nhật file `.contextd/config.json` cho dự án (codebase) hiện tại. Trong migration window có thể giữ/tạo `.claude/wiki.json` làm compatibility adapter.
+Chạy một lần khi bắt đầu tích hợp contextd vào một dự án mới — hoặc lại khi đổi workspace.
 
-> Wiki được tổ chức theo workspace. Mỗi codebase phải khai báo `workspace` để biết đọc knowledge từ `{wiki_root}/workspaces/{workspace}/`.
+> Knowledge được tổ chức theo workspace. Mỗi codebase phải khai báo `workspace` để biết đọc knowledge từ `{knowledge_root}/workspaces/{workspace}/`.
 
 ---
 
 ## Bước 1 — Đọc global config
 
-Đọc `~/.claude/wiki-global.json`.
+Đọc `~/.contextd/config.json` trước, fallback legacy `~/.claude/wiki-global.json`.
 
 Nếu file không tồn tại → dừng và hướng dẫn:
 ```
-⚠️  Chưa có global config ~/.claude/wiki-global.json.
+⚠️  Chưa có global config ~/.contextd/config.json.
 
 Cách nhanh nhất (recommended) — chạy installer:
    bash {wiki-template-root}/scripts/install-to-claude.sh
 
   Script này:
-  - Tự dò wiki_root từ vị trí script
+  - Tự dò knowledge_root từ vị trí script
   - Sync slash commands + subagents về ~/.claude/{commands,agents}/
-  - Tạo ~/.claude/wiki-global.json với wiki_root đã set sẵn
+  - Tạo ~/.contextd/config.json với knowledge_root đã set sẵn
+  - Ghi legacy ~/.claude/wiki-global.json nếu cần compatibility
   - Idempotent: chạy lại để cập nhật khi pull wiki-template mới
 
 Cách thủ công (nếu không dùng được bash):
-  1. Copy {wiki-template-root}/templates/wiki-global.json → ~/.claude/wiki-global.json
-  2. Sửa "wiki_root" thành absolute path tới wiki-template repo
+  1. Copy {contextd-root}/templates/contextd-config.json → ~/.contextd/config.json
+  2. Sửa "knowledge_root" thành absolute path tới knowledge repo
   3. Chạy lại /contextd-setup
 ```
 
 Nếu main agent đang chạy chính từ trong wiki-template repo (detect: cwd hoặc wiki_json_dir trùng vị trí của script `scripts/install-to-claude.sh`) → có thể offer chạy `bash scripts/install-to-claude.sh` luôn cho user (chỉ chạy sau khi user confirm; KHÔNG tự chạy).
 
-Lấy `wiki_root` (và optional `default_workspace`) từ global config.
+Lấy `knowledge_root` (và optional `default_workspace`) từ global config.
 
 ---
 
-## Bước 2 — Kiểm tra .claude/wiki.json hiện tại
+## Bước 2 — Kiểm tra config hiện tại
 
-Nếu `.claude/wiki.json` đã tồn tại → đọc và hỏi:
+Nếu `.contextd/config.json` hoặc legacy `.claude/wiki.json` đã tồn tại → đọc và hỏi:
 ```
-⚠️  .claude/wiki.json đã tồn tại với config:
+⚠️  contextd config đã tồn tại với config:
    workspace: {workspace}
    project  : {project}
    domain   : {domain}
@@ -53,17 +54,17 @@ Tiếp tục với giá trị hiện có làm default.
 
 ## Bước 3 — Chọn workspace
 
-Liệt kê `{wiki_root}/workspaces/*/workspace.md` để hiển thị options.
+Liệt kê `{knowledge_root}/workspaces/*/workspace.md` để hiển thị options.
 
 Thứ tự pre-fill:
-1. Giá trị `workspace` trong `.claude/wiki.json` cũ (nếu có).
-2. `default_workspace` từ `~/.claude/wiki-global.json`.
+1. Giá trị `workspace` trong `.contextd/config.json` hoặc legacy config cũ (nếu có).
+2. `default_workspace` từ global config.
 3. Workspace duy nhất nếu chỉ có 1.
 4. Hỏi user (AskUserQuestion với danh sách workspace + option "Tạo mới" → trigger `/new-workspace`).
 
-Validate: `{wiki_root}/workspaces/{workspace}/workspace.md` tồn tại. Nếu không → STOP, gợi ý `/new-workspace {name}` trong wiki-template.
+Validate: `{knowledge_root}/workspaces/{workspace}/workspace.md` tồn tại. Nếu không → STOP, gợi ý `/new-workspace {name}`.
 
-Set biến `{ws} = workspaces/{workspace}/` cho các bước sau (paths relative tới `wiki_root`).
+Set biến `{ws} = workspaces/{workspace}/` cho các bước sau (paths relative tới `knowledge_root`).
 
 ---
 
@@ -148,20 +149,20 @@ User submit → `chosen_packs` = list pack đã tick.
 So sánh `chosen_packs` với `workspace_packs`:
 
 - **Nếu `chosen_packs == workspace_packs`** (giống workspace default):
-  - KHÔNG ghi `packs` field vào wiki.json (giữ null/omit) → fallback workspace.md tự nhiên.
-  - In: `ℹ️ Packs khớp workspace default — không cần override trong wiki.json.`
+  - KHÔNG ghi `packs` field vào config (giữ null/omit) → fallback workspace.md tự nhiên.
+  - In: `Packs khớp workspace default — không cần override trong config.`
 
 - **Nếu `chosen_packs != workspace_packs`** (override):
-  - Ghi `packs: [list]` vào wiki.json (ở Bước 6).
-  - In: `ℹ️ Packs khác workspace default — sẽ ghi override vào wiki.json.`
+  - Ghi `packs: [list]` vào `.contextd/config.json` (ở Bước 6).
+  - In: `Packs khác workspace default — sẽ ghi override vào .contextd/config.json.`
   - Hỏi tiếp: "Đây là override per-codebase. Workspace mặc định ({workspace_packs}) KHÔNG đổi. Bạn muốn:"
-    - "Chỉ override codebase này" (default — ghi vào wiki.json)
+    - "Chỉ override codebase này" (default — ghi vào `.contextd/config.json`)
     - "Update workspace default" (cũng edit `workspace.md ## Packs` cho workspace, áp dụng MỌI codebase trong workspace)
     - "Cancel" (giữ effective_packs hiện tại)
 
 ### 4.5.6 — Update workspace.md (chỉ khi user chọn "Update workspace default")
 
-Edit `{wiki_root}/workspaces/{workspace}/workspace.md` section `## Packs`:
+Edit `{knowledge_root}/workspaces/{workspace}/workspace.md` section `## Packs`:
 - Replace toàn bộ list trong section bằng `chosen_packs` (kebab-case, mỗi pack 1 dòng `- pack-name`).
 - Preserve text trước/sau section ## Packs.
 - Sau khi edit, in: `✅ Updated workspace.md ## Packs — applies to all codebases in workspace '{workspace}'.`
@@ -172,12 +173,12 @@ Edit `{wiki_root}/workspaces/{workspace}/workspace.md` section `## Packs`:
 
 Hiển thị config sẽ được tạo:
 ```
-📝 Chuẩn bị tạo .claude/wiki.json:
+📝 Chuẩn bị tạo .contextd/config.json:
 
 {
   "project"       : "surgery-service",
   "workspace"     : "example-surgery",
-  "wiki_root"     : null,              ← dùng ~/.claude/wiki-global.json
+  "knowledge_root": null,              ← dùng ~/.contextd/config.json
   "knowledge_map" : "projects/surgery-service/knowledge-map.md",
   "domain"        : "surgery",
   "packs"         : ["pack-event-driven", "pack-web-api"]   ← chỉ ghi nếu khác workspace default; null/omit = fallback workspace.md
@@ -194,7 +195,7 @@ Pattern/contract gợi ý cho stack đã detect (KHÔNG lưu vào config — pip
   - mqtt-topic-contract     ({status})
 
 Lưu ý:
-- knowledge_map path relative đến {wiki_root}/workspaces/{workspace}/
+- knowledge_map path relative đến {knowledge_root}/workspaces/{workspace}/
 - packs override per-codebase: workspace có 5 codebase, mỗi codebase có thể bật pack khác nhau.
 - Nếu cần điều chỉnh, hãy cho biết trước khi ghi file.
 
@@ -205,13 +206,13 @@ Chờ user xác nhận hoặc yêu cầu chỉnh sửa.
 
 ---
 
-## Bước 6 — Ghi file .claude/wiki.json
+## Bước 6 — Ghi file .contextd/config.json
 
-Sau khi user xác nhận, ghi file `.claude/wiki.json` vào thư mục gốc dự án.
+Sau khi user xác nhận, ghi file `.contextd/config.json` vào thư mục gốc dự án. Nếu cần compatibility với Claude Code cũ, có thể ghi thêm `.claude/wiki.json` với cùng `workspace` và alias `wiki_root`.
 
 Xác nhận:
 ```
-✅ Đã tạo .claude/wiki.json
+✅ Đã tạo .contextd/config.json
    Workspace: {workspace}
    Project  : {project}
 

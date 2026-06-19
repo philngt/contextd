@@ -25,7 +25,7 @@ packs/                               ← PACKS (stack-specific, opt-in per works
   ... (see packs/README.md)
 
 workspaces/
-  {ws}/                              ← resolved from <cwd>/.claude/wiki.json.workspace
+  {ws}/                              ← resolved from <cwd>/.contextd/config.json.workspace
     workspace.md                     ← metadata + ## Packs opt-in
     patterns-index.md                ← per-workspace pattern lookup
     platform/
@@ -39,6 +39,8 @@ workspaces/
     decisions/                       ← workspace ADRs
     agents/                          ← OPTIONAL — workspace overrides
 ```
+
+`knowledge_root` is the canonical root field. Legacy `wiki_root` in `.claude/wiki.json`, `.Codex/wiki.json`, and legacy global configs is accepted only as a migration adapter.
 
 ## Output Format
 

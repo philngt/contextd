@@ -3,7 +3,7 @@
 
 Strict per-project knowledge isolation. Layered packs. Deterministic retrieval.
 
-Designed for developers using AI coding agents across multiple projects/companies who need agents that don't mix context between repos. Current first-class runtime support is Claude Code; CLI and reference exports are planned to make the same workspace knowledge usable by Codex, Cursor, and other agents.
+Designed for developers using AI coding agents across multiple projects/companies who need agents that don't mix context between repos. The canonical runtime namespace is `.contextd`; Claude Code, Codex, Cursor, and plain markdown exports are adapters over the same deterministic context engine.
 
 
 ## Onboarding
@@ -23,8 +23,8 @@ Designed for developers using AI coding agents across multiple projects/companie
 3. **Packs are cognitive scaffolds, not just templates**  
    Packs are reusable reasoning modules that shape task framing, validation, and execution quality.
 
-4. **Claude Code-first support — with a runtime-agnostic direction**  
-   Official support currently targets Claude Code only (CLI + IDE extension). The architecture is planned to evolve toward a runtime-neutral context engine so the same workspace knowledge can be consumed by other agents via CLI export and manifest-based bundles.
+4. **Runtime-neutral core, adapter-specific surfaces**
+   `.contextd/config.json` and the CLI are canonical. Claude Code slash commands, Codex skills, Cursor rules, and plain bundles consume the same workspace knowledge through adapters.
 
 5. **Deterministic knowledge priority**  
    Contracts > Platform Patterns > Project Documentation > Domain Knowledge.
@@ -54,26 +54,28 @@ Use is provided under the repository license ([MIT](LICENSE)) and is offered **"
 | Claude Code slash commands | Stable |
 | Claude Code subagents | Stable |
 | Workspace/packs markdown engine | Stable |
-| CLI: resolve/find/bundle | Planned |
-| Plain markdown bundle export | Planned |
-| Codex skill/plugin export | Planned |
-| Cursor rules export | Planned |
+| CLI: resolve/find/bundle | Available (`pip install -e .`) |
+| CLI: deterministic task context | Available (`contextd context`) |
+| Plain markdown bundle export | Available |
+| Codex skill/plugin export | Available |
+| Cursor rules export | Available |
 
 **System requirements**
 - macOS/Linux: `bash` required.
 - Windows: PowerShell + Git Bash or WSL recommended for shell installer execution.
-- Write access to `~/.claude/` required.
+- Write access to `~/.contextd/` for global config. Claude Code adapters still write to `~/.claude/`.
 - Release installer prerequisites: `curl` or `wget`, plus `unzip`.
 
 ## Roadmap: Runtime-Agnostic Context
 
-contextd is moving toward a markdown-first context engine:
+contextd is a markdown-first context engine:
 
 1. **CLI core**: `contextd resolve`, `contextd find`, `contextd bundle`
-2. **Manifest index**: `.contextd/manifest.json`
-3. **Runtime export**: plain markdown, Codex skill/plugin, Cursor rules, Claude Code artifacts
+2. **Task context artifact**: `contextd context "task" --format json`
+3. **Manifest index**: `.contextd/manifest.json`
+4. **Runtime export**: plain markdown, Codex skill/plugin, Cursor rules, Claude Code artifacts
 
-The existing `.claude/commands` and `.claude/agents` remain canonical until the export flow is proven.
+Existing `.claude/commands` and `.claude/agents` remain supported adapters during the migration window, but `.contextd/config.json` is the canonical project config.
 
 ## Non-goals
 
@@ -89,13 +91,13 @@ Wiki = **engine** (shared) + **N workspaces** (independent sandboxes).
 wiki-template/
 ├── agents/         ← ENGINE — system prompt, pipeline, coding rules (workspace-agnostic)
 ├── templates/      ← ENGINE — templates for new workspaces and docs
-├── .claude/        ← ENGINE — slash commands
+├── .contextd/      ← ENGINE — manifest/config/context runtime namespace
+├── .claude/        ← ADAPTER — Claude Code slash commands
 └── workspaces/     ← N workspaces, each with platform/domains/projects/... data
     └── {name}/...
 
-# Active workspace is per-codebase, currently stored in <project>/.claude/wiki.json
-# (there is no global pointer file inside wiki-template)
-# A future runtime-neutral config path may be added, but existing Claude Code users will not be broken.
+# Active workspace is per-codebase, stored in <project>/.contextd/config.json.
+# Legacy <project>/.claude/wiki.json and <project>/.Codex/wiki.json are read as adapters.
 ```
 
 ## Packs (Stack-specific Knowledge)
@@ -109,7 +111,8 @@ Packs are stack/use-case knowledge layers between engine and workspace:
 Enable packs via:
 
 - Workspace default: `workspaces/{ws}/workspace.md` → `## Packs`
-- Per-codebase override: `<cwd>/.claude/wiki.json` → `packs` (replace semantics)
+- Per-codebase override: `<cwd>/.contextd/config.json` → `packs` (replace semantics)
+- Legacy adapters: `<cwd>/.claude/wiki.json` and `<cwd>/.Codex/wiki.json`
 
 See [packs/README.md](packs/README.md) for the full catalog.
 
@@ -166,6 +169,15 @@ bash scripts/install-to-claude.sh --dry-run
 bash scripts/install-to-claude.sh --force
 ```
 
+### Migrate an existing codebase config
+
+```bash
+contextd migrate-config --dry-run
+contextd migrate-config
+```
+
+This creates `<project>/.contextd/config.json` from an existing `.claude/wiki.json` or `.Codex/wiki.json`. The legacy file may remain in place for compatibility.
+
 ### Start a session (inside a codebase)
 
 ```text
@@ -177,6 +189,13 @@ bash scripts/install-to-claude.sh --force
 
 ```text
 /use-contextd "Add Kafka consumer..."
+```
+
+Or with the runtime-neutral CLI:
+
+```bash
+contextd context "Add Kafka consumer..." --format json
+contextd contract-path citation-format
 ```
 
 ### After coding
@@ -191,6 +210,27 @@ bash scripts/install-to-claude.sh --force
 ```text
 /new-workspace {name}
 ```
+
+## Codex Usage
+
+contextd can also be used with OpenAI Codex CLI via the exported skill.
+
+1. Install the CLI:
+   ```bash
+   pip install -e .
+   ```
+2. Install the Codex skill:
+   ```bash
+   bash scripts/setup-codex-skills.sh
+   ```
+   Or, if contextd CLI is already installed:
+   ```bash
+   contextd export --runtime codex-plugin --install
+   ```
+3. In any project with `.contextd/config.json` (or legacy `.claude/wiki.json`), Codex can now use contextd:
+   ```bash
+   codex 'Run contextd resolve and find the relevant contract for this task'
+   ```
 
 ## Deploy GitHub Pages
 
@@ -216,8 +256,8 @@ Workflow: [release.yml](.github/workflows/release.yml)
 ## Troubleshooting
 
 - Slash commands not visible: re-run `bash scripts/install-to-claude.sh` and restart Claude Code.
-- Missing `.claude/wiki.json`: run `/contextd-setup` or `/switch-workspace`.
-- Wrong workspace context: verify `workspace` in `<cwd>/.claude/wiki.json`.
+- Missing `.contextd/config.json`: run `contextd migrate-config`, `/contextd-setup`, or `/switch-workspace`.
+- Wrong workspace context: verify `workspace` in `<cwd>/.contextd/config.json`; legacy `.claude/wiki.json` is lower priority.
 
 ## Contributing
 

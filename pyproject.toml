@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "contextd"
+version = "1.1.1"
+description = "Scoped context daemon for AI coding agents"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+
+[project.scripts]
+contextd = "scripts.cli:main"
+
+[tool.setuptools]
+py-modules = []
+packages = ["scripts", "scripts.lib"]

@@ -9,11 +9,11 @@ Usage:
     python lint-wiki.py [--workspace <name>] [--wiki-root <path>] [--all-workspaces]
 
 Behavior:
-- If --workspace omitted: walk up from cwd to find .claude/wiki.json, read 'workspace'.
-- If --wiki-root omitted: resolve per agents/system-prompt.md rule:
+- If --workspace omitted: use the shared contextd resolver.
+- If --wiki-root omitted: resolve canonical knowledge_root per agents/system-prompt.md rule:
     absolute -> use as-is
-    relative -> resolve relative to .claude/wiki.json directory
-    null/empty -> fallback ~/.claude/wiki-global.json#wiki_root
+    relative -> resolve relative to project root
+    null/empty -> fallback global contextd/legacy config
 - --all-workspaces: iterate every directory under {wiki-root}/workspaces/*/.
 
 Checks per workspace:
@@ -37,12 +37,13 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import re
 import sys
 from pathlib import Path
 from typing import Any
 from urllib.parse import unquote, urlparse
+
+from lib import contextd_resolver
 
 # Markdown inline link: [text](target)
 # - Skips images (preceding '!') by using a negative lookbehind.
@@ -51,55 +52,6 @@ from urllib.parse import unquote, urlparse
 LINK_RE = re.compile(
     r"(?<!\!)\[([^\]\n]+)\]\(\s*([^)\s]+)(?:\s+\"[^\"]*\")?\s*\)"
 )
-
-
-def find_wiki_json(start: Path) -> Path | None:
-    """Walk up from start dir to find .claude/wiki.json."""
-    cur = start.resolve()
-    while True:
-        candidate = cur / ".claude" / "wiki.json"
-        if candidate.is_file():
-            return candidate
-        if cur.parent == cur:
-            return None
-        cur = cur.parent
-
-
-def load_json(p: Path) -> dict:
-    with p.open("r", encoding="utf-8") as f:
-        return json.load(f)
-
-
-def resolve_wiki_root(wiki_json_path: Path | None, raw_value: Any) -> Path:
-    """Resolve wiki_root per agents/system-prompt.md rule.
-
-    Relative paths anchor at project_root = wiki_json_path.parent.parent
-    (parent of .claude/), NOT at wiki_json_path.parent (which is .claude/).
-    """
-    if isinstance(raw_value, str) and raw_value.strip():
-        p = Path(raw_value)
-        if p.is_absolute():
-            return p.resolve()
-        if wiki_json_path is None:
-            raise SystemExit(
-                "wiki_root is relative but no wiki.json path available to anchor it"
-            )
-        project_root = wiki_json_path.parent.parent
-        return (project_root / p).resolve()
-    # null/empty -> fallback to ~/.claude/wiki-global.json#wiki_root
-    global_cfg = Path.home() / ".claude" / "wiki-global.json"
-    if not global_cfg.is_file():
-        raise SystemExit(
-            "wiki_root not set in wiki.json and ~/.claude/wiki-global.json missing"
-        )
-    g = load_json(global_cfg)
-    gv = g.get("wiki_root")
-    if not isinstance(gv, str) or not gv.strip():
-        raise SystemExit("wiki-global.json#wiki_root missing or empty")
-    gp = Path(gv)
-    if not gp.is_absolute():
-        gp = (global_cfg.parent / gp).resolve()
-    return gp.resolve()
 
 
 def parse_links(md_text: str) -> list[tuple[str, str]]:
@@ -287,24 +239,22 @@ def main(argv: list[str] | None = None) -> int:
                     help="Lint every workspace under {wiki-root}/workspaces/")
     args = ap.parse_args(argv)
 
-    # Resolve wiki.json (only needed if wiki-root or workspace not provided)
-    wiki_json_path: Path | None = None
-    wiki_json: dict = {}
+    # Resolve project config (only needed if wiki-root or workspace not provided).
+    resolved: dict = {}
     if args.wiki_root is None or (args.workspace is None and not args.all_workspaces):
-        wiki_json_path = find_wiki_json(Path.cwd())
-        if wiki_json_path is not None:
-            wiki_json = load_json(wiki_json_path)
+        resolved = contextd_resolver.resolve(Path.cwd())
 
-    # Resolve wiki_root
+    # Resolve knowledge_root.
     if args.wiki_root:
         p = Path(args.wiki_root)
         wiki_root = p.resolve() if p.is_absolute() else p.resolve()
     else:
-        if wiki_json_path is None:
-            print("ERROR: no .claude/wiki.json found by walking up from cwd; "
+        root = resolved.get("knowledge_root") or resolved.get("wiki_root")
+        if not root:
+            print("ERROR: no .contextd/config.json or legacy config found by walking up from cwd; "
                   "pass --wiki-root explicitly.", file=sys.stderr)
             return 3
-        wiki_root = resolve_wiki_root(wiki_json_path, wiki_json.get("wiki_root"))
+        wiki_root = Path(str(root)).resolve()
 
     workspaces_dir = wiki_root / "workspaces"
     if not workspaces_dir.is_dir():
@@ -315,9 +265,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.all_workspaces:
         targets = sorted([d for d in workspaces_dir.iterdir() if d.is_dir()])
     else:
-        ws_name = args.workspace or wiki_json.get("workspace")
+        ws_name = args.workspace or resolved.get("workspace")
         if not ws_name:
-            print("ERROR: workspace not specified and not found in wiki.json",
+            print("ERROR: workspace not specified and not found in contextd config",
                   file=sys.stderr)
             return 3
         targets = [workspaces_dir / ws_name]

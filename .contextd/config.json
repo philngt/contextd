@@ -1,0 +1,13 @@
+{
+  "project": "contextd",
+  "workspace": "default",
+  "knowledge_root": ".",
+  "packs": null,
+  "compat": {
+    "legacy_field_alias": "wiki_root",
+    "legacy_configs_supported": [
+      ".claude/wiki.json",
+      ".Codex/wiki.json"
+    ]
+  }
+}

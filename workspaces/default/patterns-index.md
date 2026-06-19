@@ -15,7 +15,7 @@ Quick lookup table for AI agents. Find the pattern name, follow the link, read b
 | `redaction-post-pass` | Sau build output — scan secrets (password/token/api-key/email/URL-with-creds) → STOP-on-secret. Companion với `secrets-blocklist-gate`. | [platform/patterns/redaction-post-pass.md](platform/patterns/redaction-post-pass.md) |
 | `secrets-blocklist-gate` | Pre-read config files — 5-tier defense (hard blocklist + AskUser gate + redaction + log + workspace override). Default block-all. | [platform/patterns/secrets-blocklist-gate.md](platform/patterns/secrets-blocklist-gate.md) |
 | `variant-discriminated-dispatcher` | (v1, single-instance) Command/pipeline phục vụ nhiều variants — discriminate qua field `variant`, dispatch internally. Hiện áp dụng cho `/code-analyze` `code_variant ∈ {code, agentic-engine}`. | [platform/patterns/variant-discriminated-dispatcher.md](platform/patterns/variant-discriminated-dispatcher.md) |
-| `workspace-resolve-step0` | Bước 0 universal cho mọi slash command — resolve `.claude/wiki.json` → set `{ws}` → validate workspace.md. Engine-level invariant. | [platform/patterns/workspace-resolve-step0.md](platform/patterns/workspace-resolve-step0.md) |
+| `workspace-resolve-step0` | Bước 0 universal cho mọi context-aware command — resolve `.contextd/config.json` (legacy adapters supported) → set `{ws}` → validate workspace.md. Engine-level invariant. | [platform/patterns/workspace-resolve-step0.md](platform/patterns/workspace-resolve-step0.md) |
 
 ## Contracts
 

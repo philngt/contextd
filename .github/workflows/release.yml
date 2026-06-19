@@ -10,7 +10,10 @@ permissions:
   contents: write
 
 jobs:
-  release:
+  # ---------------------------------------------------------------------------
+  # Stage 1: Package source zip (legacy artifact + onboarding)
+  # ---------------------------------------------------------------------------
+  package-source:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -37,109 +40,200 @@ jobs:
             exit 1
           fi
 
+      - name: Upload source artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: source-zip
+          path: release/contextd-*.zip
+
+  # ---------------------------------------------------------------------------
+  # Stage 2: Build standalone binaries
+  # ---------------------------------------------------------------------------
+  build-binaries:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            asset_name: contextd-linux-x86_64
+          - os: macos-13
+            asset_name: contextd-darwin-x86_64
+          - os: macos-latest
+            asset_name: contextd-darwin-arm64
+          - os: windows-latest
+            asset_name: contextd-windows-x86_64.exe
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install PyInstaller
+        run: pip install pyinstaller==6.11.0
+
+      - name: Generate version file
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "__version__ = '${VERSION}'" > scripts/_version.py
+
+      - name: Generate manifest
+        run: python scripts/generate_manifest.py
+
+      - name: Build binary
+        run: pyinstaller --clean contextd.spec
+
+      - name: Stage artifact
+        shell: bash
+        run: |
+          mkdir -p release-bin
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            mv dist/contextd.exe "release-bin/${{ matrix.asset_name }}"
+          else
+            mv dist/contextd "release-bin/${{ matrix.asset_name }}"
+          fi
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset_name }}
+          path: release-bin/${{ matrix.asset_name }}
+
+  # ---------------------------------------------------------------------------
+  # Stage 3: Create release with all artifacts + installers
+  # ---------------------------------------------------------------------------
+  release:
+    runs-on: ubuntu-latest
+    needs: [package-source, build-binaries]
+    steps:
+      - name: Resolve release tag
+        id: tag
+        run: |
+          if [ "${GITHUB_REF_TYPE}" = "tag" ] && [ -n "${GITHUB_REF_NAME}" ]; then
+            echo "value=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=manual-${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-artifacts
+          merge-multiple: true
+
       - name: Generate release installer scripts
         run: |
           TAG="${{ steps.tag.outputs.value }}"
           BASE_URL="https://github.com/${{ github.repository }}/releases/download/${TAG}"
-          # Canonical asset name. Legacy `wiki-template-latest.zip` is also
-          # uploaded as an alias by package-release.sh for the migration window.
-          ZIP_URL="${BASE_URL}/contextd-latest.zip"
 
+          # ── install.sh ──────────────────────────────────────────────
           cat > release/install.sh <<'EOF'
           #!/usr/bin/env sh
           set -eu
-          tmpdir="$(mktemp -d 2>/dev/null || mktemp -d -t wiki-install)"
-          zip_path="$tmpdir/wiki-template.zip"
-          extract_dir="$tmpdir/extract"
-          trap 'rm -rf "$tmpdir"' EXIT
-          mkdir -p "$extract_dir"
 
+          REPO="__REPO__"
+          TAG="__TAG__"
+          BASE_URL="https://github.com/${REPO}/releases/download/${TAG}"
+
+          # Detect platform
+          OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
+          ARCH="$(uname -m)"
+          case "$OS" in
+            linux)   PLATFORM="linux" ;;
+            darwin)  PLATFORM="darwin" ;;
+            *)
+              echo "ERROR: Unsupported OS: $OS" >&2
+              exit 1
+              ;;
+          esac
+
+          case "$ARCH" in
+            x86_64|amd64)  BINARY="contextd-${PLATFORM}-x86_64" ;;
+            arm64|aarch64) BINARY="contextd-${PLATFORM}-arm64" ;;
+            *)
+              echo "ERROR: Unsupported architecture: $ARCH" >&2
+              exit 1
+              ;;
+          esac
+
+          DOWNLOAD_URL="${BASE_URL}/${BINARY}"
+
+          # Determine install directory
+          if [ -w "/usr/local/bin" ] 2>/dev/null; then
+            INSTALL_DIR="/usr/local/bin"
+          else
+            INSTALL_DIR="${HOME}/.local/bin"
+            mkdir -p "$INSTALL_DIR"
+          fi
+
+          TMPFILE="$(mktemp)"
+          trap 'rm -f "$TMPFILE"' EXIT
+
+          echo "Downloading ${BINARY}..."
           if command -v curl >/dev/null 2>&1; then
-            curl -fL --retry 3 --connect-timeout 15 "__ZIP_URL__" -o "$zip_path"
+            curl -fL --retry 3 --connect-timeout 15 "$DOWNLOAD_URL" -o "$TMPFILE"
           elif command -v wget >/dev/null 2>&1; then
-            wget -O "$zip_path" "__ZIP_URL__"
+            wget -O "$TMPFILE" "$DOWNLOAD_URL"
           else
             echo "ERROR: need curl or wget" >&2
             exit 1
           fi
 
-          if ! command -v unzip >/dev/null 2>&1; then
-            echo "ERROR: need unzip" >&2
-            exit 1
+          chmod +x "$TMPFILE"
+          mv "$TMPFILE" "${INSTALL_DIR}/contextd"
+          echo "Installed to ${INSTALL_DIR}/contextd"
+
+          if ! command -v contextd >/dev/null 2>&1; then
+            echo ""
+            echo "WARNING: ${INSTALL_DIR} is not on your PATH."
+            echo "Add this to your shell profile:"
+            echo "  export PATH=\"${INSTALL_DIR}:\$PATH\""
           fi
 
-          unzip -q "$zip_path" -d "$extract_dir"
-          repo_root="$extract_dir/wiki-template"
-          if [ ! -f "$repo_root/scripts/install-to-claude.sh" ]; then
-            echo "ERROR: invalid artifact structure" >&2
-            exit 1
-          fi
-
-          if ! command -v bash >/dev/null 2>&1; then
-            echo "ERROR: need bash" >&2
-            exit 1
-          fi
-          (cd "$repo_root" && bash scripts/install-to-claude.sh)
-          claude_dir="${HOME}/.claude"
-          mkdir -p "$claude_dir"
-          cat > "$claude_dir/wiki-install-meta.json" <<META
-          {
-            "repo": "__REPO__",
-            "release_tag": "__TAG__",
-            "installed_at_utc": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-            "installer": "install.sh"
-          }
-          META
-          echo "Done. Verify: cat ~/.claude/wiki-global.json"
-          echo "Version meta: cat ~/.claude/wiki-install-meta.json"
-          echo "Installed tag: __TAG__"
+          echo "Verify: contextd --version"
           EOF
-          perl -pi -e "s#__ZIP_URL__#${ZIP_URL}#g; s#__REPO__#${{ github.repository }}#g; s#__TAG__#${TAG}#g" release/install.sh
+          perl -pi -e "s#__REPO__#${{ github.repository }}#g; s#__TAG__#${TAG}#g" release/install.sh
+          chmod +x release/install.sh
 
+          # ── install.ps1 ─────────────────────────────────────────────
           cat > release/install.ps1 <<'EOF'
           $ErrorActionPreference = 'Stop'
-          $zipUrl = '__ZIP_URL__'
-          $tmpDir = Join-Path $env:TEMP ("wiki-install-" + [guid]::NewGuid().ToString("N"))
-          $zipPath = Join-Path $tmpDir "wiki-template.zip"
-          $extractDir = Join-Path $tmpDir "extract"
-          New-Item -ItemType Directory -Path $extractDir -Force | Out-Null
 
-          try {
-            Invoke-WebRequest -Uri $zipUrl -OutFile $zipPath
-            Expand-Archive -Path $zipPath -DestinationPath $extractDir -Force
-            $repoRoot = Join-Path $extractDir "wiki-template"
-            $installer = Join-Path $repoRoot "scripts/install-to-claude.sh"
-            if (-not (Test-Path $installer)) { throw "Invalid artifact structure" }
-            $bashCmd = Get-Command bash -ErrorAction SilentlyContinue
-            if (-not $bashCmd) { throw "bash not found. Install Git Bash or WSL, then run again." }
-            Push-Location $repoRoot
-            try { & bash "scripts/install-to-claude.sh" } finally { Pop-Location }
+          $repo    = '__REPO__'
+          $tag     = '__TAG__'
+          $baseUrl = "https://github.com/$repo/releases/download/$tag"
+          $binary  = 'contextd-windows-x86_64.exe'
+          $url     = "$baseUrl/$binary"
 
-            $claudeDir = Join-Path $env:USERPROFILE ".claude"
-            New-Item -ItemType Directory -Path $claudeDir -Force | Out-Null
-            $metaPath = Join-Path $claudeDir "wiki-install-meta.json"
-            $meta = [ordered]@{
-              repo = '__REPO__'
-              release_tag = '__TAG__'
-              installed_at_utc = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
-              installer = 'install.ps1'
-            }
-            $meta | ConvertTo-Json | Set-Content -Path $metaPath -Encoding UTF8
+          $installDir = Join-Path $env:USERPROFILE '.contextd' 'bin'
+          $exePath    = Join-Path $installDir 'contextd.exe'
 
-            Write-Host "Done. Verify: type $env:USERPROFILE\.claude\wiki-global.json"
-            Write-Host "Version meta: type $env:USERPROFILE\.claude\wiki-install-meta.json"
-            Write-Host "Installed tag: __TAG__"
-          } finally {
-            if (Test-Path $tmpDir) { Remove-Item -Recurse -Force $tmpDir }
+          New-Item -ItemType Directory -Path $installDir -Force | Out-Null
+
+          Write-Host "Downloading $binary..."
+          Invoke-WebRequest -Uri $url -OutFile $exePath
+
+          # Add to user PATH if missing
+          $currentPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+          if ($currentPath -notlike "*$installDir*") {
+              [Environment]::SetEnvironmentVariable('Path', "$currentPath;$installDir", 'User')
+              Write-Host "Added $installDir to your user PATH."
           }
-          EOF
-          perl -pi -e "s#__ZIP_URL__#${ZIP_URL}#g; s#__REPO__#${{ github.repository }}#g; s#__TAG__#${TAG}#g" release/install.ps1
 
-          chmod +x release/install.sh
+          Write-Host "Installed to $exePath"
+          Write-Host "Verify: contextd --version"
+          EOF
+          perl -pi -e "s#__REPO__#${{ github.repository }}#g; s#__TAG__#${TAG}#g" release/install.ps1
 
       - name: Generate checksums
         run: |
-          sha256sum release/contextd-*.zip release/wiki-template-*.zip release/install.sh release/install.ps1 > release/SHA256SUMS.txt
+          cd release-artifacts
+          sha256sum * > ../release/SHA256SUMS.txt || true
+          cd ..
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -147,8 +241,7 @@ jobs:
           tag_name: ${{ steps.tag.outputs.value }}
           name: Release ${{ steps.tag.outputs.value }}
           files: |
-            release/contextd-*.zip
-            release/wiki-template-*.zip
+            release-artifacts/*
             release/install.sh
             release/install.ps1
             release/SHA256SUMS.txt

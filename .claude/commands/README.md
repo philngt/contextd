@@ -1,9 +1,9 @@
 # Slash Commands — Index
 
-Đây là slash commands cho workflow wiki-aware. Mọi command resolve **active workspace** từ `<cwd>/.claude/wiki.json` (xem [`wiki_root` Resolution Rule](../../agents/system-prompt.md) để hiểu cách path được resolve). Pipeline kiến trúc tổng thể: [agents/pipeline/README.md](../../agents/pipeline/README.md).
+Đây là slash commands cho workflow contextd-aware. Trong migration window chúng vẫn cài dưới `.claude/commands`, nhưng canonical engine/config là `contextd` CLI + `<cwd>/.contextd/config.json`. Legacy `<cwd>/.claude/wiki.json` và `<cwd>/.Codex/wiki.json` chỉ là compatibility adapters. Pipeline kiến trúc tổng thể: [agents/pipeline/README.md](../../agents/pipeline/README.md).
 
 Quy tắc chung:
-- Mỗi command có Bước 0 resolve workspace + wiki_root trước khi làm bất cứ gì.
+- Mỗi command có Bước 0 resolve workspace + `knowledge_root` bằng shared resolver trước khi làm bất cứ gì.
 - Mọi knowledge access scope CHỈ trong workspace active (không cross-workspace).
 - Command edit wiki (update-contextd, rebase-contextd, evidence-apply) delegate qua `contextd-curator` subagent + main agent verify path sau khi curator return.
 
@@ -13,10 +13,10 @@ Quy tắc chung:
 
 | Command | Purpose | When to use |
 |---------|---------|-------------|
-| [`/contextd-setup`](contextd-setup.md) | Tạo `.claude/wiki.json` cho codebase hiện tại; detect project name + components và pre-fill config | Lần đầu tích hợp wiki vào codebase mới, hoặc đổi workspace |
-| [`/contextd-detect`](contextd-detect.md) | Validate `.claude/wiki.json` của codebase + check workspace tồn tại + scan dependency để propose update | Sanity check sau khi setup, hoặc khi `/use-contextd` lỗi resolve |
-| [`/switch-workspace`](switch-workspace.md) `{name}` | Đổi `workspace` field trong `<cwd>/.claude/wiki.json` sang workspace khác | Khi cùng codebase phục vụ nhiều domain workspace, hoặc khi clone codebase nội bộ |
-| [`/new-workspace`](new-workspace.md) `{name}` | Scaffold workspace mới trong `{wiki_root}/workspaces/{name}/` từ template | Khi join công ty/dự án mới, cần knowledge sandbox riêng |
+| [`/contextd-setup`](contextd-setup.md) | Bootstrap `.contextd/config.json`; legacy `.claude/wiki.json` có thể được giữ làm adapter | Lần đầu tích hợp contextd vào codebase mới, hoặc đổi workspace |
+| [`/contextd-detect`](contextd-detect.md) | Validate config/workspace + scan dependency để propose update | Sanity check sau khi setup, hoặc khi `/use-contextd` lỗi resolve |
+| [`/switch-workspace`](switch-workspace.md) `{name}` | Đổi `workspace` field trong config hiện tại, ưu tiên `.contextd/config.json` | Khi cùng codebase phục vụ nhiều domain workspace, hoặc khi clone codebase nội bộ |
+| [`/new-workspace`](new-workspace.md) `{name}` | Scaffold workspace mới trong `{knowledge_root}/workspaces/{name}/` từ template | Khi join công ty/dự án mới, cần knowledge sandbox riêng |
 | [`/list-workspaces`](list-workspaces.md) | In bảng mọi workspace + đánh dấu workspace của codebase hiện tại | Khám phá workspace nào có sẵn trước khi `/switch-workspace` |
 
 ---
@@ -25,8 +25,8 @@ Quy tắc chung:
 
 | Command | Purpose | When to use |
 |---------|---------|-------------|
-| [`/use-contextd`](use-contextd.md) | Chạy 4-stage pipeline (planner → context-selector(+verdict) → main agent code → reviewer) trước khi viết bất kỳ code wiki-aware nào | Trước MỌI task implement_feature / fix_bug / design / incident / review |
-| [`/find`](find.md) `<keywords>` | Fuzzy search patterns + contracts + services + packs — top-5 với score. Skip planner ceremony | Quick lookup khi đã biết mình cần gì; trước khi mở `/use-contextd` đầy đủ |
+| [`/use-contextd`](use-contextd.md) | Gọi canonical `contextd context` để sinh `.contextd/context/current-task.json` + markdown render + materialized pack | Trước MỌI task implement_feature / fix_bug / design / incident / review |
+| [`/find`](find.md) `<keywords>` | Advisory fuzzy discovery patterns + contracts + services + packs — không override artifact deterministic | Quick lookup khi đã biết mình cần gì; trước khi mở `/use-contextd` đầy đủ |
 | [`/update-contextd`](update-contextd.md) | Sync wiki với code đã thay đổi (git diff → curator áp dụng) | Sau khi code merge để wiki không drift; tự detect engine vs workspace scope |
 | [`/rebase-contextd`](rebase-contextd.md) | Quét wiki vs codebase thực tế để vá mọi chỗ wiki nói khác code chạy | Định kỳ (hằng tuần/tháng) hoặc khi nghi wiki lỗi thời lớn |
 
@@ -100,7 +100,7 @@ Meta-commands operating **on contextd itself** (install / backup / version / upg
 |---------|---------|
 | [`/contextd-admin`](contextd-admin.md) | **Index** — bảng tra route sang các lệnh admin bên dưới |
 | [`/contextd-version`](contextd-version.md) | In version + release tag đã cài |
-| [`/contextd-detect`](contextd-detect.md) | Kiểm tra contextd có cài chưa + resolve `wiki_root` |
+| [`/contextd-detect`](contextd-detect.md) | Kiểm tra contextd có cài chưa + resolve `knowledge_root` |
 | [`/contextd-upgrade`](contextd-upgrade.md) | Upgrade lên release mới |
 | [`/contextd-backup`](contextd-backup.md) | Snapshot workspace active sang archive |
 | [`/contextd-restore`](contextd-restore.md) | Restore workspace từ backup |

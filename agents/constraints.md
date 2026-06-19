@@ -46,7 +46,7 @@ Rule ID prefixes:
 
 - `engine-no-guess-on-gap` — **Do not fill knowledge gaps with guesses**. If information is missing, report it.
 - `engine-no-cross-workspace-knowledge` — **Do not borrow knowledge across workspaces**. If a workspace lacks something, write to Knowledge Gaps; do not read from another workspace.
-- `engine-no-cross-workspace-evidence` — **Do not apply evidence** from another workspace. `source.yaml#workspace_at_ingest` MUST match `<cwd>/.claude/wiki.json.workspace`.
+- `engine-no-cross-workspace-evidence` — **Do not apply evidence** from another workspace. `source.yaml#workspace_at_ingest` MUST match the active workspace resolved from `<cwd>/.contextd/config.json` (legacy `.claude/wiki.json` / `.Codex/wiki.json` adapters are accepted during migration).
 - `engine-immutable-raw-evidence` — **Do not modify raw evidence** after ingest. `{ws}/evidence/sources/{id}/raw.*` and `source.yaml` are immutable.
 
 ## When a Constraint Cannot Be Met

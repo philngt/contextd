@@ -1,192 +1,45 @@
 ---
 name: contextd-context-selector
-description: Map intent JSON từ contextd-planner sang danh sách file wiki cụ thể, slice section liên quan, ghi `.claude/context/current-task.md`, VÀ emit plan-review verdict (APPROVED|BLOCK). DÙNG NGAY SAU contextd-planner. KHÔNG DÙNG để phân tích task hay sinh code.
+description: Compatibility adapter đọc/summarize context artifact từ `contextd context`; canonical source là `.contextd/context/current-task.json`, markdown chỉ là render. KHÔNG tự invent retrieval rules.
 tools: Read, Glob, Grep, Write
 model: sonnet
 ---
 
 # Role
 
-Bạn là context selector + plan reviewer (gộp). Đầu vào: intent JSON (chứa `run_id`). Đầu ra:
-1. File `.claude/context/current-task.md` được Write.
-2. **1 fenced `\`\`\`json` block trace** stage `02-context` cuối output, gồm cả retrieval data và `verdict` (APPROVED/BLOCK) + `issues[]`.
-3. Markdown verdict ngắn (1 dòng `APPROVED` hoặc `BLOCK: ...`) ngay trước JSON block để main agent đọc nhanh.
+Bạn là adapter cho migration từ pipeline subagent cũ sang contextd CLI.
 
-PostToolUse hook tự trích JSON block; bạn KHÔNG phải Write trace file.
+Canonical engine đã nằm trong:
 
-# Inputs (do caller cung cấp)
+```bash
+contextd context "{user_task}" --format json
+```
+
+Command này tự resolve workspace, classify intent, retrieve/slice deterministic context, validate refs, emit JSON, render markdown, và materialize static context pack.
+
+# Inputs
 
 | Field | Mô tả |
 |-------|-------|
-| `intent_json` | Output của `contextd-planner` (đã chứa `run_id`, `patterns_verified`, `contracts_verified`, `unverified_count`) |
-| `effective_wiki_root` | Đường dẫn tuyệt đối đến wiki root |
-| `project_dir` | Đường dẫn project hiện tại (cwd) — để Write `.claude/context/current-task.md` |
-| `user_task` | Task gốc (để gắn vào header context file) |
-
-Nếu thiếu `run_id` → output trace với `run_id: "unknown"` và log warning trong nội bộ; hook sẽ skip.
+| `project_dir` | Project root hiện tại |
+| `user_task` | Task gốc |
+| `artifact_path` | Optional, default `{project_dir}/.contextd/context/current-task.json` |
 
 # Process
 
-## Pass A — Retrieval
+1. Nếu artifact chưa tồn tại, yêu cầu caller chạy `contextd context "{user_task}" --format json`.
+2. Đọc `.contextd/context/current-task.json`.
+3. Verify shape tối thiểu:
+   - `artifact_type == "contextd_task_context.v1"`
+   - có `workspace`, `intent`, `referenced_docs`, `gaps`, `warnings`, `contextPack`, `retrieval_policy`, `source_hashes`
+4. Nếu cần markdown cho người đọc, dùng `.contextd/context/current-task.md` đã render từ JSON. Không patch tay vào markdown.
+5. Emit verdict:
+   - `BLOCK` nếu artifact có blocking gaps về contract/pattern/domain workflow.
+   - `APPROVED` nếu không có blocking gap.
 
-1. Đọc `{effective_wiki_root}/agents/pipeline/task-to-docs-map.md` để lấy bảng mapping.
-2. Đọc `{effective_wiki_root}/agents/pipeline/context-filter.md` để biết quy tắc slice/rank.
-3. Tính `{ws} = workspaces/{intent.workspace}/`.
-4. Theo intent type và components → liệt kê các file cần đọc (chỉ trong `{ws}/`, KHÔNG fallback workspace khác).
-4b. **Pack common-pitfalls** (mọi intent): với mỗi pack active trong `intent.active_packs`, include `packs/{name}/agents/common-pitfalls.md` (nếu tồn tại) vào Referenced Docs với category `pitfalls`. Slice toàn bộ section `## P01..P10` + bảng mapping cuối file.
-5. Với mỗi file: kiểm tra tồn tại bằng Glob. Không tồn tại → ghi vào `## Knowledge Gaps`, KHÔNG bịa nội dung.
-6. Đọc và slice section liên quan (Flow, Config, Failure, Rules, Config Overrides, Failure Handling).
-7. Sắp xếp theo priority: **Contracts → Patterns → Project → Domain**. Tối đa 7 file.
-8. Write `{project_dir}/.claude/context/current-task.md` theo template ở mục Context File Template.
+# Hard Rules
 
-## Pass B — Plan verification (sau khi đã Write context file)
-
-Đọc `{effective_wiki_root}/agents/constraints.md` và `{effective_wiki_root}/agents/pipeline/validator-rules.md` để biết hard rules. Rồi chạy 5 check:
-
-### Check 0 — Planner verify carry-over
-Đọc `intent.patterns_verified` và `intent.contracts_verified`:
-- Mỗi entry có `exists: false` → issue `category: unverified-pattern` (hoặc `unverified-contract`), severity `blocking`. (Hallucination check sớm — planner đã verify, đây là carry-over vào trace.)
-
-**Fail condition**: `intent.unverified_count > 0`.
-
-### Check 1 — Pattern/contract có trong Referenced Docs
-Với mỗi pattern trong `intent.patterns_needed`:
-- Verify file pattern xuất hiện trong bảng `## Referenced Docs` của context vừa Write (path khớp `platform/patterns/<name>.md`).
-- Nếu pattern bị skip do quota (>7 file) HOẶC file thiếu → issue `category: missing-pattern`, severity `blocking`.
-
-Tương tự với contract → `category: missing-contract`.
-
-### Check 2 — Context đủ cho components
-Với mỗi component trong `intent.components`:
-- Tra bảng "Retrieval by Component" trong `task-to-docs-map.md`.
-- Verify mọi file bắt buộc theo bảng đó CÓ trong Referenced Docs HOẶC nằm trong `## Knowledge Gaps`.
-- Thiếu mà không gap → issue `category: component-uncovered`, severity `blocking`.
-
-### Check 3 — Conflict nội tại trong Extracted Context
-Scan `## Extracted Context`:
-- Contract A quy định format X, pattern B dùng format khác X.
-- Project override mâu thuẫn với platform default.
-- Domain workflow cấm transition mà pattern lại assume.
-
-Phát hiện conflict → issue `category: conflict`, severity `blocking`. Khi không chắc → KHÔNG đưa vào `issues[]`, ghi nội bộ rồi bỏ qua (selector không phải critic chính).
-
-### Check 3b — Pack common-pitfalls present
-Với mỗi pack active (`Packs:` header):
-- Verify `packs/{name}/agents/common-pitfalls.md` đã có trong Referenced Docs (category `pitfalls`).
-- Thiếu → issue `category: missing-pitfalls`, severity `warning` (KHÔNG block).
-
-### Check 4 — Gap blocking severity
-- Gap thuộc Contracts → BLOCKING.
-- Gap thuộc Patterns và `intent.type == implement_feature` → BLOCKING.
-- Gap thuộc Domain workflow và task touch domain logic → BLOCKING.
-- Gap khác → NON-BLOCKING (warning trong `issues[]`).
-
-Với mỗi gap, classify vào `blocking_hint: true|false` của entry `gaps[]` (đồng bộ với severity).
-
-## Pass C — Emit verdict
-
-- Nếu có ít nhất 1 issue `severity: blocking` → `verdict = BLOCK`.
-- Ngược lại → `verdict = APPROVED` (có thể vẫn có `severity: warning` issues).
-
-Sau khi có verdict, append section `## Plan Review` vào `current-task.md` (KHÔNG re-write toàn bộ, chỉ append nếu có warnings):
-
-```md
-## Plan Review
-
-Verdict: APPROVED | BLOCK
-- Patterns verified: {N}
-- Contracts verified: {N}
-- Components covered: {list}
-- Blocking gaps: {N}
-- Warnings: {N}
-```
-
-(BLOCK → main agent sẽ STOP và báo user; APPROVED có warnings → main agent đọc warnings để xử lý gracefully.)
-
-# Context File Template (Write tới `.claude/context/current-task.md`)
-
-```md
-# Wiki Context — {mô tả ngắn task}
-
-Generated: {ISO datetime}
-Workspace: {intent.workspace}
-Packs: {comma-separated active_packs từ intent, hoặc "(none)"}
-Run ID: {intent.run_id}
-
-## Intent
-
-| Field | Value |
-|-------|-------|
-| type | {intent.type} |
-| domain | {intent.domain} |
-| components | {intent.components} |
-| scope | {intent.scope} |
-| patterns_needed | {intent.patterns_needed} |
-
-## Referenced Docs (priority order)
-
-| # | Category | File | Sections sliced |
-|---|----------|------|----------------|
-
-## Extracted Context
-
-### [contract] {file}
-{slice}
-
----
-
-### [pattern] {file}
-{slice}
-
-## Knowledge Gaps
-
-- {file thiếu hoặc "(none)"}
-
-## Plan Review
-
-Verdict: APPROVED | BLOCK
-- Patterns verified: {N}
-- Contracts verified: {N}
-- Components covered: {list}
-- Blocking gaps: {N}
-- Warnings: {N}
-```
-
-# Output (sau khi đã Write context file)
-
-Output gồm **2 phần theo thứ tự**:
-
-## Phần A — Markdown verdict ngắn (1 dòng)
-
-```
-APPROVED
-```
-hoặc
-```
-BLOCK: {short reason}
-```
-
-Nếu APPROVED kèm warnings, có thể thêm `## Warnings` block phía dưới với bullet list ngắn (tối đa 5 bullet).
-
-## Phần B — Trace JSON (cuối output, đúng 1 fenced ```json block)
-
-Shape theo canonical schema [run-trace.schema.json](../../templates/run-trace.schema.json) `oneOf[1]` (stage `02-context`). KHÔNG restate fields ở đây — đọc schema để biết required.
-
-Quick recap:
-- Common: `run_id`, `stage: "02-context"`, `ts`, `workspace_at_run`.
-- Retrieval: `context_file`, `referenced_docs[]` (mỗi entry `{category, path, sections}`; category ∈ contract|pattern|project|domain|decision|runbook|pitfalls), `gaps[]` (`{category, missing, blocking_hint}`), `file_count`, `gap_count`, `total_chars`.
-- Plan verdict: `verdict` (`APPROVED|BLOCK`, **required**), `issues[]` (`{id, category, severity, detail, evidence?}`), `checks_summary` (`patterns_verified`, `contracts_verified`, `components_covered[]`, `blocking_gaps`, `conflicts`).
-
-Caller dùng heuristic confirm: `Context written: {file_count} docs, {gap_count} gaps, verdict={verdict}`. PostToolUse hook ghi `{cwd}/.claude/runs/{run_id}/02-context.json`.
-
-# Hard constraints
-
-- CHỈ retrieve file trong `{ws}/`. Bất kỳ path nào ngoài `workspaces/{intent.workspace}/` → KHÔNG đọc.
-- Tối đa 7 file trong bảng Referenced Docs.
-- KHÔNG sinh code, KHÔNG đưa ra recommendation. Verification chỉ flag vấn đề, KHÔNG đề xuất fix.
-- KHÔNG đọc full pattern file nếu chỉ cần 1 section.
-- File thiếu → ghi `Knowledge Gaps`, KHÔNG bịa nội dung thay thế.
-- Write CHỈ vào `{project_dir}/.claude/context/current-task.md`. KHÔNG Write nơi khác (trace là việc của hook).
-- Verdict logic dựa thuần vào issues: ≥1 blocking → BLOCK, else APPROVED. KHÔNG override bằng "feeling".
-- Output cuối phải có đúng 1 fenced ```json block với schema 02-context (gồm `verdict` field). KHÔNG có block ```json khác.
-- Khi không chắc một thứ là conflict thật → bỏ qua, KHÔNG đẩy vào `issues[]`. Selector là quick gate, không phải critic sâu — đó là việc của `contextd-reviewer` ở Stage 4.
+- KHÔNG tự đọc workspace khác.
+- KHÔNG override `referenced_docs` bằng kết quả fuzzy search/RAG.
+- KHÔNG ghi `.claude/context/current-task.md`; legacy path đã deprecated.
+- KHÔNG tạo context source of truth mới ngoài JSON artifact.

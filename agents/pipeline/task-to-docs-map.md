@@ -13,15 +13,16 @@ Active packs are surfaced separately in `02-context.referenced_docs[].category =
 ### Field resolution
 
 **`workspace`**
-- Default = `<cwd>/.claude/wiki.json.workspace` (active của codebase).
-- Fallback nếu file thiếu: `~/.claude/wiki-global.json.default_workspace`.
+- Default = `<cwd>/.contextd/config.json.workspace` (active của codebase).
+- Legacy adapters: `<cwd>/.claude/wiki.json.workspace`, `<cwd>/.Codex/wiki.json.workspace`.
+- Fallback nếu file thiếu: `~/.contextd/config.json.default_workspace`, rồi legacy globals.
 - Nếu task chỉ rõ workspace khác (vd "trong workspace company-b, ...") → cảnh báo, gợi ý `/switch-workspace` trước. KHÔNG silently override.
 - Cả 2 nguồn thiếu → STOP (xem [workspace-resolution.md](workspace-resolution.md)).
 
 **`domain` & `scope`**
 - `domain` ∈ subdirs của `{ws}/domains/`.
 - `scope` ∈ subdirs của `{ws}/projects/`.
-- Không khớp → `null`, ghi vào Knowledge Gaps trong `current-task.md`.
+- Không khớp → `null`, ghi vào `gaps[]` trong `current-task.json`.
 
 **Active packs** = list pack từ `{ws}/workspace.md ## Packs` (verify mỗi pack có `packs/{name}/pack.yaml`). Planner đọc trực tiếp từ workspace.md; **không** persist vào `intent` JSON (giảm drift surface).
 
@@ -83,7 +84,7 @@ Engine baseline (`agents/constraints.md`, `agents/coding-rules.md`) luôn load c
 
 ### Pack common-pitfalls (mọi intent)
 
-Mọi pack active luôn cung cấp `packs/{name}/agents/common-pitfalls.md` (Top 10 anti-pattern). Pipeline PHẢI include file này vào retrieval cho **mọi intent** (`implement_feature | fix_bug | design | incident | review`), surface section "Common Pitfalls" trong `.claude/context/current-task.md`. Mỗi pitfall có Layer-1 rule ID (regex-detectable) hoặc Layer-2 self-check (design-only).
+Mọi pack active luôn cung cấp `packs/{name}/agents/common-pitfalls.md` (Top 10 anti-pattern). Pipeline PHẢI include file này vào static context pack cho **mọi intent** (`implement_feature | fix_bug | design | incident | review`), surface trong `.contextd/context/current-task.json` / markdown render. Mỗi pitfall có Layer-1 rule ID (regex-detectable) hoặc Layer-2 self-check (design-only).
 
 ### By component (pack-driven)
 
@@ -112,7 +113,7 @@ Ví dụ với `pack-event-driven`:
 ## 3. Worked example
 
 **Task:** `"Implement Kafka consumer for surgery file processed events and publish result via MQTT"`
-**Active workspace** (`.claude/wiki.json.workspace`): `example-surgery`
+**Active workspace** (`.contextd/config.json.workspace`): `example-surgery`
 **Active packs** (`workspace.md ## Packs`): `pack-event-driven`
 
 ### Intent (output của Stage 1 — contextd-planner)
@@ -142,4 +143,4 @@ workspaces/example-surgery/projects/surgery-service/services/kafka-consumer.md  
 workspaces/example-surgery/domains/surgery/workflow.md                           ← domain
 ```
 
-Pass danh sách này tới [Context Filter + Rank](context-filter.md) → cuối cùng ghi `current-task.md`.
+Pass danh sách này tới [Context Filter + Rank](context-filter.md) → cuối cùng ghi `.contextd/context/current-task.json` và render `.contextd/context/current-task.md`.

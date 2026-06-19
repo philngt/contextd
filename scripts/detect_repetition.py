@@ -11,7 +11,7 @@ Design doc: agents/pipeline/repetition-detection.md.
 
 Hard rules:
 - NEVER blocks the user. All errors -> exit 0. Errors go to stderr only.
-- NEVER reads/writes outside <wiki_root>/workspaces/<active>/.observations/.
+- NEVER reads/writes outside <knowledge_root>/workspaces/<active>/.observations/.
 - Self-budget ~800ms; bails out early if exceeded.
 """
 
@@ -30,6 +30,7 @@ from lib.atomic_write import (  # noqa: E402
     atomic_write_json,
     with_advisory_lock,
 )
+from lib import contextd_resolver  # noqa: E402
 from lib.repetition import (  # noqa: E402
     MIN_PROMPT_TOKENS,
     Cluster,
@@ -63,56 +64,18 @@ def warn(msg: str) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Workspace resolution — mirrors emit_trace.py / system-prompt.md rules.
+# Workspace resolution — canonical contextd resolver.
 # ---------------------------------------------------------------------------
-
-def _find_wiki_json(start: Path) -> Path | None:
-    """Walk up from `start` looking for .claude/wiki.json."""
-    cur = start.resolve()
-    while True:
-        candidate = cur / ".claude" / "wiki.json"
-        if candidate.is_file():
-            return candidate
-        if cur.parent == cur:
-            return None
-        cur = cur.parent
-
-
-def _resolve_wiki_root(wiki_json_path: Path, raw_value) -> Path | None:
-    """Resolve wiki_root per agents/system-prompt.md#wiki_root-resolution-rule."""
-    project_root = wiki_json_path.parent.parent  # <root>/.claude/wiki.json -> <root>
-    if isinstance(raw_value, str) and raw_value.strip():
-        p = Path(raw_value)
-        if p.is_absolute():
-            return p
-        return (project_root / raw_value).resolve()
-    # Fallback to ~/.claude/wiki-global.json
-    global_cfg = Path.home() / ".claude" / "wiki-global.json"
-    if global_cfg.is_file():
-        try:
-            data = json.loads(global_cfg.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
-            return None
-        root = data.get("wiki_root")
-        if isinstance(root, str) and root.strip():
-            return Path(root).expanduser().resolve()
-    return None
 
 
 def resolve_workspace(cwd: Path) -> tuple[Path, str] | None:
-    """Return (wiki_root, workspace_name) or None if not resolvable."""
-    wiki_json_path = _find_wiki_json(cwd)
-    if not wiki_json_path:
+    """Return (knowledge_root, workspace_name) or None if not resolvable."""
+    resolved = contextd_resolver.resolve(cwd)
+    workspace = resolved.get("workspace")
+    root = resolved.get("knowledge_root") or resolved.get("wiki_root")
+    if not isinstance(workspace, str) or not workspace.strip() or not root:
         return None
-    try:
-        data = json.loads(wiki_json_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as e:
-        warn(f"cannot parse {wiki_json_path}: {e}")
-        return None
-    workspace = data.get("workspace")
-    if not isinstance(workspace, str) or not workspace.strip():
-        return None
-    wiki_root = _resolve_wiki_root(wiki_json_path, data.get("wiki_root"))
+    wiki_root = Path(str(root)).resolve()
     if not wiki_root or not wiki_root.is_dir():
         return None
     return wiki_root, workspace.strip()

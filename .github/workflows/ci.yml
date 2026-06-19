@@ -25,5 +25,8 @@ jobs:
       - name: Run test_detect_repetition
         run: python scripts/test_detect_repetition.py
 
+      - name: Run test_contextd_runtime
+        run: python scripts/test_contextd_runtime.py
+
       - name: Run wiki lint
         run: python scripts/lint-wiki.py --all-workspaces --wiki-root .

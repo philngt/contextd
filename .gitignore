@@ -5,6 +5,11 @@
 # Per-codebase context written by contextd-context-selector (regenerated each task)
 .claude/context/
 
+# Runtime-neutral contextd artifacts (regenerated)
+.contextd/context/
+.contextd/runs/
+.contextd/cache/
+
 # Manual evaluation results (per-workspace scorecards — chứa data nội bộ)
 workspaces/*/eval/results/*
 !workspaces/*/eval/results/.gitkeep
@@ -23,9 +28,15 @@ release/*
 !release/install.sh
 !release/install.ps1
 
+# PyInstaller build artifacts
+scripts/_version.py
+build/
+dist/
+
 .DS_Store
 
 # Python bytecode/cache
 __pycache__/
 *.py[cod]
 *$py.class
+*.egg-info/

@@ -1,0 +1,525 @@
+{
+  "schema_version": "1.0.0",
+  "generated_at": null,
+  "generated_from": {
+    "commands_dir": ".claude/commands",
+    "agents_dir": ".claude/agents",
+    "packs_dir": "packs",
+    "pipeline_dir": "agents/pipeline"
+  },
+  "commands": [
+    {
+      "name": "business-view",
+      "description": "Business View",
+      "template_file": ".claude/commands/business-view.md"
+    },
+    {
+      "name": "code-analyze",
+      "description": "Code Analyze",
+      "template_file": ".claude/commands/code-analyze.md"
+    },
+    {
+      "name": "contextd-admin",
+      "description": "/contextd-admin — Admin & Diagnostics Index",
+      "template_file": ".claude/commands/contextd-admin.md"
+    },
+    {
+      "name": "contextd-backup",
+      "description": "/contextd-backup — Backup Workspace",
+      "template_file": ".claude/commands/contextd-backup.md"
+    },
+    {
+      "name": "contextd-detect",
+      "description": "/contextd-detect — Detect contextd Install",
+      "template_file": ".claude/commands/contextd-detect.md"
+    },
+    {
+      "name": "contextd-eval",
+      "description": "/contextd-eval — Evaluate Pipeline Effectiveness",
+      "template_file": ".claude/commands/contextd-eval.md"
+    },
+    {
+      "name": "contextd-explain",
+      "description": "/contextd-explain — Explain Wiki Concepts",
+      "template_file": ".claude/commands/contextd-explain.md"
+    },
+    {
+      "name": "contextd-export-manifest",
+      "description": "Export Manifest",
+      "template_file": ".claude/commands/contextd-export-manifest.md"
+    },
+    {
+      "name": "contextd-report",
+      "description": "/contextd-report — Generate Workspace Report",
+      "template_file": ".claude/commands/contextd-report.md"
+    },
+    {
+      "name": "contextd-restore",
+      "description": "/contextd-restore — Restore Workspace From Backup",
+      "template_file": ".claude/commands/contextd-restore.md"
+    },
+    {
+      "name": "contextd-setup",
+      "description": "/contextd-setup — Setup contextd for a Codebase",
+      "template_file": ".claude/commands/contextd-setup.md"
+    },
+    {
+      "name": "contextd-team-sync",
+      "description": "/contextd-team-sync — Team Workspace Sync",
+      "template_file": ".claude/commands/contextd-team-sync.md"
+    },
+    {
+      "name": "contextd-trace",
+      "description": "/contextd-trace — Inspect Pipeline Trace",
+      "template_file": ".claude/commands/contextd-trace.md"
+    },
+    {
+      "name": "contextd-upgrade",
+      "description": "/contextd-upgrade — Upgrade contextd Install",
+      "template_file": ".claude/commands/contextd-upgrade.md"
+    },
+    {
+      "name": "contextd-version",
+      "description": "/contextd-version — Show Installed Version",
+      "template_file": ".claude/commands/contextd-version.md"
+    },
+    {
+      "name": "contextd-viz",
+      "description": "/contextd-viz — Visualize Pipeline Trace",
+      "template_file": ".claude/commands/contextd-viz.md"
+    },
+    {
+      "name": "evidence-analyze",
+      "description": "Evidence Analyze",
+      "template_file": ".claude/commands/evidence-analyze.md"
+    },
+    {
+      "name": "evidence-apply",
+      "description": "Evidence Apply",
+      "template_file": ".claude/commands/evidence-apply.md"
+    },
+    {
+      "name": "evidence-ingest",
+      "description": "Evidence Ingest",
+      "template_file": ".claude/commands/evidence-ingest.md"
+    },
+    {
+      "name": "evidence-qa",
+      "description": "Evidence Q&A",
+      "template_file": ".claude/commands/evidence-qa.md"
+    },
+    {
+      "name": "find",
+      "description": "Find",
+      "template_file": ".claude/commands/find.md"
+    },
+    {
+      "name": "list-workspaces",
+      "description": "Liệt Kê Workspaces",
+      "template_file": ".claude/commands/list-workspaces.md"
+    },
+    {
+      "name": "new-workspace",
+      "description": "Tạo Workspace Mới",
+      "template_file": ".claude/commands/new-workspace.md"
+    },
+    {
+      "name": "observations-clear",
+      "description": "Observations Clear",
+      "template_file": ".claude/commands/observations-clear.md"
+    },
+    {
+      "name": "obsidian-ingest",
+      "description": "Obsidian Ingest",
+      "template_file": ".claude/commands/obsidian-ingest.md"
+    },
+    {
+      "name": "product-brief",
+      "description": "Product Brief",
+      "template_file": ".claude/commands/product-brief.md"
+    },
+    {
+      "name": "rebase-contextd",
+      "description": "/rebase-contextd — Rebase Wiki Against Code",
+      "template_file": ".claude/commands/rebase-contextd.md"
+    },
+    {
+      "name": "suggest-automation",
+      "description": "Suggest Automation",
+      "template_file": ".claude/commands/suggest-automation.md"
+    },
+    {
+      "name": "switch-workspace",
+      "description": "Đổi Active Workspace",
+      "template_file": ".claude/commands/switch-workspace.md"
+    },
+    {
+      "name": "tool-design",
+      "description": "Tool Design",
+      "template_file": ".claude/commands/tool-design.md"
+    },
+    {
+      "name": "tool-extend",
+      "description": "Tool Extend",
+      "template_file": ".claude/commands/tool-extend.md"
+    },
+    {
+      "name": "tool-list",
+      "description": "Tool List",
+      "template_file": ".claude/commands/tool-list.md"
+    },
+    {
+      "name": "update-contextd",
+      "description": "/update-contextd — Cập nhật wiki sau khi code thay đổi",
+      "template_file": ".claude/commands/update-contextd.md"
+    },
+    {
+      "name": "use-contextd",
+      "description": "/use-contextd — Build Runtime-Neutral Task Context",
+      "template_file": ".claude/commands/use-contextd.md"
+    }
+  ],
+  "agents": [
+    {
+      "name": "contextd-context-selector",
+      "description": "Compatibility adapter đọc/summarize context artifact từ `contextd context`; canonical source là `.contextd/context/current-task.json`, markdown chỉ là render. KHÔNG tự invent retrieval rules.",
+      "tools": "Read, Glob, Grep, Write",
+      "model": "sonnet",
+      "template_file": ".claude/agents/contextd-context-selector.md"
+    },
+    {
+      "name": "contextd-curator",
+      "description": "Cập nhật wiki sau khi code thay đổi — pattern mới, contract mới, service mới, ADR mới. DÙNG KHI user gọi /update-contextd hoặc khi cần đồng bộ wiki sau merge. KHÔNG DÙNG để chỉnh code project.",
+      "tools": "Read, Edit, Write, Glob, Grep",
+      "model": "sonnet",
+      "template_file": ".claude/agents/contextd-curator.md"
+    },
+    {
+      "name": "contextd-planner",
+      "description": "Legacy planner reference. Canonical task classification now happens inside `contextd context`, which emits `.contextd/context/current-task.json`. KHÔNG dùng planner này để override artifact.",
+      "tools": "Read, Glob, Grep",
+      "model": "sonnet",
+      "template_file": ".claude/agents/contextd-planner.md"
+    },
+    {
+      "name": "contextd-reviewer",
+      "description": "Review output against contracts/patterns/domain rules referenced by `.contextd/context/current-task.json`. Markdown is render-only; JSON artifact is canonical.",
+      "tools": "Read, Grep, Glob",
+      "model": "sonnet",
+      "template_file": ".claude/agents/contextd-reviewer.md"
+    }
+  ],
+  "packs": [
+    {
+      "name": "pack-agentic",
+      "description": "Agent loops, tool use, multi-agent orchestration, MCP servers — bounded steps, idempotent tools, human-in-the-loop checkpoints",
+      "version": "1.0.0",
+      "components": [
+        "agent",
+        "tool",
+        "mcp",
+        "orchestration"
+      ],
+      "template_file": "packs/pack-agentic/pack.yaml"
+    },
+    {
+      "name": "pack-ai-app",
+      "description": "LLM application patterns — prompt caching, structured output, eval harness, cost tracking, no PII leak",
+      "version": "1.0.0",
+      "components": [
+        "llm",
+        "prompt",
+        "rag",
+        "embedding"
+      ],
+      "template_file": "packs/pack-ai-app/pack.yaml"
+    },
+    {
+      "name": "pack-ba",
+      "description": "Business analysis pack — requirements modeling, acceptance criteria, process mapping, and stakeholder alignment.",
+      "version": "0.1.0",
+      "components": [
+        "requirements-modeling",
+        "acceptance-criteria",
+        "process-mapping",
+        "stakeholder-alignment"
+      ],
+      "template_file": "packs/pack-ba/pack.yaml"
+    },
+    {
+      "name": "pack-claude-plugin-dev",
+      "description": "Build Claude Code plugins per Anthropic standards — plugin manifest, slash commands, subagents, skills, hooks, MCP servers",
+      "version": "1.0.0",
+      "components": [
+        "plugin",
+        "command",
+        "subagent",
+        "skill",
+        "hook",
+        "plugin-mcp"
+      ],
+      "template_file": "packs/pack-claude-plugin-dev/pack.yaml"
+    },
+    {
+      "name": "pack-dba",
+      "description": "Database administration pack — schema change safety, query hygiene, backup/restore readiness, and operational guardrails.",
+      "version": "0.1.0",
+      "components": [
+        "schema-change-management",
+        "query-performance-hygiene",
+        "backup-restore-readiness",
+        "db-operational-guardrails"
+      ],
+      "template_file": "packs/pack-dba/pack.yaml"
+    },
+    {
+      "name": "pack-event-driven",
+      "description": "Kafka, MQTT, and event-driven backend patterns (DLQ, offset commit, idempotent consumer, batch processing)",
+      "version": "1.0.0",
+      "components": [
+        "kafka",
+        "mqtt",
+        "batch"
+      ],
+      "template_file": "packs/pack-event-driven/pack.yaml"
+    },
+    {
+      "name": "pack-frontend-react",
+      "description": "React/Next.js frontend patterns — hooks rules, a11y, effect cleanup, list keys, no direct state mutation",
+      "version": "1.0.0",
+      "components": [
+        "react",
+        "hooks",
+        "jsx",
+        "nextjs"
+      ],
+      "template_file": "packs/pack-frontend-react/pack.yaml"
+    },
+    {
+      "name": "pack-product",
+      "description": "Product/business knowledge pack — product briefs, OKR, roadmap, personas, customer journey, success metrics. For non-tech contributors (PM, business, stakeholder).",
+      "version": "0.1.0",
+      "components": [
+        "brief",
+        "okr",
+        "roadmap",
+        "persona",
+        "journey",
+        "metric"
+      ],
+      "template_file": "packs/pack-product/pack.yaml"
+    },
+    {
+      "name": "pack-qc",
+      "description": "Quality control + performance optimization pack — test design/execution, defect triage, regression coverage, release quality gates, baseline metrics, bottleneck profiling, safe optimization, regression guarding.",
+      "version": "0.2.0",
+      "components": [
+        "test-case-design",
+        "test-execution",
+        "defect-triage",
+        "regression-plan",
+        "performance-profiling",
+        "bottleneck-analysis",
+        "optimization-safety",
+        "regression-guard"
+      ],
+      "template_file": "packs/pack-qc/pack.yaml"
+    },
+    {
+      "name": "pack-security",
+      "description": "Security engineering + authorized pentest pack — threat modeling, secure design review, vulnerability management, control verification, scope discipline, evidence-based findings, risk rating, and remediation reporting.",
+      "version": "0.2.0",
+      "components": [
+        "threat-modeling",
+        "secure-design-review",
+        "vulnerability-management",
+        "security-controls",
+        "attack-surface-mapping",
+        "finding-validation",
+        "exploit-safety",
+        "reporting-remediation"
+      ],
+      "template_file": "packs/pack-security/pack.yaml"
+    },
+    {
+      "name": "pack-solo-builder",
+      "description": "Cho non-tech expert (cơ khí, kế toán, y tế, ...) dùng Claude Code làm \"no-code IDE\" — tool design coach + tech recipe library cross-platform (Linux native + Windows Docker).",
+      "version": "0.1.0",
+      "components": [
+        "tool-design",
+        "tool-extend",
+        "recipe",
+        "tool-catalog"
+      ],
+      "template_file": "packs/pack-solo-builder/pack.yaml"
+    },
+    {
+      "name": "pack-ui-ux",
+      "description": "UI/UX pack — design system, accessibility (WCAG), user flows, và UX writing conventions.",
+      "version": "0.1.0",
+      "components": [
+        "design-system",
+        "accessibility",
+        "user-flows",
+        "ux-writing"
+      ],
+      "template_file": "packs/pack-ui-ux/pack.yaml"
+    },
+    {
+      "name": "pack-web-api",
+      "description": "REST/GraphQL/gRPC API patterns — input validation, error shape, idempotency, auth boundary, no info leak",
+      "version": "1.0.0",
+      "components": [
+        "rest",
+        "graphql",
+        "grpc",
+        "api"
+      ],
+      "template_file": "packs/pack-web-api/pack.yaml"
+    }
+  ],
+  "pipeline_docs": [
+    {
+      "name": "PIPELINE-VISUAL",
+      "description": "Pipeline Visual — How the Wiki Works",
+      "template_file": "agents/pipeline/PIPELINE-VISUAL.md"
+    },
+    {
+      "name": "README",
+      "description": "Prompt Pipeline",
+      "template_file": "agents/pipeline/README.md"
+    },
+    {
+      "name": "automation-skeletons",
+      "description": "Automation Skeletons",
+      "template_file": "agents/pipeline/automation-skeletons.md"
+    },
+    {
+      "name": "code-analysis-prompts-agentic",
+      "description": "Code Analysis Prompts — CORE-AGENTIC variant",
+      "template_file": "agents/pipeline/code-analysis-prompts-agentic.md"
+    },
+    {
+      "name": "code-analysis-prompts-code",
+      "description": "Code Analysis Prompts — CORE-CODE variant",
+      "template_file": "agents/pipeline/code-analysis-prompts-code.md"
+    },
+    {
+      "name": "code-analysis-prompts",
+      "description": "Code Analysis Prompts — Evidence Pipeline (source_type=code)",
+      "template_file": "agents/pipeline/code-analysis-prompts.md"
+    },
+    {
+      "name": "code-snapshot-conventions",
+      "description": "Code Snapshot Conventions",
+      "template_file": "agents/pipeline/code-snapshot-conventions.md"
+    },
+    {
+      "name": "concurrency-notes",
+      "description": "Concurrency Notes",
+      "template_file": "agents/pipeline/concurrency-notes.md"
+    },
+    {
+      "name": "context-filter",
+      "description": "Context Filter + Rank",
+      "template_file": "agents/pipeline/context-filter.md"
+    },
+    {
+      "name": "critical-analysis-prompts",
+      "description": "Critical Analysis Prompts (10) — Evidence Pipeline (source_type ∈ {paste, api, mcp})",
+      "template_file": "agents/pipeline/critical-analysis-prompts.md"
+    },
+    {
+      "name": "evidence-lifecycle",
+      "description": "Evidence State Rules",
+      "template_file": "agents/pipeline/evidence-lifecycle.md"
+    },
+    {
+      "name": "multi-agent-pipeline",
+      "description": "Context Artifact Pipeline",
+      "template_file": "agents/pipeline/multi-agent-pipeline.md"
+    },
+    {
+      "name": "observability",
+      "description": "Pipeline Observability",
+      "template_file": "agents/pipeline/observability.md"
+    },
+    {
+      "name": "prompt-template",
+      "description": "Prompt Template",
+      "template_file": "agents/pipeline/prompt-template.md"
+    },
+    {
+      "name": "qa-batching",
+      "description": "Q&A Batching Strategy",
+      "template_file": "agents/pipeline/qa-batching.md"
+    },
+    {
+      "name": "raw-storage-conventions",
+      "description": "Raw Storage Conventions",
+      "template_file": "agents/pipeline/raw-storage-conventions.md"
+    },
+    {
+      "name": "repetition-detection",
+      "description": "Repetition Detection (UserPromptSubmit hook)",
+      "template_file": "agents/pipeline/repetition-detection.md"
+    },
+    {
+      "name": "report-prompts",
+      "description": "Report Prompts — Wiki → Technical Report (HTML)",
+      "template_file": "agents/pipeline/report-prompts.md"
+    },
+    {
+      "name": "task-to-docs-map",
+      "description": "Task → Docs Map",
+      "template_file": "agents/pipeline/task-to-docs-map.md"
+    },
+    {
+      "name": "validator-rules",
+      "description": "Validator Rules — Engine (Universal)",
+      "template_file": "agents/pipeline/validator-rules.md"
+    },
+    {
+      "name": "workspace-resolution",
+      "description": "Workspace Resolution — canonical Bước 0",
+      "template_file": "agents/pipeline/workspace-resolution.md"
+    }
+  ],
+  "schemas": [
+    {
+      "name": "contextd-config.schema",
+      "template_file": "templates/contextd-config.schema.json"
+    },
+    {
+      "name": "run-trace.schema",
+      "template_file": "templates/run-trace.schema.json"
+    },
+    {
+      "name": "task-context.schema",
+      "template_file": "templates/task-context.schema.json"
+    }
+  ],
+  "retrieval": {
+    "priority": [
+      "contracts",
+      "patterns",
+      "project_docs",
+      "domain_knowledge"
+    ],
+    "max_docs": 7,
+    "intent_types": [
+      "implement_feature",
+      "fix_bug",
+      "design",
+      "incident",
+      "review"
+    ]
+  },
+  "supported_runtimes": [
+    "claude",
+    "cursor",
+    "codex-plugin",
+    "codex-instructions",
+    "plain"
+  ]
+}
