@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -412,6 +413,96 @@ def test_installer_dry_run_knowledge_root() -> None:
     print("  ok installer_dry_run_knowledge_root")
 
 
+def test_trace_uses_contextd_runs_and_renderer_fallback() -> None:
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        _workspace(root)
+        _write(root / ".contextd" / "config.json",
+               json.dumps({"workspace": "default", "knowledge_root": "."}))
+        payload = {
+            "tool_name": "Task",
+            "cwd": str(root),
+            "tool_input": {"subagent_type": "contextd-planner"},
+            "tool_response": (
+                "done\n```json\n"
+                + json.dumps({
+                    "run_id": "run-canonical",
+                    "stage": "01-planner",
+                    "workspace_at_run": "default",
+                    "intent": {"type": "design", "workspace": "default"},
+                })
+                + "\n```\n"
+            ),
+        }
+        proc = subprocess.run(
+            [sys.executable, str(ROOT / "scripts" / "emit_trace.py")],
+            cwd=str(ROOT),
+            input=json.dumps(payload),
+            text=True,
+            capture_output=True,
+        )
+        assert proc.returncode == 0, (proc.stdout, proc.stderr)
+        assert (root / ".contextd" / "runs" / "run-canonical" / "01-planner.json").is_file()
+        assert not (root / ".claude" / "runs" / "run-canonical").exists()
+
+        rendered = subprocess.run(
+            [sys.executable, str(ROOT / "scripts" / "render_trace.py"),
+             "--project-dir", str(root), "--last"],
+            cwd=str(ROOT),
+            text=True,
+            capture_output=True,
+        )
+        assert rendered.returncode == 0, (rendered.stdout, rendered.stderr)
+        assert (root / ".contextd" / "runs" / "run-canonical" / "trace.html").is_file()
+
+        shutil.rmtree(root / ".contextd" / "runs")
+        _write(root / ".claude" / "runs" / "legacy-run" / "run.json",
+               json.dumps({
+                   "stage": "run",
+                   "run_id": "legacy-run",
+                   "workspace_at_run": "default",
+                   "stages_completed": [],
+               }))
+        legacy_rendered = subprocess.run(
+            [sys.executable, str(ROOT / "scripts" / "render_trace.py"),
+             "--project-dir", str(root), "--last"],
+            cwd=str(ROOT),
+            text=True,
+            capture_output=True,
+        )
+        assert legacy_rendered.returncode == 0, (legacy_rendered.stdout, legacy_rendered.stderr)
+        assert (root / ".claude" / "runs" / "legacy-run" / "trace.html").is_file()
+    print("  ok trace_uses_contextd_runs_and_renderer_fallback")
+
+
+def test_package_release_dry_run_shape() -> None:
+    proc = subprocess.run(
+        ["bash", str(ROOT / "scripts" / "package-release.sh"), "--dry-run"],
+        cwd=str(ROOT),
+        text=True,
+        capture_output=True,
+    )
+    assert proc.returncode == 0, (proc.stdout, proc.stderr)
+    stage = None
+    for line in proc.stdout.splitlines():
+        candidate = Path(line.strip())
+        if candidate.name == "wiki-template" and candidate.is_dir():
+            stage = candidate
+    assert stage is not None, proc.stdout
+    try:
+        assert (stage / "workspaces" / "default" / "workspace.md").is_file()
+        assert (stage / "workspaces" / "README.md").is_file()
+        assert not (stage / "build").exists()
+        assert not (stage / "dist").exists()
+        assert not (stage / "contextd.egg-info").exists()
+        assert not (stage / "scripts" / "_version.py").exists()
+        assert not (stage / ".contextd" / "runs").exists()
+        assert not (stage / ".contextd" / "context").exists()
+    finally:
+        shutil.rmtree(stage.parent, ignore_errors=True)
+    print("  ok package_release_dry_run_shape")
+
+
 def run() -> int:
     tests = [
         test_contextd_config_wins,
@@ -424,6 +515,8 @@ def run() -> int:
         test_cli_smoke,
         test_mcp_server_smoke,
         test_installer_dry_run_knowledge_root,
+        test_trace_uses_contextd_runs_and_renderer_fallback,
+        test_package_release_dry_run_shape,
     ]
     failed = 0
     for test in tests:

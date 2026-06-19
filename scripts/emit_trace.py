@@ -2,8 +2,8 @@
 """
 emit_trace.py — Claude Code PostToolUse hook handler.
 
-Reads hook payload from stdin (JSON), extracts trace JSON from a wiki-* subagent's
-output, and writes it to {cwd}/.claude/runs/{run_id}/{stage}.json.
+Reads hook payload from stdin (JSON), extracts trace JSON from a contextd
+subagent's output, and writes it to {cwd}/.contextd/runs/{run_id}/{stage}.json.
 
 Hook event: PostToolUse (matcher=Task).
 Subagents handled: contextd-planner, contextd-context-selector, contextd-reviewer.
@@ -176,7 +176,7 @@ def main() -> int:
         return 0
 
     cwd = Path(payload.get("cwd") or os.getcwd())
-    run_dir = cwd / ".claude" / "runs" / run_id
+    run_dir = cwd / ".contextd" / "runs" / run_id
     try:
         run_dir.mkdir(parents=True, exist_ok=True)
     except OSError as e:

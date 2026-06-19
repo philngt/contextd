@@ -9,16 +9,21 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 VERSION="${1:-0.0.0-dev}"
+PYINSTALLER_VERSION="${PYINSTALLER_VERSION:-6.11.0}"
 
 cd "$REPO_ROOT"
 
 # Generate ephemeral version module
 echo "__version__ = '${VERSION}'" > scripts/_version.py
+cleanup_version() {
+    rm -f scripts/_version.py
+}
+trap cleanup_version EXIT
 
 # Ensure PyInstaller is available
 if ! command -v pyinstaller >/dev/null 2>&1; then
-    echo "Installing PyInstaller..."
-    pip install pyinstaller==6.11.0
+    echo "Installing PyInstaller ${PYINSTALLER_VERSION}..."
+    pip install "pyinstaller==${PYINSTALLER_VERSION}"
 fi
 
 echo "Building contextd binary (version ${VERSION})..."

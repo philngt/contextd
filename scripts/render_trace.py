@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 """
-render_trace.py — render wiki pipeline trace JSON as HTML.
+render_trace.py — render contextd pipeline trace JSON as HTML.
 
-Reads `.claude/runs/{run_id}/*.json` (schema: templates/run-trace.schema.json)
-and emits self-contained HTML for human inspection. Stdlib only, no deps.
+Reads `.contextd/runs/{run_id}/*.json` (schema: templates/run-trace.schema.json)
+and emits an HTML viewer for human inspection. Legacy `.claude/runs/` is used
+as a read-only fallback for old traces. Stdlib only, no Python deps.
 
 Modes:
   --run <id>       Render that run -> {run_dir}/trace.html
   --last           Render the latest run -> {run_dir}/trace.html
-  --all            Render index of all runs -> .claude/runs/index.html
+  --all            Render index of all runs -> .contextd/runs/index.html
   --watch          Poll the latest (or --run) run and re-render on change
   --out <path>     Override output path
   --project-dir    Override project_dir resolution (default: walk up from CWD)
@@ -28,6 +29,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
+SCRIPT_DIR = Path(__file__).resolve().parent
+sys.path.insert(0, str(SCRIPT_DIR / "lib"))
+
+import contextd_resolver  # noqa: E402
+
 STAGE_FILES = [
     "run.json",
     "01-planner.json",
@@ -45,23 +51,16 @@ WATCH_TIMEOUT_SEC = 600  # 10 minutes
 
 
 def find_project_dir(start: Path) -> Path | None:
-    cur = start.resolve()
-    while True:
-        if (cur / ".claude" / "wiki.json").exists():
-            return cur
-        if cur.parent == cur:
-            return None
-        cur = cur.parent
+    selected, _ = contextd_resolver.find_config(start)
+    if selected is None or "global" in selected.kind:
+        return None
+    return selected.project_dir
 
 
 def load_workspace_active(project_dir: Path) -> str | None:
-    cfg = project_dir / ".claude" / "wiki.json"
-    if not cfg.exists():
-        return None
-    try:
-        return json.loads(cfg.read_text(encoding="utf-8")).get("workspace")
-    except (OSError, json.JSONDecodeError):
-        return None
+    resolved = contextd_resolver.resolve(project_dir)
+    workspace = resolved.get("workspace")
+    return str(workspace) if workspace else None
 
 
 def list_runs(runs_dir: Path) -> list[Path]:
@@ -71,6 +70,15 @@ def list_runs(runs_dir: Path) -> list[Path]:
         (p for p in runs_dir.iterdir() if p.is_dir()),
         key=lambda p: p.name,
     )
+
+
+def select_runs_dir(project_dir: Path) -> Path:
+    """Prefer canonical traces, fallback to legacy traces when no canonical run exists."""
+    canonical = project_dir / ".contextd" / "runs"
+    legacy = project_dir / ".claude" / "runs"
+    if list_runs(canonical) or not list_runs(legacy):
+        return canonical
+    return legacy
 
 
 def resolve_run(runs_dir: Path, run_id_or_prefix: str | None, use_last: bool) -> Path | None:
@@ -545,12 +553,12 @@ def render_per_run_html(run: dict, workspace_active: str | None, watch: bool = F
 <head>
 <meta charset="utf-8">
 {refresh_meta}
-<title>Wiki Trace — {esc(run['run_id'])}</title>
+<title>contextd Trace — {esc(run['run_id'])}</title>
 <style>{CSS}</style>
 </head>
 <body>
 <header class="page-header">
-  <h1>Wiki Trace <small>{esc(run['run_id'])}</small></h1>
+  <h1>contextd Trace <small>{esc(run['run_id'])}</small></h1>
   <p>
     Workspace: <code>{esc(rj.get('workspace_at_run') or '—')}</code> ·
     Started: {esc(fmt_ts(rj.get('ts_start')))} ·
@@ -678,12 +686,12 @@ def render_index_html(runs_data: list[dict], workspace_active: str | None, runs_
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Wiki Runs — index</title>
+<title>contextd Runs — index</title>
 <style>{CSS}</style>
 </head>
 <body>
 <header class="page-header">
-  <h1>Wiki Runs</h1>
+  <h1>contextd Runs</h1>
   <p>
     Total: <b>{total}</b> ·
     Active workspace: <code>{esc(workspace_active or '—')}</code>
@@ -815,7 +823,7 @@ INDEX_JS = """
 
 
 def cmd_render_run(project_dir: Path, run_id: str | None, use_last: bool, out: Path | None, watch: bool) -> int:
-    runs_dir = project_dir / ".claude" / "runs"
+    runs_dir = select_runs_dir(project_dir)
     run_dir = resolve_run(runs_dir, run_id, use_last)
     if not run_dir:
         sys.stderr.write(f"[render_trace] no run found in {runs_dir}\n")
@@ -841,7 +849,7 @@ def cmd_render_run(project_dir: Path, run_id: str | None, use_last: bool, out: P
 
 
 def cmd_render_index(project_dir: Path, out: Path | None) -> int:
-    runs_dir = project_dir / ".claude" / "runs"
+    runs_dir = select_runs_dir(project_dir)
     runs = list_runs(runs_dir)
     runs_data = [load_run(p) for p in runs]
     workspace_active = load_workspace_active(project_dir)
@@ -887,13 +895,13 @@ def watch_loop(run_dir: Path, workspace_active: str | None, out_path: Path) -> i
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(description="Render wiki pipeline trace as HTML.")
+    p = argparse.ArgumentParser(description="Render contextd pipeline trace as HTML.")
     p.add_argument("--run", help="Run ID (or prefix)")
     p.add_argument("--last", action="store_true", help="Latest run")
     p.add_argument("--all", action="store_true", help="Render index of all runs")
     p.add_argument("--watch", action="store_true", help="Live watch mode (re-render on change)")
     p.add_argument("--out", help="Output path override")
-    p.add_argument("--project-dir", help="Project dir (default: walk up from CWD to find .claude/wiki.json)")
+    p.add_argument("--project-dir", help="Project dir (default: walk up from CWD to find .contextd/config.json or legacy adapter)")
     args = p.parse_args()
 
     if args.project_dir:
@@ -901,7 +909,7 @@ def main() -> int:
     else:
         project_dir = find_project_dir(Path.cwd())
         if not project_dir:
-            sys.stderr.write("[render_trace] no .claude/wiki.json found walking up from CWD\n")
+            sys.stderr.write("[render_trace] no .contextd/config.json or legacy adapter found walking up from CWD\n")
             return 2
 
     out = Path(args.out).resolve() if args.out else None

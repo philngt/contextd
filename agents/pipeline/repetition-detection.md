@@ -160,7 +160,7 @@ ASCII-only intentionally — hint hiển thị trong nhiều terminal khác nhau
 
 | Hook | File | Trigger | Mục đích | Chia sẻ gì? |
 |------|------|---------|----------|-------------|
-| `emit_trace.py` | `scripts/emit_trace.py` | PostToolUse (matcher=Task) | Ghi trace pipeline wiki-* subagent | KHÔNG — file riêng `.contextd/runs/` |
+| `emit_trace.py` | `scripts/emit_trace.py` | PostToolUse (matcher=Task) | Ghi trace pipeline contextd subagent | KHÔNG — file riêng `.contextd/runs/` |
 | `detect_repetition.py` | `scripts/detect_repetition.py` | UserPromptSubmit | Detect lặp + suggest automation | KHÔNG |
 
 Hai hook độc lập về state. Phase B sẽ add `log_invocation.py` (usage telemetry cho lifecycle) — cũng độc lập.

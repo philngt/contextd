@@ -10,9 +10,11 @@
 # EXCLUDE:
 #   - .git/, .github/, .gitattributes
 #   - workspaces/* TRỪ workspaces/default/ và workspaces/README.md
-#   - .claude/runs/, .claude/context/, .claude/settings.local.json
+#   - .contextd/{context,runs,cache}/ and legacy .claude/{runs,context}/
+#   - .claude/settings.local.json
 #   - evidence/ trong mọi workspace
 #   - .observations/prompts.jsonl, *.lock
+#   - build/, dist/, *.egg-info/, scripts/_version.py
 #   - __pycache__/, *.pyc, node_modules/, .DS_Store, Thumbs.db
 #   - release/ (folder output này)
 #
@@ -53,6 +55,7 @@ if [[ -z "$VERSION" ]]; then
         # Try git tag, fallback to short commit + date
         COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "nogit")
         if TAG=$(git describe --tags --abbrev=0 2>/dev/null); then
+            TAG="${TAG#v}"
             VERSION="${TAG}+${COMMIT}"
         else
             VERSION="0.0.0+${COMMIT}"
@@ -86,7 +89,8 @@ LEGACY_LATEST_PATH="$RELEASE_DIR/wiki-template-latest.zip"
 
 # ---------- staging area ----------
 STAGE_DIR="$(mktemp -d 2>/dev/null || mktemp -d -t wiki-pkg)"
-STAGE_ROOT="$STAGE_DIR/wiki-template"  # Legacy zip root kept for v0.x compatibility.
+ZIP_ROOT_NAME="${CONTEXTD_ZIP_ROOT_NAME:-wiki-template}"  # Legacy zip root kept for v0.x compatibility.
+STAGE_ROOT="$STAGE_DIR/$ZIP_ROOT_NAME"
 mkdir -p "$STAGE_ROOT"
 
 cleanup() {
@@ -102,9 +106,16 @@ EXCLUDES=(
     --exclude=".github/"
     --exclude=".gitattributes"
     --exclude="release/"
+    --exclude=".contextd/context/"
+    --exclude=".contextd/runs/"
+    --exclude=".contextd/cache/"
     --exclude=".claude/runs/"
     --exclude=".claude/context/"
     --exclude=".claude/settings.local.json"
+    --exclude="build/"
+    --exclude="dist/"
+    --exclude="*.egg-info/"
+    --exclude="scripts/_version.py"
     --exclude="__pycache__/"
     --exclude="*.pyc"
     --exclude="node_modules/"
@@ -123,20 +134,24 @@ EXCLUDES=(
 if command -v rsync > /dev/null 2>&1; then
     echo "📤 Copying files (rsync)..."
     rsync -a "${EXCLUDES[@]}" \
-        --exclude="workspaces/*/" \
+        --include="workspaces/" \
         --include="workspaces/default/***" \
         --include="workspaces/README.md" \
+        --exclude="workspaces/*/" \
         "$REPO_ROOT/" "$STAGE_ROOT/"
-    # Note: workspaces/*/ exclude blocks all subdirs, but include workspaces/default/*** brings it back
+    # Note: include workspace allow-list before the broad workspaces/*/ exclude.
 else
     echo "⚠️  rsync not found — falling back to cp + manual cleanup (slower)."
     cp -r "$REPO_ROOT/." "$STAGE_ROOT/"
     # Remove unwanted
     rm -rf "$STAGE_ROOT/.git" "$STAGE_ROOT/.github" "$STAGE_ROOT/release" \
+           "$STAGE_ROOT/.contextd/context" "$STAGE_ROOT/.contextd/runs" "$STAGE_ROOT/.contextd/cache" \
            "$STAGE_ROOT/.claude/runs" "$STAGE_ROOT/.claude/context" \
-           "$STAGE_ROOT/.claude/settings.local.json" 2>/dev/null || true
+           "$STAGE_ROOT/.claude/settings.local.json" \
+           "$STAGE_ROOT/build" "$STAGE_ROOT/dist" "$STAGE_ROOT/scripts/_version.py" 2>/dev/null || true
     find "$STAGE_ROOT" -type d -name "__pycache__" -prune -exec rm -rf {} + 2>/dev/null || true
     find "$STAGE_ROOT" -type d -name "node_modules" -prune -exec rm -rf {} + 2>/dev/null || true
+    find "$STAGE_ROOT" -type d -name "*.egg-info" -prune -exec rm -rf {} + 2>/dev/null || true
     find "$STAGE_ROOT" -type d -name "evidence" -prune -exec rm -rf {} + 2>/dev/null || true
     find "$STAGE_ROOT" -type d -name ".idea" -prune -exec rm -rf {} + 2>/dev/null || true
     find "$STAGE_ROOT" -type d -name ".vscode" -prune -exec rm -rf {} + 2>/dev/null || true
@@ -168,11 +183,11 @@ echo "   Files: $TOTAL_FILES"
 echo "   Size:  $TOTAL_SIZE (uncompressed)"
 echo ""
 echo "📁 Top-level entries:"
-ls -la "$STAGE_ROOT" | tail -n +2 | awk '{print "   " $NF}' | grep -v "^\s*\.$\|^\s*\.\.$"
+ls -la "$STAGE_ROOT" | awk 'NR > 1 && $NF != "." && $NF != ".." {print "   " $NF}'
 if [[ -d "$STAGE_ROOT/workspaces" ]]; then
     echo ""
     echo "📁 Included workspaces:"
-    ls -la "$STAGE_ROOT/workspaces" | tail -n +2 | awk '{print "   " $NF}' | grep -v "^\s*\.$\|^\s*\.\.$"
+    ls -la "$STAGE_ROOT/workspaces" | awk 'NR > 1 && $NF != "." && $NF != ".." {print "   " $NF}'
 fi
 
 # ---------- dry run stops here ----------
@@ -190,7 +205,7 @@ fi
 # ---------- create zip ----------
 echo ""
 echo "🗜️  Creating zip..."
-( cd "$STAGE_DIR" && zip -rq "$OUT_PATH" "wiki-template" )
+( cd "$STAGE_DIR" && zip -rq "$OUT_PATH" "$ZIP_ROOT_NAME" )
 
 # ---------- update latest pointer + legacy aliases ----------
 cp "$OUT_PATH" "$LATEST_PATH"

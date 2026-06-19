@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Pack loader for the wiki-template knowledge engine.
+Pack loader for the contextd knowledge engine.
 
 Resolves which packs an active workspace opts into, and loads their:
   - Constraints (markdown, additive)
