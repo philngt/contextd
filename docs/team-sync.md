@@ -189,7 +189,7 @@ Your team knowledge repo is untouched.
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| `/contextd-team-sync` says "knowledge_root is not a git repo" | `knowledge_root` points to engine repo or missing | Edit `.contextd/config.json` or legacy `~/.claude/wiki-global.json` |
+| `/contextd-team-sync` says "knowledge_root is not a git repo" | `knowledge_root` points to engine repo or missing | Edit `.contextd/config.json` |
 | `git pull` fails with merge conflict | Local uncommitted changes | `cd ~/company-wiki && git stash && git pull && git stash pop` or commit first |
 | Pushed files include `evidence/` | Missing `.gitignore` in knowledge repo | Add template `.gitignore` from `templates/team-knowledge-repo/.gitignore` |
 | Workspace not found after pull | New workspace created by teammate | Run `/list-workspaces` then `/switch-workspace {name}` |
@@ -218,4 +218,6 @@ Switch by editing `.contextd/config.json` in each codebase:
 }
 ```
 
-Legacy `.claude/wiki.json` may keep using `wiki_root`; contextd treats it as an adapter alias.
+### Compatibility
+
+Legacy `.claude/wiki.json` may keep using `wiki_root`; contextd treats it as an adapter alias during migration.

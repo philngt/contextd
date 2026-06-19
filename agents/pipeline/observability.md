@@ -9,7 +9,7 @@
 3. **Wiki còn thiếu gì?** Knowledge gap nào lặp lại nhiều lần qua các task?
 4. **Wiki có cải thiện chất lượng?** So sánh output có-wiki vs không-wiki.
 
-Cơ chế: mỗi subagent **output 1 fenced ```json block** ở cuối response. **PostToolUse hook** ([scripts/emit_trace.py](../../scripts/emit_trace.py)) tự động trích block đó và ghi `{cwd}/.claude/runs/{run_id}/{stage}.json`. Subagent KHÔNG dùng Write tool cho trace — code-driven, deterministic, tiết kiệm token.
+Cơ chế: mỗi subagent **output 1 fenced ```json block** ở cuối response. **PostToolUse hook** ([scripts/emit_trace.py](../../scripts/emit_trace.py)) tự động trích block đó và ghi `{cwd}/.contextd/runs/{run_id}/{stage}.json`. Subagent KHÔNG dùng Write tool cho trace — code-driven, deterministic, tiết kiệm token.
 
 Builder (main agent, không phải subagent) vẫn tự ghi `04-builder.json` qua Write tool — không có hook cho main agent.
 
@@ -37,7 +37,7 @@ Các stage sau **nhận `run_id` từ caller** (main agent hoặc `/use-contextd
 ## File layout
 
 ```
-{project_dir}/.claude/runs/{run_id}/
+{project_dir}/.contextd/runs/{run_id}/
   ├─ run.json              ← roll-up: hook update sau mỗi stage (stages_completed, totals)
   ├─ 01-planner.json       ← hook ghi từ contextd-planner output
   ├─ 02-context.json       ← hook ghi từ contextd-context-selector output (gồm verdict APPROVED|BLOCK)
@@ -46,9 +46,9 @@ Các stage sau **nhận `run_id` từ caller** (main agent hoặc `/use-contextd
   └─ scorecard.md          ← optional, manual chấm điểm
 ```
 
-`runs/` là **per-codebase** (`{project_dir}/.claude/runs/`), KHÔNG ghi vào wiki repo. Workspace lock vẫn bắt buộc — mỗi trace chứa `workspace_at_run` để verify.
+`runs/` là **per-codebase** (`{project_dir}/.contextd/runs/`), KHÔNG ghi vào wiki repo. Workspace lock vẫn bắt buộc — mỗi trace chứa `workspace_at_run` để verify.
 
-`.gitignore` của project-root nên thêm `.claude/runs/` (per-machine ephemeral data).
+`.gitignore` của project-root nên thêm `.contextd/runs/` (per-machine ephemeral data).
 
 ---
 
@@ -58,7 +58,7 @@ Các stage sau **nhận `run_id` từ caller** (main agent hoặc `/use-contextd
 
 Common fields (mọi stage): `run_id`, `stage`, `ts`, `workspace_at_run`, `duration_ms` (optional).
 
-Worked example đầy đủ 4 stage cho 1 task: xem 1 run thực tế tại `{project_dir}/.claude/runs/{run_id}/` (sinh bởi `/use-contextd`).
+Worked example đầy đủ 4 stage cho 1 task: xem 1 run thực tế tại `{project_dir}/.contextd/runs/{run_id}/` (sinh bởi `/use-contextd`).
 
 ---
 
@@ -76,7 +76,7 @@ Path tới definition trong schema: `#/oneOf/{n}` (theo thứ tự dưới đây
 
 ### Stage 2 — `02-context.json` (contextd-context-selector) → schema oneOf[1]
 
-**Purpose:** Map intent → file paths thực tế. Ghi `current-task.md`. Báo cáo gaps. **Gồm cả plan-review verdict** (gộp từ stage 03-plan-review cũ): chạy 5 check (planner carry-over, pattern/contract trong Referenced Docs, component coverage, conflict, gap severity) → BLOCK nếu thiếu pattern/contract, conflict, blocking gap.
+**Purpose:** Map intent → file paths thực tế. Ghi `current-task.json`. Báo cáo gaps. **Gồm cả plan-review verdict** (gộp từ stage 03-plan-review cũ): chạy 5 check (planner carry-over, pattern/contract trong Referenced Docs, component coverage, conflict, gap severity) → BLOCK nếu thiếu pattern/contract, conflict, blocking gap.
 
 **Key fields:** `context_file`, `referenced_docs[]` (mỗi entry: `{category, path, sections}`), `gaps[]`, `file_count`, `gap_count`, `total_chars`, `verdict` (`APPROVED|BLOCK`), `issues[]` (mỗi entry: `{id, category, severity, detail, evidence}`), `checks_summary`.
 
@@ -108,13 +108,13 @@ Path tới definition trong schema: `#/oneOf/{n}` (theo thứ tự dưới đây
 
 ## Aggregation rules cho `/contextd-eval`
 
-Đọc tất cả `{project_dir}/.claude/runs/*/`. Lọc theo `workspace_at_run == workspace_active` (workspace isolation).
+Đọc tất cả `{project_dir}/.contextd/runs/*/`. Lọc theo `workspace_at_run == workspace_active` (workspace isolation).
 
 Metrics output:
 
 | Metric | Source | Formula |
 |--------|--------|---------|
-| Run count | dirs trong `.claude/runs/` | count |
+| Run count | dirs trong `.contextd/runs/` | count |
 | Plan-block rate | `02-context.verdict == BLOCK` | block / total |
 | Hallucination rate (planner) | `01-planner.unverified_count > 0` | có / total |
 | Hallucination rate (builder) | `05-review.hallucination_count > 0` | có / total |
@@ -134,7 +134,7 @@ Golden tasks **per-workspace** — mỗi workspace định nghĩa fixture riêng
 
 Chạy 2 lần:
 - **A — wiki-on**: `/use-contextd` đầy đủ.
-- **B — wiki-off**: ghi đè `current-task.md` thành stub trống (`## Referenced Docs: (none)`, `## Knowledge Gaps: all sections missing — wiki-off mode`), rồi gọi builder thẳng.
+- **B — wiki-off**: ghi đè `current-task.json` thành stub trống (`## Referenced Docs: (none)`, `## Knowledge Gaps: all sections missing — wiki-off mode`), rồi gọi builder thẳng.
 
 Sau khi cả A và B chạy xong, copy [templates/task-scorecard.md](../../templates/task-scorecard.md) (skeleton chung của engine), chấm theo 10 tiêu chí. Lưu kết quả vào `{ws}/eval/results/{date}-{task-id}.md`.
 
@@ -146,7 +146,7 @@ Delta `score_A − score_B` = wiki contribution. Nếu delta ≤ 1 (trên thang 
 
 Trace emit cho 3 subagent (`contextd-planner`, `contextd-context-selector`, `contextd-reviewer`) chạy qua **PostToolUse hook** trên tool `Task`. Hook script: [scripts/emit_trace.py](../../scripts/emit_trace.py) (Python 3.9+).
 
-### Trong wiki-template repo (self-test)
+### Trong contextd repo (self-test)
 
 `.claude/settings.json` đã có sẵn:
 
@@ -165,18 +165,18 @@ Trace emit cho 3 subagent (`contextd-planner`, `contextd-context-selector`, `con
 }
 ```
 
-Khi user chạy `/use-contextd` từ trong wiki-template, mỗi lần Task tool kết thúc → hook chạy, parse subagent output, ghi trace.
+Khi user chạy `/use-contextd` từ trong contextd repo, mỗi lần Task tool kết thúc → hook chạy, parse subagent output, ghi trace.
 
 ### Trong codebase khác (production usage)
 
-Codebase A có `.claude/wiki.json` trỏ tới wiki-template ở `D:\tool\wiki-template\`. Để bật trace:
+Codebase A có `.contextd/config.json` trỏ tới contextd knowledge root ở `D:\tool\contextd\`. Để bật trace:
 
-1. Sao chép `.claude/settings.json` của wiki-template vào codebase A, đổi command thành **absolute path**:
+1. Sao chép `.claude/settings.json` của contextd repo vào codebase A, đổi command thành **absolute path**:
    ```json
-   { "type": "command", "command": "python D:\\tool\\wiki-template\\scripts\\emit_trace.py", "timeout": 5 }
+   { "type": "command", "command": "python D:\\tool\\contextd\\scripts\\emit_trace.py", "timeout": 5 }
    ```
 2. Verify `python` trong PATH (`python --version` ≥ 3.9).
-3. Chạy 1 task qua `/use-contextd`. Sau khi Task tool đầu tiên xong → kiểm `{codebase A}/.claude/runs/{run_id}/01-planner.json`.
+3. Chạy 1 task qua `/use-contextd`. Sau khi Task tool đầu tiên xong → kiểm `{codebase A}/.contextd/runs/{run_id}/01-planner.json`.
 
 ### Hook payload (tham khảo)
 
@@ -190,7 +190,7 @@ Hook nhận JSON qua stdin với format Claude Code chuẩn:
 }
 ```
 
-Script extract fenced ```json block cuối từ `tool_response`, validate có `run_id` + `stage`, ghi vào `{cwd}/.claude/runs/{run_id}/{stage}.json`. Không match → exit 0 (no-op).
+Script extract fenced ```json block cuối từ `tool_response`, validate có `run_id` + `stage`, ghi vào `{cwd}/.contextd/runs/{run_id}/{stage}.json`. Không match → exit 0 (no-op).
 
 ### Disable trace
 
@@ -201,7 +201,7 @@ Comment block `hooks` trong `settings.json` (hoặc xoá file). Pipeline vẫn c
 ## Hard rules
 
 - **Trace KHÔNG block pipeline.** Nếu Write file fail, subagent log warning và tiếp tục output bình thường.
-- **Trace KHÔNG đọc file ngoài project_dir + effective_wiki_root.** Workspace lock vẫn bắt buộc.
+- **Trace KHÔNG đọc file ngoài project_dir + effective_knowledge_root.** Workspace lock vẫn bắt buộc.
 - **Một run = một workspace.** Nếu user `/switch-workspace` giữa pipeline → run abort (out of scope).
 - **Run dir append-only** trong session. KHÔNG sửa file đã ghi của stage trước.
 - **`/contextd-eval` chỉ đọc**, không sửa runs/.

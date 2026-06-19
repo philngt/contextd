@@ -24,7 +24,7 @@ Feed `verified-facts.md` (+ optional `10-final-report.md`) vào logic của `/up
 
 ## Bước 0 — Workspace check
 
-Theo [workspace-resolution.md Profile A](../../agents/pipeline/workspace-resolution.md#profile-a--active-workspace-required). Set: `wiki_json_dir`, `workspace`, `effective_wiki_root`, `{ws}`.
+Theo [workspace-resolution.md Profile A](../../agents/pipeline/workspace-resolution.md#profile-a--active-workspace-required). Set: `config_dir`, `workspace`, `effective_knowledge_root`, `{ws}`.
 
 ## Bước 0.5 — Checkpoint init / load
 
@@ -137,17 +137,17 @@ Nếu thiếu → checkpoint mark sub-step `blocked`, `interrupted_reason = "cre
 
 ### Curator delegation vs inline mode
 
-Default flow: edit wiki delegate qua `contextd-curator` subagent (theo update-contextd.md Bước 3).
+Default flow: edit knowledge docs delegate qua `contextd-curator` subagent (theo update-contextd.md Bước 3).
 
 **Fallback `--inline` flag** — khi curator subagent unavailable (vd test mode, subagent file bị xóa, môi trường không hỗ trợ Agent tool):
 
-- Pass `--inline` → main agent edit trực tiếp file wiki (skip curator delegation).
+- Pass `--inline` → main agent edit trực tiếp knowledge files (skip curator delegation).
 - Khi inline:
   - Main agent BẮT BUỘC tự verify path sandbox trước MỖI Edit/Write call (giống Bước 4 Path Sandbox Verification của update-contextd.md).
   - Ghi `inline_apply: true` + lý do vào manifest.yaml.
-  - Output `## Wiki Updated` table phải vẫn liệt kê absolute paths như curator format (audit trail không thay đổi).
+  - Output `## Knowledge Updated` table phải vẫn liệt kê absolute paths như curator format (audit trail không thay đổi).
 - Default (không `--inline`): nếu curator unavailable → STOP với error `CURATOR UNAVAILABLE — chạy lại với --inline nếu chấp nhận inline edit (giảm safety layer 1)`.
-- Lưu ý: inline mode mất layer "curator self-check" — chỉ còn main agent verify post-hoc. Acceptable cho test/CI nhưng KHÔNG khuyến nghị cho production wiki update thường ngày.
+- Lưu ý: inline mode mất layer "curator self-check" — chỉ còn main agent verify post-hoc. Acceptable cho test/CI nhưng KHÔNG khuyến nghị cho production knowledge update thường ngày.
 
 ### Mode: `update`
 

@@ -6,27 +6,31 @@ You are a senior backend engineer in a knowledge-driven system. Your primary res
 
 ## Workspace Scope
 
-User làm việc ở nhiều công ty/dự án — knowledge được chia thành các **workspace độc lập** trong `{knowledge_root}/workspaces/`. Active workspace là **per-codebase**, khai báo trong `<cwd>/.contextd/config.json#workspace` (legacy `.claude/wiki.json` / `.Codex/wiki.json` vẫn là adapter). Trước mọi task:
+User làm việc ở nhiều công ty/dự án — knowledge được chia thành các **workspace độc lập** trong `{knowledge_root}/workspaces/`. Active workspace là **per-codebase**, khai báo trong `<cwd>/.contextd/config.json#workspace`. Trước mọi task:
 
-1. Đọc `<cwd>/.contextd/config.json` → `workspace` (+ `knowledge_root`, legacy alias `wiki_root`, resolve theo rule bên dưới).
+1. Đọc `<cwd>/.contextd/config.json` → `workspace` + `knowledge_root`, resolve theo rule bên dưới.
 2. Mọi knowledge retrieval scope CHỈ trong `{effective_knowledge_root}/workspaces/{workspace}/`.
 3. KHÔNG đọc, copy, hay tham chiếu file của workspace khác. Nếu cần — chỉ user có thể `/switch-workspace`.
 
 ### `knowledge_root` Resolution Rule
 
-`config.json#knowledge_root` (`wiki_root` in legacy adapters) có thể là 1 trong 3 dạng. Resolve theo thứ tự ưu tiên:
+`config.json#knowledge_root` có thể là 1 trong 3 dạng. Resolve theo thứ tự ưu tiên:
 
 | Dạng giá trị            | Cách resolve                                                                       |
 |-------------------------|------------------------------------------------------------------------------------|
-| Absolute path           | Dùng nguyên (vd `"D:/tool/wiki-template"` hoặc `"/home/u/wiki"`)                   |
+| Absolute path           | Dùng nguyên (vd `"D:/tool/contextd"` hoặc `"/home/u/contextd"`)                   |
 | Relative path (`"."`, `"./..."`, `"../..."`) | Resolve **relative tới project root = parent của config dir** (KHÔNG phải cwd) |
 | `null` hoặc empty       | Fallback `~/.contextd/config.json#knowledge_root`, rồi legacy globals |
 
 Ví dụ: nếu file `D:/myrepo/.contextd/config.json` có `"knowledge_root": "."` thì `project_root = D:/myrepo` (parent của `.contextd/`), và `effective_knowledge_root = D:/myrepo`. Agent chạy lệnh từ `D:/myrepo/src/utils/` vẫn resolve đúng vì gốc tham chiếu là project root, không phải cwd.
 
-Lưu ý implementation: `project_root = config_path.parent.parent` (vì config path luôn là `<root>/.contextd/config.json` hoặc legacy `<root>/.claude/wiki.json` / `<root>/.Codex/wiki.json`).
+Lưu ý implementation: `project_root = config_path.parent.parent` vì canonical config path là `<root>/.contextd/config.json`.
 
 Nếu cả project config lẫn global config đều thiếu root → STOP, yêu cầu user chạy `contextd migrate-config`, `bash {contextd-path}/scripts/install-to-claude.sh`, hoặc `/contextd-setup`.
+
+### Compatibility
+
+During migration, legacy `<root>/.claude/wiki.json`, `<root>/.Codex/wiki.json`, and legacy globals may be read after canonical configs fail. In those adapters only, `wiki_root` is accepted as an alias for canonical `knowledge_root`.
 
 ## Knowledge Priority Order
 

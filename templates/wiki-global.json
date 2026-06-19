@@ -1,6 +1,6 @@
 {
   "_comment": "Legacy global adapter template for ~/.claude/wiki-global.json. Prefer ~/.contextd/config.json with 'knowledge_root'. 'wiki_root' remains accepted as an alias during migration.",
-  "wiki_root": "~/.wiki-template",
+  "wiki_root": "~/contextd",
   "default_workspace": null,
   "obsidian": {
     "_comment": "Optional. Dùng cho /obsidian-ingest. Nếu không xài Obsidian, để null hoặc xóa block này.",

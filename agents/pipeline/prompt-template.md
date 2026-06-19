@@ -114,7 +114,7 @@ Constraints to check (engine baseline):
 
 # TRACE EMIT (post-implementation)
 
-After finalizing your output above, write a builder trace to `{project_dir}/.claude/runs/{run_id}/04-builder.json` (`run_id` được lấy từ field `Run ID:` trong context file). Schema: stage `04-builder` của [run-trace.schema.json](../../templates/run-trace.schema.json).
+After finalizing your output above, write a builder trace to `{project_dir}/.contextd/runs/{run_id}/04-builder.json` (`run_id` được lấy từ field `Run ID:` trong context file). Schema: stage `04-builder` của [run-trace.schema.json](../../templates/run-trace.schema.json).
 
 Required fields:
 - `used_docs`: subset của Referenced Docs bạn thực sự cite trong `## Knowledge Mapping` (path + section)

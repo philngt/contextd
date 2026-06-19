@@ -18,9 +18,9 @@ Chạy skill này sau khi thay đổi code để giữ wiki **của workspace ac
 
 ## Bước 0 — Resolve workspace (main agent)
 
-Theo [workspace-resolution.md Profile A](../../agents/pipeline/workspace-resolution.md#profile-a--active-workspace-required). Set: `wiki_json_dir`, `workspace`, `effective_wiki_root`, `{ws}`. Đồng thời:
+Theo [workspace-resolution.md Profile A](../../agents/pipeline/workspace-resolution.md#profile-a--active-workspace-required). Set: `config_dir`, `workspace`, `effective_knowledge_root`, `{ws}`. Đồng thời:
 
-- `project_dir = wiki_json_dir` (curator đọc tham chiếu, KHÔNG ghi).
+- `project_dir = config_dir` (curator đọc tham chiếu, KHÔNG ghi).
 - Sanity check: nếu thay đổi code rõ ràng thuộc workspace khác (branch name, path patterns trỏ tới project trong workspace khác) → STOP, cảnh báo user `/switch-workspace` trước. KHÔNG ghi vào sai workspace.
 
 ---
@@ -30,7 +30,7 @@ Theo [workspace-resolution.md Profile A](../../agents/pipeline/workspace-resolut
 Trước khi đi vào Bước 1 (collect change_summary từ git diff), kiểm tra evidence flow:
 
 1. Nếu được invoke với flag `--evidence <evid-id>` → load evidence đó (bắt buộc).
-2. Nếu KHÔNG có flag → đọc `{effective_wiki_root}/workspaces/{workspace}/evidence/_index.md` (nếu tồn tại). Tìm entry state=`qa_done` chưa applied.
+2. Nếu KHÔNG có flag → đọc `{effective_knowledge_root}/workspaces/{workspace}/evidence/_index.md` (nếu tồn tại). Tìm entry state=`qa_done` chưa applied.
    - Nếu có ≥1 → hỏi user 1 lần qua AskUserQuestion: "Có evidence `{id1}, {id2}, ...` ở state qa_done. Apply trước khi update từ git diff?" Options: ["Apply via /evidence-apply", "Skip evidence, dùng git diff", "Cancel"].
    - Nếu chỉ có 0 → bỏ qua bước này, đi tiếp Bước 1.
 
@@ -95,7 +95,7 @@ Curator mặc định ghi vào `{ws}/...`. Nếu thay đổi là **rule/constrai
 
 Quy tắc nhanh:
 - Constraint riêng cho domain/project trong workspace này → workspace-level
-- Constraint cho cách dùng wiki, format pattern, structure ADR → engine-level
+- Constraint cho cách dùng contextd/knowledge docs, format pattern, structure ADR → engine-level
 - Khi không chắc → workspace-level (an toàn hơn, không ảnh hưởng workspace khác)
 
 ---
@@ -105,11 +105,11 @@ Quy tắc nhanh:
 Gọi Agent tool với `subagent_type=contextd-curator`. Prompt phải chứa:
 
 - `change_summary`: nội dung Markdown từ Bước 1+2 (bao gồm `## Scope`)
-- `effective_wiki_root`
+- `effective_knowledge_root`
 - `workspace`
 - `project_dir` (để curator có thể Read tham khảo, KHÔNG được Write)
 
-**Output mong đợi**: bảng `## Wiki Updated` liệt kê file đã created/edited + section `## Knowledge Map Diffs` + `## Next Steps for User`.
+**Output mong đợi**: bảng `## Knowledge Updated` liệt kê file đã created/edited + section `## Knowledge Map Diffs` + `## Next Steps for User`.
 
 Nếu curator trả `OUT-OF-SCOPE EDIT BLOCKED` → STOP, báo user (đây là dấu hiệu change_summary có path sai).
 
@@ -118,16 +118,16 @@ Nếu curator trả `OUT-OF-SCOPE EDIT BLOCKED` → STOP, báo user (đây là d
 ## Bước 4 — Verify & báo user (main agent)
 
 1. **Path sandbox verification (BẮT BUỘC trước mọi thứ)**:
-   - Parse `## Wiki Updated` table từ output của curator.
+   - Parse `## Knowledge Updated` table từ output của curator.
    - Với mỗi path trong table:
      - Resolve về absolute (curator đã được yêu cầu output absolute, nhưng vẫn verify).
-     - Check path có prefix `{effective_wiki_root}` không.
-     - Check path thuộc `{effective_wiki_root}/workspaces/{workspace}/` HOẶC `{effective_wiki_root}/agents/` (chỉ khi `## Scope` của change_summary có `engine-level`).
+     - Check path có prefix `{effective_knowledge_root}` không.
+     - Check path thuộc `{effective_knowledge_root}/workspaces/{workspace}/` HOẶC `{effective_knowledge_root}/agents/` (chỉ khi `## Scope` của change_summary có `engine-level`).
    - Nếu phát hiện vi phạm:
      ```
      ⚠ SANDBOX VIOLATION
      Curator đã ghi vào path ngoài scope cho phép:
-       - {path} (expected under: {effective_wiki_root}/workspaces/{workspace}/ hoặc engine)
+       - {path} (expected under: {effective_knowledge_root}/workspaces/{workspace}/ hoặc engine)
      Đây có thể là bug curator hoặc prompt injection. KHÔNG commit. Báo user kiểm tra ngay.
      ```
      Dừng pipeline, KHÔNG tự rollback (đó là quyết định user).

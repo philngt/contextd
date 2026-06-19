@@ -28,21 +28,21 @@ sequenceDiagram
     participant H as emit_trace.py<br/>(PostToolUse hook)
     participant CS as contextd-context-selector
     participant R as contextd-reviewer
-    participant FS as .claude/runs/{run_id}/
+    participant FS as .contextd/runs/{run_id}/
 
     U->>M: /use-contextd "implement X"
-    M->>M: Resolve workspace từ<br/>.claude/wiki.json
+    M->>M: Resolve workspace từ<br/>.contextd/config.json
     M->>P: Task(subagent=contextd-planner)
     P-->>M: Intent JSON +<br/>```json trace block```
     H-->>FS: 01-planner.json
     M->>CS: Task(subagent=contextd-context-selector)
-    CS->>FS: ghi current-task.md
+    CS->>FS: ghi current-task.json
     CS-->>M: APPROVED / BLOCK + trace block (verdict)
     H-->>FS: 02-context.json
     alt verdict = BLOCK
         M-->>U: STOP, báo issues
     else verdict = APPROVED
-        M->>M: đọc current-task.md<br/>→ Edit/Write code
+        M->>M: đọc current-task.json<br/>→ Edit/Write code
         M->>FS: 04-builder.json (self-write)
         M->>R: Task(subagent=contextd-reviewer)
         R-->>M: APPROVED / VIOLATIONS + trace
@@ -66,7 +66,7 @@ flowchart TD
     Halluc1 --> S2
     S2 --> Q2{verdict?}
     Q2 -- BLOCK --> Stop1([STOP<br/>báo user issues])
-    Q2 -- APPROVED --> S4[Stage 3: Main agent Builder<br/>read current-task.md, code]
+    Q2 -- APPROVED --> S4[Stage 3: Main agent Builder<br/>read current-task.json, code]
     S4 --> S5[Stage 4: Reviewer<br/>diff code vs context]
     S5 --> Q3{verdict?}
     Q3 -- VIOLATIONS --> Out1([báo violations<br/>+ hallucinated_refs])
@@ -90,10 +90,10 @@ flowchart TD
 
 | Stage | Agent file | Input | Output (LLM) | Output (file) | Câu hỏi trả lời |
 |-------|-----------|-------|--------------|---------------|------------------|
-| 0 | Main agent | user task | resolved workspace | `.claude/wiki.json` đọc | Workspace nào active? |
+| 0 | Main agent | user task | resolved workspace | `.contextd/config.json` đọc | Workspace nào active? |
 | 1 | [contextd-planner](../../.claude/agents/contextd-planner.md) | user_task, workspace | Intent JSON | `01-planner.json` | Task cần pattern/contract nào? |
-| 2 | [contextd-context-selector](../../.claude/agents/contextd-context-selector.md) | intent JSON | APPROVED/BLOCK + retrieval data | `02-context.json` (gồm `verdict`) + `.claude/context/current-task.md` | Wiki có gì để dùng? + Plan đủ thông tin chưa? |
-| 3 | Main agent (Builder) | current-task.md | code + Markdown sections | `04-builder.json` (self-write) | Code thế nào dựa trên context? |
+| 2 | [contextd-context-selector](../../.claude/agents/contextd-context-selector.md) | intent JSON | APPROVED/BLOCK + retrieval data | `02-context.json` (gồm `verdict`) + `.contextd/context/current-task.json` | Wiki có gì để dùng? + Plan đủ thông tin chưa? |
+| 3 | Main agent (Builder) | current-task.json | code + Markdown sections | `04-builder.json` (self-write) | Code thế nào dựa trên context? |
 | 4 | [contextd-reviewer](../../.claude/agents/contextd-reviewer.md) | code + context_file | APPROVED/VIOLATIONS | `05-review.json` | Code có vi phạm contract? |
 | roll-up | hook | every stage | — | `run.json` | Tổng kết run |
 
@@ -110,10 +110,10 @@ flowchart TD
 
 ```
 {project_dir}/
-├── .claude/
-│   ├── wiki.json                       ← workspace active config
+├── .contextd/
+│   ├── config.json                     ← workspace active config
 │   ├── context/
-│   │   └── current-task.md             ← Stage 2 output, Stage 4 input
+│   │   └── current-task.json             ← Stage 2 output, Stage 4 input
 │   └── runs/
 │       └── {run_id}/                   ← per-run trace dir
 │           ├── run.json                ← roll-up (hook tự update)
@@ -121,7 +121,7 @@ flowchart TD
 │           ├── 02-context.json         ← gồm verdict APPROVED|BLOCK
 │           ├── 04-builder.json         ← main agent self-write
 │           └── 05-review.json
-{wiki_root}/                            ← repo này (wiki-template)
+{knowledge_root}/                            ← contextd knowledge root
 ├── agents/                             ← engine prompts (chung mọi workspace)
 ├── scripts/emit_trace.py               ← PostToolUse hook
 └── workspaces/{workspace}/             ← scope retrieval Stage 2
@@ -139,12 +139,12 @@ flowchart TD
 
 1. **Mở 2 terminal**:
    - Terminal A: chạy `/use-contextd "..."` (pipeline chính)
-   - Terminal B: `ls -la .claude/runs/$(ls -t .claude/runs/ | head -1)/` — refresh để thấy file JSON drop dần
+   - Terminal B: `ls -la .contextd/runs/$(ls -t .contextd/runs/ | head -1)/` — refresh để thấy file JSON drop dần
 
 2. **Sau khi run xong** — debug:
    - `/contextd-trace --last` → Markdown timeline 1 run
    - `/contextd-viz --last` → HTML viewer (Phase 2 — nếu đã setup) với side-by-side retrieved-vs-used, hallucination panel
-   - `cat .claude/runs/{run_id}/05-review.json | jq .hallucinated_refs` → xem hallucination thô
+   - `cat .contextd/runs/{run_id}/05-review.json | jq .hallucinated_refs` → xem hallucination thô
 
 3. **Aggregate nhiều runs**:
    - `/contextd-eval` → Markdown report: hallucination rate, top gaps, block rate
@@ -154,7 +154,7 @@ flowchart TD
 
 ## Khi nào pipeline KHÔNG chạy
 
-- Task không có wiki (`.claude/wiki.json` thiếu) → main agent yêu cầu `/contextd-setup`
+- Task không có wiki (`.contextd/config.json` thiếu) → main agent yêu cầu `/contextd-setup`
 - Task user explicitly bypass: "no pipeline", "quick fix", typo fix
 - Task `design`/`review` không sinh code → có thể skip Stage 5
 

@@ -19,7 +19,7 @@ Wizard tạo product brief mới trong `{ws}/product/briefs/{slug}.md`. Dành ch
 
 ## Bước 0 — Workspace & pack check
 
-1. Resolve workspace theo [system-prompt.md `wiki_root` Resolution Rule](../../agents/system-prompt.md). Set `{ws}`.
+1. Resolve workspace theo [system-prompt.md `knowledge_root` Resolution Rule](../../agents/system-prompt.md). Set `{ws}`.
 2. STOP nếu workspace chưa init → guide `/new-workspace` hoặc `/contextd-setup`.
 3. Đọc `{ws}/workspace.md` section `## Packs`. Nếu KHÔNG có `pack-product`:
    - Hỏi user (AskUserQuestion): "Workspace này chưa bật `pack-product`. Bật bây giờ?" — Yes / No / Cancel.

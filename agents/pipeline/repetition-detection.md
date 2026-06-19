@@ -2,7 +2,7 @@
 
 ## Mục tiêu
 
-User trong hệ wiki-template thường **lặp đi lặp lại** các yêu cầu (gõ cùng kiểu prompt, gọi cùng workflow ad-hoc) trước khi chính thức chuẩn hoá thành **skill / slash command / subagent / pack**. Mỗi lần lặp:
+User trong hệ contextd thường **lặp đi lặp lại** các yêu cầu (gõ cùng kiểu prompt, gọi cùng workflow ad-hoc) trước khi chính thức chuẩn hoá thành **skill / slash command / subagent / pack**. Mỗi lần lặp:
 
 - tốn context (assistant phải re-discover cùng knowledge);
 - dễ drift khỏi convention vì không có guard rails;
@@ -87,7 +87,7 @@ workspaces/{ws}/.observations/
 ```
 INPUT: prompt (str), cwd (Path)
 
-1. resolve workspace từ <cwd>/.claude/wiki.json (rule "wiki_root Resolution"
+1. resolve workspace từ <cwd>/.contextd/config.json (rule "knowledge_root Resolution"
    trong agents/system-prompt.md). Nếu thiếu → exit 0 silent.
 
 2. tokens = normalize(prompt)
@@ -112,7 +112,7 @@ INPUT: prompt (str), cwd (Path)
    - now - last_hinted_at >= REP_COOLDOWN_HOURS (6)
 
 6. Nếu should_hint:
-   - load_artifact_keywords(wiki_root, workspace):
+   - load_artifact_keywords(knowledge_root, workspace):
        scan front-matter (name + description) của:
          .claude/commands/*.md
          .claude/agents/*.md
@@ -160,7 +160,7 @@ ASCII-only intentionally — hint hiển thị trong nhiều terminal khác nhau
 
 | Hook | File | Trigger | Mục đích | Chia sẻ gì? |
 |------|------|---------|----------|-------------|
-| `emit_trace.py` | `scripts/emit_trace.py` | PostToolUse (matcher=Task) | Ghi trace pipeline wiki-* subagent | KHÔNG — file riêng `.claude/runs/` |
+| `emit_trace.py` | `scripts/emit_trace.py` | PostToolUse (matcher=Task) | Ghi trace pipeline wiki-* subagent | KHÔNG — file riêng `.contextd/runs/` |
 | `detect_repetition.py` | `scripts/detect_repetition.py` | UserPromptSubmit | Detect lặp + suggest automation | KHÔNG |
 
 Hai hook độc lập về state. Phase B sẽ add `log_invocation.py` (usage telemetry cho lifecycle) — cũng độc lập.
@@ -176,7 +176,7 @@ Hai hook độc lập về state. Phase B sẽ add `log_invocation.py` (usage te
 
 | Mode | Mitigation |
 |------|------------|
-| `wiki.json` thiếu | silent exit 0, không output |
+| `.contextd/config.json` thiếu | silent exit 0, không output |
 | `clusters.json` corrupt | warn stderr, treat as empty, đè bằng atomic write mới |
 | Lock contention (2 prompt cùng giây) | timeout 400 ms → skip update, observation vẫn ghi |
 | Hook chạy chậm | self-budget 800 ms; harness timeout 2 s |

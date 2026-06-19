@@ -26,7 +26,7 @@ Nếu user gọi `/evidence-ingest` không có arg → hỏi qua AskUserQuestion
 
 ## Bước 0 — Workspace check
 
-Theo [workspace-resolution.md Profile A](../../agents/pipeline/workspace-resolution.md#profile-a--active-workspace-required). Set: `wiki_json_dir`, `workspace`, `effective_wiki_root`, `{ws}`.
+Theo [workspace-resolution.md Profile A](../../agents/pipeline/workspace-resolution.md#profile-a--active-workspace-required). Set: `config_dir`, `workspace`, `effective_knowledge_root`, `{ws}`.
 
 ---
 
@@ -67,7 +67,7 @@ Tùy `--source`:
 - Nếu có → invoke tool với args, lưu response.
 
 ### `code`
-- `--ref` = repo root (default `<cwd>` của codebase, KHÔNG phải `wiki_json_dir`). Validate path tồn tại + có `.git/` hoặc `pom.xml` / `package.json` / `build.gradle` / `Cargo.toml` / `go.mod`.
+- `--ref` = repo root (default `<cwd>` của codebase, KHÔNG phải `config_dir`). Validate path tồn tại + có `.git/` hoặc `pom.xml` / `package.json` / `build.gradle` / `Cargo.toml` / `go.mod`.
 - Confirm với user repo path + scope trước khi snapshot (AskUserQuestion).
 - Resolve `git_sha` (full 40-char) + `git_branch` qua `git rev-parse HEAD` + `git rev-parse --abbrev-ref HEAD`. Nếu repo không phải git → set `git_sha = "unmanaged-{sha256-of-tree-manifest}"`.
 - Build snapshot `raw.md` theo template [`templates/code-snapshot.md`](../../templates/code-snapshot.md) với 10 section (xem [code-snapshot-conventions.md](../../agents/pipeline/code-snapshot-conventions.md) Section 4):
@@ -180,7 +180,7 @@ Next:
 
 | Error                          | Fix                                                            |
 |--------------------------------|----------------------------------------------------------------|
-| `.claude/wiki.json missing`     | `/switch-workspace {name}` hoặc `/contextd-setup`                  |
+| `.contextd/config.json missing`     | `/switch-workspace {name}` hoặc `/contextd-setup`                  |
 | Duplicate sha256               | Skip ingest, dùng evid-id cũ                                   |
 | MCP tool not active            | Enable MCP server hoặc fallback `--source paste`               |
 | Raw size > 1MB                 | Chunk trước khi ingest hoặc `--source paste` với extract phần liên quan |

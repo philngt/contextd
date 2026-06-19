@@ -25,7 +25,7 @@ Nếu user gọi `/obsidian-ingest` không có arg → dùng default `--folder R
 
 ## Bước 0 — Workspace check
 
-Theo [workspace-resolution.md Profile A](../../agents/pipeline/workspace-resolution.md#profile-a--active-workspace-required). Set: `wiki_json_dir`, `workspace`, `effective_wiki_root`, `{ws}`.
+Theo [workspace-resolution.md Profile A](../../agents/pipeline/workspace-resolution.md#profile-a--active-workspace-required). Set: `config_dir`, `workspace`, `effective_knowledge_root`, `{ws}`.
 
 ---
 
@@ -34,17 +34,17 @@ Theo [workspace-resolution.md Profile A](../../agents/pipeline/workspace-resolut
 Resolution order (first match wins):
 
 1. CLI arg `--vault {path}`.
-2. `<cwd>/.claude/wiki.json` field `obsidian.vault_path` (per-codebase override).
-3. `~/.claude/wiki-global.json` field `obsidian.vault_path` (machine-wide).
+2. `<cwd>/.contextd/config.json` field `obsidian.vault_path` (per-codebase override).
+3. `~/.contextd/config.json` field `obsidian.vault_path` (machine-wide).
 4. STOP nếu không có cấu hình:
    ```
    ❌ Obsidian vault chưa cấu hình.
-   Thêm vào ~/.claude/wiki-global.json:
+   Thêm vào ~/.contextd/config.json:
      "obsidian": {
        "vault_path": "/abs/path/to/vault",
        "raw_folder": "RAW"          // optional, default "RAW"
      }
-   Hoặc per-codebase trong <cwd>/.claude/wiki.json.
+   Hoặc per-codebase trong <cwd>/.contextd/config.json.
    Hoặc pass --vault {path} cho lần chạy này.
    ```
 
@@ -280,7 +280,7 @@ KHI KHÔNG NÊN:
 
 | Error                                       | Fix                                                            |
 |---------------------------------------------|----------------------------------------------------------------|
-| `Obsidian vault chưa cấu hình`              | Thêm `obsidian.vault_path` vào `wiki-global.json` hoặc pass `--vault` |
+| `Obsidian vault chưa cấu hình`              | Thêm `obsidian.vault_path` vào `~/.contextd/config.json` hoặc pass `--vault` |
 | Vault path không tồn tại                    | Check absolute path; expand `~` đúng OS                        |
 | `Workspace mismatch` từ frontmatter         | `/switch-workspace {name}` trước hoặc sửa `wiki-workspace`     |
 | Mọi candidate đều `skip-dup`                | Đã ingest hết — bình thường. Dùng `--since 7d` để chỉ scan note mới. |

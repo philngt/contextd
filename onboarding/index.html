@@ -298,7 +298,7 @@
         <div class="step-content">
           <h4>Kết nối wiki với codebase hiện tại</h4>
           <p>Lần đầu mở 1 codebase mới. Lệnh detect project name + tech stack rồi tạo
-            <code>.claude/wiki.json</code> kết nối với workspace.</p>
+            <code>.contextd/config.json</code> kết nối với workspace.</p>
           <pre><code>/contextd-setup</code></pre>
           <p>Nếu workspace chưa có, gõ <code>/new-workspace tên-dự-án</code> để tạo mới.</p>
         </div>
@@ -428,10 +428,10 @@
 
     <dl class="glossary">
       <dt>Workspace (kho kiến thức riêng cho từng công ty/dự án)</dt>
-      <dd>Mỗi công ty/dự án bạn làm = 1 thư mục riêng. Kiến thức KHÔNG được trộn giữa các workspace — vì công ty A và B có quy tắc khác nhau, nếu trộn AI sẽ áp sai. Workspace đang dùng nằm trong <code>.claude/wiki.json</code>.</dd>
+      <dd>Mỗi công ty/dự án bạn làm = 1 thư mục riêng. Kiến thức KHÔNG được trộn giữa các workspace — vì công ty A và B có quy tắc khác nhau, nếu trộn AI sẽ áp sai. Workspace đang dùng nằm trong <code>.contextd/config.json</code>.</dd>
 
       <dt>Pack (gói kiến thức theo công nghệ)</dt>
-      <dd>Wiki-template hoạt động với mọi công nghệ. Kiến thức đặc thù (Kafka, REST, React, AI app, product...) nằm trong các <code>packs</code>. Bật/tắt qua <code>/contextd-setup</code> bước chọn packs (giao diện tick), hoặc sửa file <code>workspace.md</code>. Hiện có 13 packs, xem section bên dưới.</dd>
+      <dd>contextd core hoạt động với mọi công nghệ. Kiến thức đặc thù (Kafka, REST, React, AI app, product...) nằm trong các <code>packs</code>. Bật/tắt qua <code>/contextd-setup</code> bước chọn packs (giao diện tick), hoặc sửa file <code>workspace.md</code>. Hiện có 13 packs, xem section bên dưới.</dd>
 
       <dt>Thoả thuận (Contract) vs Cách làm (Pattern)</dt>
       <dd>Thứ tự ưu tiên: <strong>Thoả thuận &gt; Cách làm &gt; Tài liệu dự án &gt; Kiến thức chuyên môn</strong>.
@@ -460,8 +460,8 @@
       <table class="cmd-table">
         <thead><tr><th>Lệnh</th><th>Mục đích</th><th>Khi nào</th></tr></thead>
         <tbody>
-          <tr><td class="cmd-name">/contextd-setup<span class="cmd-tag tech">tech</span></td><td>Tạo <code>.claude/wiki.json</code> cho codebase, detect project name + components</td><td>Lần đầu dùng wiki với 1 codebase</td></tr>
-          <tr><td class="cmd-name">/contextd-detect<span class="cmd-tag tech">tech</span></td><td>Validate <code>wiki.json</code>, scan dependency, propose update</td><td>Kiểm tra sau setup, hoặc khi gặp lỗi</td></tr>
+          <tr><td class="cmd-name">/contextd-setup<span class="cmd-tag tech">tech</span></td><td>Tạo <code>.contextd/config.json</code> cho codebase, detect project name + components</td><td>Lần đầu dùng wiki với 1 codebase</td></tr>
+          <tr><td class="cmd-name">/contextd-detect<span class="cmd-tag tech">tech</span></td><td>Validate <code>.contextd/config.json</code>, scan dependency, propose update</td><td>Kiểm tra sau setup, hoặc khi gặp lỗi</td></tr>
           <tr><td class="cmd-name">/switch-workspace tên<span class="cmd-tag tech">tech</span></td><td>Đổi workspace đang dùng cho codebase hiện tại</td><td>Cùng codebase phục vụ nhiều lĩnh vực</td></tr>
           <tr><td class="cmd-name">/new-workspace tên-dự-án<span class="cmd-tag maintainer">maint</span></td><td>Tạo workspace mới từ mẫu</td><td>Mới tham gia công ty/dự án</td></tr>
           <tr><td class="cmd-name">/list-workspaces<span class="cmd-tag nontech">nontech</span><span class="cmd-tag tech">tech</span></td><td>Hiện danh sách mọi workspace, đánh dấu workspace đang dùng</td><td>Xem workspace nào đã có</td></tr>
@@ -602,7 +602,7 @@ implement spec at workspaces/{ws}/tools/{slug}-spec.md
   <!-- ============ PACKS ============ -->
   <section class="block" id="packs">
     <h2><span class="step-num">5</span>Packs có sẵn</h2>
-    <p class="lead">Bật pack: chạy <code>/contextd-setup</code> Bước 4.5 (checkbox UI per-codebase, ghi vào <code>wiki.json#packs</code>) — hoặc edit <code>workspaces/{ws}/workspace.md</code> section <code>## Packs</code> (áp dụng workspace-wide cho mọi codebase).</p>
+    <p class="lead">Bật pack: chạy <code>/contextd-setup</code> Bước 4.5 (checkbox UI per-codebase, ghi vào <code>.contextd/config.json#packs</code>) — hoặc edit <code>workspaces/{ws}/workspace.md</code> section <code>## Packs</code> (áp dụng workspace-wide cho mọi codebase).</p>
 
     <table class="cmd-table">
       <thead><tr><th>Pack</th><th>Status</th><th>Use cho</th></tr></thead>
@@ -687,14 +687,14 @@ implement spec at workspaces/{ws}/tools/{slug}-spec.md
     <details>
       <summary>1 workspace có nhiều codebase, mỗi codebase cần pack khác nhau — làm sao?</summary>
       <div class="faq-body">
-        <p>Per-codebase override qua <code>.claude/wiki.json#packs</code> field:</p>
+        <p>Per-codebase override qua <code>.contextd/config.json#packs</code> field:</p>
         <ul>
           <li>Workspace default: <code>workspaces/acme-corp/workspace.md ## Packs</code> = <code>[pack-event-driven, pack-web-api]</code></li>
-          <li>Codebase frontend: <code>acme-frontend/.claude/wiki.json</code> ghi <code>"packs": ["pack-frontend-react", "pack-web-api"]</code> → effective = chỉ frontend + web-api</li>
+          <li>Codebase frontend: <code>acme-frontend/.contextd/config.json</code> ghi <code>"packs": ["pack-frontend-react", "pack-web-api"]</code> → effective = chỉ frontend + web-api</li>
           <li>Codebase backend (không override) → effective = workspace default</li>
         </ul>
         <p><strong>Replace semantics</strong>, không additive. <code>null</code>/không có field = follow workspace default. Array = override hoàn toàn.</p>
-        <p>Cách dễ nhất: chạy <code>/contextd-setup</code> trong codebase → Bước 4.5 hiện checkbox UI cho mọi pack có sẵn, tick/untick → tự ghi <code>wiki.json</code>.</p>
+        <p>Cách dễ nhất: chạy <code>/contextd-setup</code> trong codebase → Bước 4.5 hiện checkbox UI cho mọi pack có sẵn, tick/untick → tự ghi <code>.contextd/config.json</code>.</p>
       </div>
     </details>
 
@@ -714,8 +714,8 @@ implement spec at workspaces/{ws}/tools/{slug}-spec.md
     <details>
       <summary>Workspace của tôi nằm ở đâu trên máy?</summary>
       <div class="faq-body">
-        <p>Mặc định <code>{wiki-template-root}/workspaces/{name}/</code>. Có thể override qua <code>~/.claude/wiki-global.json</code> field <code>wiki_root</code>.
-          Để xem path active: <code>/list-workspaces</code> hoặc đọc <code>&lt;cwd&gt;/.claude/wiki.json</code>.</p>
+        <p>Mặc định <code>{contextd-root}/workspaces/{name}/</code>. Có thể override qua <code>~/.contextd/config.json</code> field <code>knowledge_root</code>.
+          Để xem path active: <code>/list-workspaces</code> hoặc đọc <code>&lt;cwd&gt;/.contextd/config.json</code>.</p>
       </div>
     </details>
 

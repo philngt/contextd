@@ -10,10 +10,10 @@ Reference cho việc xử lý nhiều actor ghi/sửa cùng file shared state tr
 
 | File | Cơ chế | Actor(s) | Notes |
 |---|---|---|---|
-| `{project_dir}/.claude/runs/{run_id}/run.json` | Advisory lock + atomic write | `emit_trace.py` hook (called by every Task completion) | Lock timeout 600ms (3×200ms). Trên timeout → log stderr `trace lost`, exit 0 (KHÔNG block pipeline). Stress: 100 concurrent writes from 4 procs = 0 lost. |
-| `{project_dir}/.claude/runs/{run_id}/{NN-stage}.json` | Atomic write (rename) | `emit_trace.py` hook | Filename per-stage là duy nhất → không cần lock. Atomic chống đọc dở. |
+| `{project_dir}/.contextd/runs/{run_id}/run.json` | Advisory lock + atomic write | `emit_trace.py` hook (called by every Task completion) | Lock timeout 600ms (3×200ms). Trên timeout → log stderr `trace lost`, exit 0 (KHÔNG block pipeline). Stress: 100 concurrent writes from 4 procs = 0 lost. |
+| `{project_dir}/.contextd/runs/{run_id}/{NN-stage}.json` | Atomic write (rename) | `emit_trace.py` hook | Filename per-stage là duy nhất → không cần lock. Atomic chống đọc dở. |
 | `{ws}/evidence/applied/{id}/checkpoint.json` | I-8 start check + I-8.1 mid-step `session_id` check | `/evidence-apply` (single command, possibly cross-session) | Xem [evidence-lifecycle.md](evidence-lifecycle.md) §I-8/I-8.1. |
-| `.claude/context/current-task.md` | Single-writer paradigm | `contextd-context-selector` (Stage 2 of `/use-contextd`) | Builder + reviewer chỉ đọc. Pipeline strict sequential → no race. |
+| `.contextd/context/current-task.json` | Single-writer paradigm | `contextd-context-selector` (Stage 2 of `/use-contextd`) | Builder + reviewer chỉ đọc. Pipeline strict sequential → no race. |
 
 ## 2. Tight windows — acceptable (documented, no fix needed)
 

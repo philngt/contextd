@@ -17,7 +17,7 @@ Examples:
 
 ## Bước 0 — Workspace check
 
-Theo [workspace-resolution.md Profile B](../../agents/pipeline/workspace-resolution.md#profile-b--wiki-root-only-active-workspace-optional). Set: `effective_wiki_root`, `workspace_active`.
+Theo [workspace-resolution.md Profile B](../../agents/pipeline/workspace-resolution.md#profile-b--knowledge-root-only-active-workspace-optional). Set: `effective_knowledge_root`, `workspace_active`.
 
 Nếu `workspace_active` null → vẫn chạy, scope mở rộng tới mọi workspace + engine + packs. Trong output đánh tag workspace name cho mỗi result.
 
@@ -102,10 +102,10 @@ Next steps:
 
 ## Hard rules
 
-- Read-only. KHÔNG ghi file. KHÔNG sửa `.claude/context/current-task.md`.
+- Read-only. KHÔNG ghi file. KHÔNG sửa `.contextd/context/current-task.json`.
 - Respect workspace lock: nếu `workspace_active` set, KHÔNG hiển thị result từ workspace khác (engine + packs of active workspace OK).
 - KHÔNG dispatch subagent — pipeline lite by design.
-- KHÔNG fetch ngoài `{effective_wiki_root}/`.
+- KHÔNG fetch ngoài `{effective_knowledge_root}/`.
 
 ## Khi nào nên dùng
 

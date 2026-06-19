@@ -40,7 +40,11 @@ workspaces/
     agents/                          ← OPTIONAL — workspace overrides
 ```
 
-`knowledge_root` is the canonical root field. Legacy `wiki_root` in `.claude/wiki.json`, `.Codex/wiki.json`, and legacy global configs is accepted only as a migration adapter.
+`knowledge_root` is the canonical root field.
+
+### Compatibility
+
+Legacy `wiki_root` in `.claude/wiki.json`, `.Codex/wiki.json`, and legacy global configs is accepted only as a migration adapter.
 
 ## Output Format
 

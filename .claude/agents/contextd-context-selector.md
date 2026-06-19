@@ -41,5 +41,8 @@ Command này tự resolve workspace, classify intent, retrieve/slice determinist
 
 - KHÔNG tự đọc workspace khác.
 - KHÔNG override `referenced_docs` bằng kết quả fuzzy search/RAG.
-- KHÔNG ghi `.claude/context/current-task.md`; legacy path đã deprecated.
 - KHÔNG tạo context source of truth mới ngoài JSON artifact.
+
+# Compatibility
+
+- KHÔNG ghi `.claude/context/current-task.md`; legacy path đã deprecated.

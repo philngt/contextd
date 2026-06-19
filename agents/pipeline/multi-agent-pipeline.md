@@ -53,11 +53,11 @@ Required semantic fields:
 
 | Legacy stage | New owner |
 |--------------|-----------|
-| Stage 0 resolve `wiki_root` | shared resolver with canonical `knowledge_root` |
+| Stage 0 resolve legacy root alias | shared resolver with canonical `knowledge_root` |
 | `contextd-planner` | intent classifier inside `contextd context` |
 | `contextd-context-selector` | deterministic retriever/slicer/artifact writer |
 | `contextd-reviewer` | optional adapter reading `current-task.json` |
-| `.claude/context/current-task.md` | `.contextd/context/current-task.json` plus markdown render |
+| legacy markdown-only context | `.contextd/context/current-task.json` plus markdown render |
 
 ## Runtime Adapter Rule
 

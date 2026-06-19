@@ -1,16 +1,16 @@
 # Liệt Kê Workspaces
 
-In bảng tất cả workspace trong `{wiki_root}/workspaces/` và đánh dấu workspace của codebase hiện tại.
+In bảng tất cả workspace trong `{knowledge_root}/workspaces/` và đánh dấu workspace của codebase hiện tại.
 
-## Bước 0 — Resolve `wiki_root` và active
+## Bước 0 — Resolve `knowledge_root` và active
 
-Theo [workspace-resolution.md Profile B](../../agents/pipeline/workspace-resolution.md#profile-b--wiki-root-only-active-workspace-optional). Set: `wiki_json_dir` (có thể null), `effective_wiki_root`, `workspace_active`.
+Theo [workspace-resolution.md Profile B](../../agents/pipeline/workspace-resolution.md#profile-b--knowledge-root-only-active-workspace-optional). Set: `config_dir` (có thể null), `effective_knowledge_root`, `workspace_active`.
 
-Nếu cwd không có `.claude/wiki.json` → fallback `~/.claude/wiki-global.json#default_workspace` làm `workspace_active`.
+Nếu cwd không có `.contextd/config.json` → fallback `~/.contextd/config.json#default_workspace` làm `workspace_active`.
 
 ## Bước 1 — Quét workspace folders
 
-- Glob: `{wiki_root}/workspaces/*/workspace.md`.
+- Glob: `{knowledge_root}/workspaces/*/workspace.md`.
 - Với mỗi file, parse Identity block để lấy: company, role, period.
 - Nếu workspace folder tồn tại nhưng thiếu `workspace.md` → liệt kê với cờ `⚠ missing workspace.md`.
 
@@ -18,7 +18,7 @@ Nếu cwd không có `.claude/wiki.json` → fallback `~/.claude/wiki-global.jso
 
 ```
 Codebase: {cwd}
-Active for this codebase: {active}    (source: .claude/wiki.json | global default | none)
+Active for this codebase: {active}    (source: .contextd/config.json | global default | none)
 
 | Name              | Company           | Role               | Period           |
 |-------------------|-------------------|--------------------|------------------|

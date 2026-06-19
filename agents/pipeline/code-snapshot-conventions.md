@@ -360,7 +360,7 @@ Xem chi tiết tại [code-analysis-prompts.md](code-analysis-prompts.md) — ph
 
 ## 12. Agentic-engine variant (`code_variant: agentic-engine`)
 
-Áp dụng khi codebase target là **agentic-coding engine / plugin** (markdown-heavy: slash commands, sub-agents, prompt templates), KHÔNG phải runtime code repo. Ví dụ: wiki-template, các Claude Code plugin repo, MCP server skeleton.
+Áp dụng khi codebase target là **agentic-coding engine / plugin** (markdown-heavy: slash commands, sub-agents, prompt templates), KHÔNG phải runtime code repo. Ví dụ: contextd, các Claude Code plugin repo, MCP server skeleton.
 
 ### 12.1 Khi nào dùng
 
@@ -401,7 +401,7 @@ Section 1, 2, 3, 9, 10 giữ nguyên cấu trúc Section 4 của file này (proj
 |---|---------|---------|
 | 1 | Engine metadata | Engine name, purpose excerpt từ `README.md` / `CLAUDE.md` (≤ 300 chars), top-level dirs (1 cấp) |
 | 2 | Dependencies | (a) MCP servers từ `mcp.json` / `.mcp.json` — name, command, role; (b) Claude Code version target nếu README/CLAUDE.md có ghi; (c) script-tool deps từ `package.json`/`requirements.txt`/`pyproject.toml` nếu có; (d) external integrations (Obsidian, Confluence, Linear) suy ra từ command list |
-| 3 | Configs | Same redaction + guard rules (`--allow-configs`); thường gồm `wiki.json` schemas, `settings.json` (hooks/permissions) |
+| 3 | Configs | Same redaction + guard rules (`--allow-configs`); thường gồm contextd config schemas, `settings.json` (hooks/permissions) |
 | 4 | Slash commands | Table of `.claude/commands/*.md`. Mỗi row: `name`, `purpose` (từ first heading + intro), `inputs (args)`, `outputs (file/state changes)`, `mode (interactive/auto)`, citation |
 | 5 | Sub-agents & system prompts | Table of `.claude/agents/*.md` + agent definitions trong `agents/**/*.md`. Mỗi row: `name`, `role`, `tools allowed` (nếu khai báo trong frontmatter), `when_to_use` (1 line), citation |
 | 6 | Pipeline stages / Modules | Nếu `agents/pipeline/` tồn tại — list mỗi pipeline stage doc với role + thứ tự; else: list functional modules (knowledge dirs như `workspaces/{ws}/platform/`, `workspaces/{ws}/projects/`) + role |
@@ -418,7 +418,7 @@ Section 1, 2, 3, 9, 10 giữ nguyên cấu trúc Section 4 của file này (proj
 
 Prefix `engine` thay `code` để phân biệt trong `_index.md`. `source.yaml#source_type` vẫn là `code`; thêm field `code_variant: agentic-engine` để dispatcher chọn đúng prompt set.
 
-Ví dụ: `2026-05-08-engine-wiki-template-bootstrap`.
+Ví dụ: `2026-05-08-engine-contextd-bootstrap`.
 
 ### 12.6 source.yaml fields
 

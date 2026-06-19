@@ -2,7 +2,7 @@
 
 Đồng bộ workspace knowledge với team repo (git pull/push/status).
 
-> **Yêu cầu:** `knowledge_root` trong `~/.contextd/config.json` phải trỏ về một **git repository** (thường là team knowledge repo). Legacy `wiki_root` trong `~/.claude/wiki-global.json` vẫn được hỗ trợ như adapter.
+> **Yêu cầu:** `knowledge_root` trong `~/.contextd/config.json` phải trỏ về một **git repository** (thường là team knowledge repo).
 
 ---
 
@@ -11,7 +11,6 @@
 Dùng resolver canonical của contextd:
 
 1. Đọc `~/.contextd/config.json` → lấy `knowledge_root`.
-2. Nếu thiếu, fallback legacy `~/.claude/wiki-global.json#wiki_root` hoặc `~/.Codex/wiki-global.json#wiki_root`.
 2. Expand `~` thành `$HOME`.
 3. Kiểm tra `knowledge_root` tồn tại và là git repo (`.git/`).
 
@@ -78,3 +77,7 @@ Gợi ý tiếp theo:
 - **knowledge_root là git repo nhưng chưa có remote:** STOP, hướng dẫn `git remote add origin <url>`.
 - **Merge conflict khi pull:** In lỗi chi tiết, hướng dẫn resolve manual (`cd knowledge_root && git status`). Không tự resolve.
 - **Push thất bại do network:** In lỗi, suggest thử lại.
+
+## Compatibility
+
+Nếu `~/.contextd/config.json` thiếu, resolver migration có thể fallback legacy `~/.claude/wiki-global.json#wiki_root` hoặc `~/.Codex/wiki-global.json#wiki_root`. Khi fallback xảy ra, command phải khuyến nghị `contextd migrate-config` hoặc `/contextd-setup`.

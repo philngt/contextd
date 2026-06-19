@@ -298,7 +298,7 @@
         <div class="step-content">
           <h4>Connect the wiki to your current codebase</h4>
           <p>First time in a new codebase: this command detects project name + tech stack and creates
-            <code>.claude/wiki.json</code> connected to your workspace.</p>
+            <code>.contextd/config.json</code> connected to your workspace.</p>
           <pre><code>/contextd-setup</code></pre>
           <p>If the workspace does not exist yet, run <code>/new-workspace project-name</code> to create one.</p>
         </div>
@@ -428,10 +428,10 @@
 
     <dl class="glossary">
       <dt>Workspace (isolated knowledge base per company/project)</dt>
-      <dd>Each company/project gets its own workspace folder. Knowledge is never mixed across workspaces, because each organization has different rules. The active workspace is defined in <code>.claude/wiki.json</code>.</dd>
+      <dd>Each company/project gets its own workspace folder. Knowledge is never mixed across workspaces, because each organization has different rules. The active workspace is defined in <code>.contextd/config.json</code>.</dd>
 
       <dt>Pack (technology-specific knowledge bundle)</dt>
-      <dd>Wiki-template is stack-agnostic. Specialized knowledge (Kafka, REST, React, AI app, product, etc.) lives in <code>packs</code>. Enable/disable packs in <code>/contextd-setup</code> pack selection, or edit <code>workspace.md</code>. There are currently 13 packs (see section below).</dd>
+      <dd>contextd core is stack-agnostic. Specialized knowledge (Kafka, REST, React, AI app, product, etc.) lives in <code>packs</code>. Enable/disable packs in <code>/contextd-setup</code> pack selection, or edit <code>workspace.md</code>. There are currently 13 packs (see section below).</dd>
 
       <dt>Contract vs Pattern</dt>
       <dd>Priority order: <strong>Contract &gt; Pattern &gt; Project docs &gt; Domain knowledge</strong>.
@@ -459,8 +459,8 @@
       <table class="cmd-table">
         <thead><tr><th>Command</th><th>Purpose</th><th>When to use</th></tr></thead>
         <tbody>
-          <tr><td class="cmd-name">/contextd-setup<span class="cmd-tag tech">tech</span></td><td>Create <code>.claude/wiki.json</code> for the codebase, detect project name + components</td><td>First time using wiki with a codebase</td></tr>
-          <tr><td class="cmd-name">/contextd-detect<span class="cmd-tag tech">tech</span></td><td>Validate <code>wiki.json</code>, scan dependency, propose update</td><td>After setup, or when troubleshooting</td></tr>
+          <tr><td class="cmd-name">/contextd-setup<span class="cmd-tag tech">tech</span></td><td>Create <code>.contextd/config.json</code> for the codebase, detect project name + components</td><td>First time using wiki with a codebase</td></tr>
+          <tr><td class="cmd-name">/contextd-detect<span class="cmd-tag tech">tech</span></td><td>Validate <code>.contextd/config.json</code>, scan dependency, propose update</td><td>After setup, or when troubleshooting</td></tr>
           <tr><td class="cmd-name">/switch-workspace name<span class="cmd-tag tech">tech</span></td><td>Switch the active workspace for the current codebase</td><td>One codebase serving multiple domains</td></tr>
           <tr><td class="cmd-name">/new-workspace project-name<span class="cmd-tag maintainer">maint</span></td><td>Create a new workspace from template</td><td>Joining a new company/project</td></tr>
           <tr><td class="cmd-name">/list-workspaces<span class="cmd-tag nontech">nontech</span><span class="cmd-tag tech">tech</span></td><td>List all workspaces and highlight active one</td><td>Check which workspaces exist</td></tr>
@@ -601,7 +601,7 @@ implement spec at workspaces/{ws}/tools/{slug}-spec.md
   <!-- ============ PACKS ============ -->
   <section class="block" id="packs">
     <h2><span class="step-num">5</span>Available packs</h2>
-    <p class="lead">Enable packs via <code>/contextd-setup</code> Step 4.5 (per-codebase checkbox UI, saved in <code>wiki.json#packs</code>) — or edit <code>workspaces/{ws}/workspace.md</code> under <code>## Packs</code> (workspace-wide default).</p>
+    <p class="lead">Enable packs via <code>/contextd-setup</code> Step 4.5 (per-codebase checkbox UI, saved in <code>.contextd/config.json#packs</code>) — or edit <code>workspaces/{ws}/workspace.md</code> under <code>## Packs</code> (workspace-wide default).</p>
 
     <table class="cmd-table">
       <thead><tr><th>Pack</th><th>Status</th><th>Use for</th></tr></thead>
@@ -686,14 +686,14 @@ implement spec at workspaces/{ws}/tools/{slug}-spec.md
     <details>
       <summary>One workspace, multiple codebases, different pack needs — how?</summary>
       <div class="faq-body">
-        <p>Use per-codebase override via <code>.claude/wiki.json#packs</code>:</p>
+        <p>Use per-codebase override via <code>.contextd/config.json#packs</code>:</p>
         <ul>
           <li>Workspace default: <code>workspaces/acme-corp/workspace.md ## Packs</code> = <code>[pack-event-driven, pack-web-api]</code></li>
-          <li>Frontend codebase: <code>acme-frontend/.claude/wiki.json</code> sets <code>"packs": ["pack-frontend-react", "pack-web-api"]</code> → effective packs are frontend + web-api only</li>
+          <li>Frontend codebase: <code>acme-frontend/.contextd/config.json</code> sets <code>"packs": ["pack-frontend-react", "pack-web-api"]</code> → effective packs are frontend + web-api only</li>
           <li>Backend codebase (no override) → effective packs = workspace default</li>
         </ul>
         <p><strong>Replace semantics</strong>, not additive. <code>null</code>/missing field follows workspace default. Array fully overrides.</p>
-        <p>Easiest way: run <code>/contextd-setup</code> in the codebase → Step 4.5 shows all pack checkboxes and writes <code>wiki.json</code> automatically.</p>
+        <p>Easiest way: run <code>/contextd-setup</code> in the codebase → Step 4.5 shows all pack checkboxes and writes <code>.contextd/config.json</code> automatically.</p>
       </div>
     </details>
 
@@ -713,8 +713,8 @@ implement spec at workspaces/{ws}/tools/{slug}-spec.md
     <details>
       <summary>Where is my workspace stored?</summary>
       <div class="faq-body">
-        <p>Default path is <code>{wiki-template-root}/workspaces/{name}/</code>. You can override it with <code>wiki_root</code> in <code>~/.claude/wiki-global.json</code>.
-          To see active path: use <code>/list-workspaces</code> or read <code>&lt;cwd&gt;/.claude/wiki.json</code>.</p>
+        <p>Default path is <code>{contextd-root}/workspaces/{name}/</code>. You can override it with <code>knowledge_root</code> in <code>~/.contextd/config.json</code>.
+          To see active path: use <code>/list-workspaces</code> or read <code>&lt;cwd&gt;/.contextd/config.json</code>.</p>
       </div>
     </details>
 

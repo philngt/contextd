@@ -64,9 +64,13 @@ Nếu cần re-ingest → STOP, yêu cầu user `/evidence-ingest` mới (evid-i
 **Note source_type=code**: `raw.md` là snapshot METADATA tại `git_sha` của HEAD lúc ingest. Codebase tiến hóa sau đó KHÔNG ảnh hưởng evidence cũ — `raw.md` đông cứng cùng `git_sha` để analysis cite reproducible. Muốn snapshot phiên bản mới → chạy `/code-analyze` lần nữa, ra evid-id mới.
 
 ### I-2. Workspace lock
-`source.yaml#workspace_at_ingest` MUST khớp active workspace resolved từ `<cwd>/.contextd/config.json` (fallback legacy `.claude/wiki.json`, `.Codex/wiki.json`, rồi global configs) tại mọi transition sau ingest.
+`source.yaml#workspace_at_ingest` MUST khớp active workspace resolved từ `<cwd>/.contextd/config.json` tại mọi transition sau ingest.
 Vi phạm = STOP với error:
 ```
+
+#### Compatibility
+
+During migration, the shared resolver may fall back to legacy `.claude/wiki.json`, `.Codex/wiki.json`, then legacy global configs after canonical config is absent.
 CROSS-WORKSPACE VIOLATION
 Evidence {evid-id} ingested in workspace `{X}`.
 Current active workspace: `{Y}`.

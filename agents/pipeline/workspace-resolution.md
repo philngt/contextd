@@ -2,7 +2,7 @@
 
 Single source of truth cho **Bước 0** của mọi slash command. Trước đây mỗi command lặp đoạn này 20-30 dòng — giờ command chỉ link tới profile phù hợp và liệt kê variable nó set.
 
-> **Root resolution rule** vẫn tương thích với legacy `wiki_root`, nhưng tên canonical mới là `knowledge_root`. Doc này orchestrate quanh rule đó.
+> **Root resolution rule** dùng canonical `knowledge_root`. Legacy aliases are documented in the Compatibility section.
 
 ---
 
@@ -12,10 +12,10 @@ Dùng bởi: `code-analyze`, `evidence-ingest`, `evidence-analyze`, `evidence-qa
 
 **Procedure:**
 
-1. Tìm `.contextd/config.json`: từ `<cwd>` đi lên parent cho tới khi gặp file. Nếu thiếu, fallback legacy `.claude/wiki.json`, rồi `.Codex/wiki.json`. Lưu `config_dir`.
-2. Đọc file → `workspace` + `knowledge_root` (`wiki_root` accepted as legacy alias) resolve theo [system-prompt.md `wiki_root` Resolution Rule](../system-prompt.md):
+1. Tìm `.contextd/config.json`: từ `<cwd>` đi lên parent cho tới khi gặp file. Nếu thiếu, fallback legacy adapters (xem Compatibility). Lưu `config_dir`.
+2. Đọc file → `workspace` + `knowledge_root`, resolve theo [system-prompt.md Resolution Rule](../system-prompt.md):
    - Absolute path → dùng nguyên.
-   - Relative (`"."`, `"./..."`) → resolve relative TỚI `project_root` (= parent của `.claude/`), KHÔNG phải `.claude/` literal, KHÔNG phải cwd.
+   - Relative (`"."`, `"./..."`) → resolve relative TỚI `project_root` (= parent của config dir), KHÔNG phải cwd.
    - `null`/empty → fallback `~/.contextd/config.json#knowledge_root`, rồi legacy globals.
 3. STOP nếu file thiếu HOẶC `.workspace` rỗng → guide user:
    ```
@@ -27,7 +27,7 @@ Dùng bởi: `code-analyze`, `evidence-ingest`, `evidence-analyze`, `evidence-qa
    - `workspace_active = .workspace`
    - `effective_knowledge_root = <resolved absolute path>`
    - `{ws} = {effective_knowledge_root}/workspaces/{workspace_active}/`
-5. Validate `{ws}/workspace.md` tồn tại. Nếu thiếu → STOP, yêu cầu user kiểm tra `wiki.json#workspace` hoặc chạy `/list-workspaces` để xem danh sách.
+5. Validate `{ws}/workspace.md` tồn tại. Nếu thiếu → STOP, yêu cầu user kiểm tra `config.json#workspace` hoặc chạy `/list-workspaces` để xem danh sách.
 
 **Variables set:** `config_dir`, `workspace_active`, `effective_knowledge_root`, `{ws}`.
 
@@ -35,7 +35,7 @@ Dùng bởi: `code-analyze`, `evidence-ingest`, `evidence-analyze`, `evidence-qa
 
 ---
 
-## Profile B — Wiki root only (active workspace optional)
+## Profile B — Knowledge root only (active workspace optional)
 
 Dùng bởi: `new-workspace`, `switch-workspace`, `list-workspaces`, `contextd-setup`. Đây là setup/management commands — có thể chưa có active workspace.
 
@@ -44,12 +44,12 @@ Dùng bởi: `new-workspace`, `switch-workspace`, `list-workspaces`, `contextd-s
 1. Tìm `.contextd/config.json` (nếu có), rồi legacy adapters. Lưu `config_dir`.
 2. Resolve `knowledge_root` theo [system-prompt.md Resolution Rule](../system-prompt.md):
    - Absolute path → dùng nguyên.
-   - Relative → resolve relative TỚI `project_root` (parent của `.claude/`).
+   - Relative → resolve relative TỚI `project_root` (parent của config dir).
    - `null`/empty → fallback global configs.
 3. Nếu cả project config lẫn global config đều thiếu root → STOP:
    ```
     ✗ Không xác định được knowledge_root.
-     Cách nhanh: bash {wiki-template}/scripts/install-to-claude.sh
+     Cách nhanh: bash {contextd-root}/scripts/install-to-claude.sh
      Cách thủ công: /contextd-setup
    ```
 4. (Optional) Đọc `.workspace` để biết active hiện tại — KHÔNG STOP nếu thiếu (command này có thể đang dùng để SET active lần đầu).
@@ -60,12 +60,12 @@ Dùng bởi: `new-workspace`, `switch-workspace`, `list-workspaces`, `contextd-s
 
 ## Profile C — Project dir only (no workspace lock)
 
-Dùng bởi: `contextd-trace`, `contextd-viz`. Mục tiêu chỉ là tìm `.claude/runs/` để đọc trace.
+Dùng bởi: `contextd-trace`, `contextd-viz`. Mục tiêu chỉ là tìm `.contextd/runs/` để đọc trace.
 
 **Procedure:**
 
 1. Tìm `.contextd/config.json` từ `<cwd>` đi lên parent, fallback legacy adapters. Lưu `project_dir = parent của config dir`.
-2. Set `runs_dir = {project_dir}/.contextd/runs/` (legacy viewers may also inspect `.claude/runs/`).
+2. Set `runs_dir = {project_dir}/.contextd/runs/`.
 3. (Optional) Đọc `.workspace` để filter trace theo workspace — KHÔNG STOP nếu thiếu (viewer best-effort).
 
 **Variables set:** `project_dir`, `runs_dir`, `workspace_active` (có thể null).
@@ -74,7 +74,7 @@ Dùng bởi: `contextd-trace`, `contextd-viz`. Mục tiêu chỉ là tìm `.clau
 
 ## Implementation note
 
-`project_root = config_path.parent.parent` (vì config path luôn là `<root>/.contextd/config.json` hoặc legacy `<root>/.claude/wiki.json` / `<root>/.Codex/wiki.json`).
+`project_root = config_path.parent.parent` (vì canonical config path là `<root>/.contextd/config.json`; legacy adapter paths cũng nằm dưới `<root>/.claude/` hoặc `<root>/.Codex/`).
 
 Ví dụ: file `D:/myrepo/.contextd/config.json` có `"knowledge_root": "."` → `project_root = D:/myrepo`, `effective_knowledge_root = D:/myrepo`. Agent chạy lệnh từ `D:/myrepo/src/utils/` vẫn resolve đúng vì gốc là project root, không phải cwd.
 
@@ -92,7 +92,7 @@ effective_packs = local_packs   IF local_packs is array (kể cả empty array [
                   workspace_packs OTHERWISE
 ```
 
-**Replace semantics, KHÔNG additive**: nếu `wiki.json#packs` là array → dùng đúng list đó, ignore `workspace.md` cho codebase này. Nếu null/undefined → fallback workspace.md.
+**Replace semantics, KHÔNG additive**: nếu `config.json#packs` là array → dùng đúng list đó, ignore `workspace.md` cho codebase này. Nếu null/undefined → fallback workspace.md.
 
 **Empty array `[]` ≠ null**:
 - `null` (hoặc field không tồn tại) = "follow workspace default"
@@ -100,9 +100,9 @@ effective_packs = local_packs   IF local_packs is array (kể cả empty array [
 
 **Use case**:
 - 1 workspace `acme-corp` có `workspace.md ## Packs: [pack-event-driven, pack-web-api]`
-- Codebase `acme-frontend` (Next.js) ghi `wiki.json#packs: [pack-frontend-react, pack-web-api]` → effective = frontend + web-api
+- Codebase `acme-frontend` (Next.js) ghi `config.json#packs: [pack-frontend-react, pack-web-api]` → effective = frontend + web-api
 - Codebase `acme-backend` (không override) → effective = workspace default
-- Codebase `acme-mobile` ghi `wiki.json#packs: [pack-product]` (PM dùng để track briefs) → effective = product only
+- Codebase `acme-mobile` ghi `config.json#packs: [pack-product]` (PM dùng để track briefs) → effective = product only
 
 **Quản lý qua `/contextd-setup` Bước 4.5**: UI checkbox để user pick packs cho codebase. Nếu chọn khớp workspace default → không ghi `packs` field (giữ null). Nếu khác → ghi vào `.contextd/config.json` (legacy adapters may mirror).
 
@@ -120,3 +120,7 @@ def get_effective_packs(config: dict, workspace_md_path: Path) -> list[str]:
 ```
 
 Commands cần dùng effective_packs (không đọc workspace.md trực tiếp): `/evidence-analyze`, `/evidence-qa`, `/use-contextd` planner, mọi pipeline retrieval-map resolution.
+
+## Compatibility
+
+During the migration window, the resolver may read legacy `.claude/wiki.json`, `.Codex/wiki.json`, `~/.claude/wiki-global.json`, and `~/.Codex/wiki-global.json`. In those files only, `wiki_root` is treated as an alias for canonical `knowledge_root`. Canonical `.contextd/config.json` always wins when multiple configs exist.

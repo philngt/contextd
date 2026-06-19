@@ -31,11 +31,14 @@ bash scripts/install-to-claude.sh
 This script:
 - Syncs slash commands + subagents to `~/.claude/{commands,agents}/`.
 - Creates canonical `~/.contextd/config.json` with `knowledge_root` pointing to this repo.
-- Also writes legacy `~/.claude/wiki-global.json` with `wiki_root` for Claude Code adapters during migration.
 - The CLI reads canonical `.contextd/config.json` first, then legacy adapters.
 - Is idempotent — run again after `git pull` to update.
 
 > Verify: `contextd resolve` and confirm `knowledge_root` is correct.
+
+### Migration
+
+During the migration window the installer may also write legacy `~/.claude/wiki-global.json` with `wiki_root` for Claude Code adapters. Treat it as compatibility data; canonical project and global config live under `.contextd/config.json`.
 
 ---
 
@@ -57,7 +60,7 @@ Switch this codebase to the workspace you want:
 /switch-workspace {name}
 ```
 
-> During migration this may create `<your-project>/.claude/wiki.json`. Run `contextd migrate-config` to create canonical `<your-project>/.contextd/config.json`.
+> Migration note: if an older slash-command adapter creates legacy config, run `contextd migrate-config` to create canonical `<your-project>/.contextd/config.json`.
 
 ---
 

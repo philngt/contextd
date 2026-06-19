@@ -39,7 +39,7 @@ Theo Section 7 của [code-snapshot-conventions.md](code-snapshot-conventions.md
 
 - Section 1: Engine metadata
 - Section 2: Dependencies (MCP servers, Claude Code version target, script-tool deps)
-- Section 3: Configs (settings.json, wiki.json schemas)
+- Section 3: Configs (settings.json, contextd config schemas)
 - Section 4: Slash commands
 - Section 5: Sub-agents & system prompts
 - Section 6: Pipeline stages / Modules
@@ -137,7 +137,7 @@ CORE-AGENTIC dispatch tới wiki target giống CORE-CODE (`{ws}/platform/patter
 - **purpose**: ...
 - **inputs**: ...
 - **outputs**:
-  - creates `.claude/wiki.json` `(.claude/commands/contextd-setup.md:L..)`
+  - creates `.contextd/config.json` `(.claude/commands/contextd-setup.md:L..)`
   - creates `workspaces/{ws}/workspace.md`
 - **calls**:
   - template `templates/workspace.md` `(.claude/commands/contextd-setup.md:L..)`
@@ -174,7 +174,7 @@ CORE-AGENTIC dispatch tới wiki target giống CORE-CODE (`{ws}/platform/patter
 > Phát hiện **repeated prompt structure** lặp lại trong commands/agents — đây là agent prompt patterns nên canonicalize.
 >
 > Patterns điển hình cần check:
-> - **Workspace check (Step 0)**: pattern resolve `.claude/wiki.json` → `{ws}` lặp ở đầu mỗi command
+> - **Workspace check (Step 0)**: pattern resolve `.contextd/config.json` → `{ws}` lặp ở đầu mỗi command
 > - **AskUserQuestion confirm preview**: pattern in preview block + ask continue/edit/cancel
 > - **Validator rules pattern**: cite `validator-rules.md` + reject conditions
 > - **State machine transitions**: `ingested → analyzed → qa_done → applied`
@@ -203,15 +203,15 @@ CORE-AGENTIC dispatch tới wiki target giống CORE-CODE (`{ws}/platform/patter
 - `/contextd-setup` Step 0 `(.claude/commands/contextd-setup.md:L..)`
 
 ### Canonical structure
-1. Tìm `.claude/wiki.json` từ cwd đi lên parent
-2. Đọc → resolve `wiki_root` (absolute / relative / fallback global)
+1. Tìm `.contextd/config.json` từ cwd đi lên parent
+2. Đọc → resolve `knowledge_root` (absolute / relative / global `.contextd`)
 3. STOP nếu thiếu hoặc `.workspace` rỗng
-4. Set `{ws} = {wiki_root}/workspaces/{workspace}/`
+4. Set `{ws} = {knowledge_root}/workspaces/{workspace}/`
 5. Validate `{ws}/workspace.md` tồn tại
 
 ### Invariants
 - KHÔNG đọc workspace khác `.workspace` đang active
-- `wiki_root: "."` resolve relative TỚI parent của `.claude/`, KHÔNG phải cwd
+- `knowledge_root: "."` resolve relative TỚI project root chứa `.contextd/config.json`, KHÔNG phải cwd
 
 ### Diff vs existing
 - ...

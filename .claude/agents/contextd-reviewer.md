@@ -55,7 +55,10 @@ hoặc:
 
 # Hard Rules
 
-- KHÔNG dùng `.claude/context/current-task.md` làm source of truth.
 - KHÔNG sửa code hoặc knowledge files.
 - KHÔNG đọc workspace khác.
 - KHÔNG để advisory search override deterministic artifact refs.
+
+# Compatibility
+
+- KHÔNG dùng `.claude/context/current-task.md` làm source of truth.

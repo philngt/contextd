@@ -5,7 +5,7 @@ Mục tiêu: tìm và vá mọi chỗ wiki nói một kiểu, code chạy một 
 
 ## Bước 0 — Xác định active workspace
 
-Theo [workspace-resolution.md Profile A](../../agents/pipeline/workspace-resolution.md#profile-a--active-workspace-required). Set: `wiki_json_dir`, `workspace`, `effective_wiki_root`, `{ws}`. Toàn bộ rebase chỉ scope trong `{ws}/`.
+Theo [workspace-resolution.md Profile A](../../agents/pipeline/workspace-resolution.md#profile-a--active-workspace-required). Set: `config_dir`, `workspace`, `effective_knowledge_root`, `{ws}`. Toàn bộ rebase chỉ scope trong `{ws}/`.
 
 Sau đó: Confirm với user "Sẽ rebase wiki của workspace `{workspace}` (codebase: `<cwd>`). Đúng chưa?" (AskUserQuestion Yes/No nếu chưa chắc).
 

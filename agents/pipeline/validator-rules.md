@@ -26,10 +26,14 @@ Run these as code or regex against the generated output. Fast, deterministic, ze
 python scripts/validate.py --file <path-to-code-file> [--workspace <name>] [--wiki-root <path>] [--pretty]
 ```
 
-* Workspace + `knowledge_root` are auto-resolved from `<cwd-walk-up>/.contextd/config.json` per [system-prompt.md Resolution Rule](../system-prompt.md). Legacy `.claude/wiki.json` / `.Codex/wiki.json` and `wiki_root` remain accepted as adapters.
+* Workspace + `knowledge_root` are auto-resolved from `<cwd-walk-up>/.contextd/config.json` per [system-prompt.md Resolution Rule](../system-prompt.md).
 * Validator reads `## Packs` section from `workspaces/{ws}/workspace.md` and dynamically loads each pack's rule module.
 * Output: JSON `{violations: [...], summary: {errors, warnings}, context: {..., active_packs: [...]}}` on stdout.
 * Exit code: `0` if no errors (warnings allowed), `1` if any errors, `2` for bad invocation.
+
+#### Compatibility
+
+Legacy `.claude/wiki.json` / `.Codex/wiki.json` and `wiki_root` remain accepted as adapters during migration.
 
 ### Engine rule list
 
@@ -63,7 +67,7 @@ For all three: add a fixture line in `scripts/test-fixtures/` that triggers the 
 ### Heuristic limitations (Layer 1, by design)
 
 * No real parser — comment / string-aware brace tracking is naive.
-* `domain-unknown-state` depends on a parseable workflow.md and a single domain (or `wiki.json#domain` set explicitly).
+* `domain-unknown-state` depends on a parseable workflow.md and a single domain (or `config.json#domain` set explicitly).
 * Workspace `ws-` rule loader is a stub: the script reports the presence of `{ws}/agents/pipeline/validator-rules.md` in `context.workspace_rules_file` but does not yet execute additive rules. (TODO marked in `scripts/validate.py`.)
 * Layer 1 catches the common drift; Layer 2 (below) covers the rest.
 

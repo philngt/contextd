@@ -2,7 +2,7 @@
 <!--
   contextd Install Guide (formerly Workspace Wiki) — single-file HTML, self-contained.
   No external CSS/JS/fonts/CDN. Open directly in a browser.
-  Goal: set up wiki-template into ~/.claude/ and your first codebase in ~5 minutes.
+  Goal: set up contextd into ~/.claude/ and your first codebase in ~5 minutes.
 -->
 <html lang="en">
 <head>
@@ -127,7 +127,7 @@
   <div class="toc" style="margin-top:6px">
     <a href="#troubleshoot-windows" style="font-size:12px;padding:4px 10px">🪟 Windows / Bash</a>
     <a href="#troubleshoot-commands" style="font-size:12px;padding:4px 10px">🔍 No commands</a>
-    <a href="#troubleshoot-wiki-root" style="font-size:12px;padding:4px 10px">📂 wiki_root error</a>
+    <a href="#troubleshoot-knowledge-root" style="font-size:12px;padding:4px 10px">📂 knowledge_root error</a>
     <a href="#troubleshoot-workspace" style="font-size:12px;padding:4px 10px">🏢 Workspace not found</a>
     <a href="#troubleshoot-permission" style="font-size:12px;padding:4px 10px">🔒 Permission error</a>
   </div>
@@ -185,7 +185,7 @@
       <div class="step-num-bubble">1</div>
       <div class="step-content">
         <h4>Extract the zip</h4>
-        <p>Extract to any folder — for example <code>~/wiki</code> on Linux/macOS or <code>D:\tool\wiki-template</code> on Windows.</p>
+        <p>Extract to any folder — for example <code>~/wiki</code> on Linux/macOS or <code>D:\tool\contextd</code> on Windows.</p>
 
         <div class="os-tabs">
           <button class="os-tab active" onclick="showOS(this, 'extract-linux')">Linux / macOS</button>
@@ -194,15 +194,15 @@
 
         <div class="os-panel active" data-os="extract-linux">
           <pre><code>mkdir -p ~/wiki && unzip contextd-latest.zip -d ~/wiki
-# The zip contains root folder 'wiki-template' → unzip creates ~/wiki/wiki-template/
-cd ~/wiki/wiki-template</code></pre>
+# The zip contains root folder 'contextd' → unzip creates ~/wiki/contextd/
+cd ~/wiki/contextd</code></pre>
         </div>
 
         <div class="os-panel" data-os="extract-windows">
           <pre><code># PowerShell
 Expand-Archive -Path contextd-latest.zip -DestinationPath D:\tool
-# Creates D:\tool\wiki-template\
-cd D:\tool\wiki-template
+# Creates D:\tool\contextd\
+cd D:\tool\contextd
 
 # Or Git Bash
 unzip contextd-latest.zip -d /d/tool</code></pre>
@@ -217,7 +217,7 @@ unzip contextd-latest.zip -d /d/tool</code></pre>
         <h4>Run the installer</h4>
         <p>Same as Step 2 in the Git clone path — the file <code>scripts/install-to-claude.sh</code> is already in the zip:</p>
         <pre><code>bash scripts/install-to-claude.sh</code></pre>
-        <p>Verify the same way as Git install: <code>cat ~/.claude/wiki-global.json</code> should show <code>"wiki_root"</code> with your extracted path.</p>
+        <p>Verify the same way as Git install: <code>cat ~/.contextd/config.json</code> should show <code>"knowledge_root"</code> with your extracted path.</p>
       </div>
     </div>
 
@@ -234,7 +234,7 @@ unzip contextd-latest.zip -d /d/tool</code></pre>
     </div>
 
     <div class="callout tip">
-      <strong>💡 For maintainers:</strong> create a new zip with <code>bash scripts/package-release.sh</code>. Output is written to <code>release/wiki-template-{version}.zip</code> + <code>release/contextd-latest.zip</code>. It automatically excludes <code>.git/</code>, raw evidence, workspaces other than <code>wiki/</code>, and runs/cache/log files. See <code>scripts/package-release.sh --help</code>.
+      <strong>💡 For maintainers:</strong> create a new zip with <code>bash scripts/package-release.sh</code>. Output is written to <code>release/contextd-{version}.zip</code> + <code>release/contextd-latest.zip</code>. It automatically excludes <code>.git/</code>, raw evidence, workspaces other than <code>wiki/</code>, and runs/cache/log files. See <code>scripts/package-release.sh --help</code>.
     </div>
   </section>
 
@@ -247,7 +247,7 @@ unzip contextd-latest.zip -d /d/tool</code></pre>
       <div class="step-num-bubble">1</div>
       <div class="step-content">
         <h2 style="margin-top:4px">Download the repository</h2>
-        <p>Choose any base folder — for example <code>~/wiki</code> on Linux/macOS or <code>D:\tool\wiki-template</code> on Windows.</p>
+        <p>Choose any base folder — for example <code>~/wiki</code> on Linux/macOS or <code>D:\tool\contextd</code> on Windows.</p>
 
         <div class="os-tabs">
           <button class="os-tab active" onclick="showOS(this, 'linux')">Linux / macOS</button>
@@ -284,7 +284,7 @@ cd /d/tool/contextd</code></pre>
         <p>This command automatically does 3 things:</p>
         <ul>
           <li>Syncs <strong>slash commands</strong> + <strong>subagents</strong> to <code>~/.claude/commands/</code> and <code>~/.claude/agents/</code> — Claude Code reads these folders automatically</li>
-          <li>Creates <code>~/.claude/wiki-global.json</code> and points <code>wiki_root</code> to your cloned repo</li>
+          <li>Creates <code>~/.contextd/config.json</code> and points <code>knowledge_root</code> to your cloned repo</li>
           <li><strong>Safe to run again</strong>: rerun after each <code>git pull</code> to refresh commands</li>
         </ul>
 
@@ -297,20 +297,20 @@ cd /d/tool/contextd</code></pre>
         </div>
 
         <div class="os-panel active" data-os="verify-linux">
-          <pre><code>cat ~/.claude/wiki-global.json</code></pre>
+          <pre><code>cat ~/.contextd/config.json</code></pre>
         </div>
 
         <div class="os-panel" data-os="verify-windows">
           <pre><code># PowerShell
-type $env:USERPROFILE\.claude\wiki-global.json
+type $env:USERPROFILE\.claude\config.json
 
 # Or Git Bash
-cat ~/.claude/wiki-global.json</code></pre>
+cat ~/.contextd/config.json</code></pre>
         </div>
 
-        <p>You should see field <code>"wiki_root"</code> with an absolute path to your cloned repo. Example:</p>
+        <p>You should see field <code>"knowledge_root"</code> with an absolute path to your cloned repo. Example:</p>
         <pre><code>{
-  "wiki_root": "/home/user/wiki",
+  "knowledge_root": "/home/user/wiki",
   "default_workspace": null,
   "obsidian": { ... }
 }</code></pre>
@@ -334,7 +334,7 @@ cat ~/.claude/wiki-global.json</code></pre>
           <li>Automatically detects project name + tech stack from <code>package.json</code> / <code>pom.xml</code> / <code>Cargo.toml</code> / ...</li>
           <li>Prompts you to choose an existing workspace — or create a new workspace via <code>/new-workspace {name}</code></li>
           <li><strong>Step 4.5 (Manage packs)</strong>: shows checkboxes for all available packs; auto-detects and pre-selects based on stack</li>
-          <li>Creates <code>&lt;codebase&gt;/.claude/wiki.json</code> with complete config + per-codebase pack overrides</li>
+          <li>Creates <code>&lt;codebase&gt;/.contextd/config.json</code> with complete config + per-codebase pack overrides</li>
         </ul>
 
         <div class="callout tip">
@@ -354,10 +354,10 @@ cat ~/.claude/wiki-global.json</code></pre>
     <div class="callout warn">
       <p>If you do not have Git Bash or WSL, use these 4 manual steps:</p>
       <ol style="margin-top:8px">
-        <li>Copy <code>templates\wiki-global.json</code> → <code>%USERPROFILE%\.claude\wiki-global.json</code></li>
-        <li>Open the copied file in Notepad, change <code>"wiki_root"</code> to the absolute repo path, and use <code>\\</code> instead of <code>\</code>:
+        <li>Copy <code>templates\contextd-config.json</code> → <code>%USERPROFILE%\.contextd\config.json</code></li>
+        <li>Open the copied file in Notepad, change <code>"knowledge_root"</code> to the absolute repo path, and use <code>\\</code> instead of <code>\</code>:
           <pre style="margin:8px 0">{
-  "wiki_root": "D:\\tool\\wiki-template",
+  "knowledge_root": "D:\\tool\\contextd",
   ...
 }</pre>
         </li>
@@ -365,7 +365,7 @@ cat ~/.claude/wiki-global.json</code></pre>
           <pre style="margin:8px 0">xcopy /E /I /Y .claude\commands %USERPROFILE%\.claude\commands
 xcopy /E /I /Y .claude\agents %USERPROFILE%\.claude\agents</pre>
         </li>
-        <li>Verify: <code>type %USERPROFILE%\.claude\wiki-global.json</code></li>
+        <li>Verify: <code>type %USERPROFILE%\.claude\config.json</code></li>
       </ol>
       <p style="margin-top:8px"><strong>Recommended</strong>: install <a href="https://git-scm.com/download/win">Git for Windows</a> (free) to get Git Bash → installer runs with one simple command.</p>
     </div>
@@ -378,11 +378,11 @@ xcopy /E /I /Y .claude\agents %USERPROFILE%\.claude\agents</pre>
       <li>Check Claude Code logs for errors (CLI: stderr; IDE: Output panel)</li>
     </ul>
 
-    <h3 id="troubleshoot-wiki-root" style="margin-top:24px;font-size:17px">Error <code>wiki_root not found</code> when running slash commands</h3>
+    <h3 id="troubleshoot-knowledge-root" style="margin-top:24px;font-size:17px">Error <code>knowledge_root not found</code> when running slash commands</h3>
     <ul>
-      <li>Open <code>~/.claude/wiki-global.json</code> and confirm <code>"wiki_root"</code> is an absolute path (do NOT use <code>~</code> or relative paths)</li>
-      <li>Path must point to the wiki-template repo root (the folder containing <code>CLAUDE.md</code>, <code>packs/</code>, <code>workspaces/</code>)</li>
-      <li>Verify the path exists: <code>ls "$(jq -r .wiki_root ~/.claude/wiki-global.json)"</code></li>
+      <li>Open <code>~/.contextd/config.json</code> and confirm <code>"knowledge_root"</code> is an absolute path (do NOT use <code>~</code> or relative paths)</li>
+      <li>Path must point to the contextd repo root (the folder containing <code>CLAUDE.md</code>, <code>packs/</code>, <code>workspaces/</code>)</li>
+      <li>Verify the path exists: <code>ls "$(jq -r .knowledge_root ~/.contextd/config.json)"</code></li>
     </ul>
 
     <h3 id="troubleshoot-workspace" style="margin-top:24px;font-size:17px"><code>/contextd-setup</code> shows "workspace not found"</h3>
@@ -401,7 +401,7 @@ xcopy /E /I /Y .claude\agents %USERPROFILE%\.claude\agents</pre>
   <!-- ============ UPDATE ============ -->
   <section class="block" id="update">
     <h2>🔄 Future updates</h2>
-    <p>After each <code>git pull</code> in the wiki-template repo, re-run the installer to sync updated slash commands:</p>
+    <p>After each <code>git pull</code> in the contextd repo, re-run the installer to sync updated slash commands:</p>
     <pre><code>cd ~/wiki
 git pull
 bash scripts/install-to-claude.sh   # idempotent — updates everything</code></pre>
@@ -409,7 +409,7 @@ bash scripts/install-to-claude.sh   # idempotent — updates everything</code></
     <div class="callout tip">
       <strong>💡 When should you update?</strong>
       <ul>
-        <li>The wiki-template repo has new slash commands (e.g. newly shipped <code>/tool-design</code>)</li>
+        <li>The contextd repo has new slash commands (e.g. newly shipped <code>/tool-design</code>)</li>
         <li>New packs were added to <code>packs/</code></li>
         <li>Engine constraints / coding-rules were updated (new validator rules)</li>
       </ul>

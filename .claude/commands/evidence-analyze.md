@@ -32,7 +32,7 @@ Pipeline branches theo `source.yaml#source_type` (+ `code_variant` khi source_ty
 
 ## Bước 0 — Workspace check
 
-Theo [workspace-resolution.md Profile A](../../agents/pipeline/workspace-resolution.md#profile-a--active-workspace-required). Set: `wiki_json_dir`, `workspace`, `effective_wiki_root`, `{ws}`.
+Theo [workspace-resolution.md Profile A](../../agents/pipeline/workspace-resolution.md#profile-a--active-workspace-required). Set: `config_dir`, `workspace`, `effective_knowledge_root`, `{ws}`.
 
 ## Bước 1 — Resolve evidence
 
@@ -50,7 +50,7 @@ Theo [workspace-resolution.md Profile A](../../agents/pipeline/workspace-resolut
 Resolve **effective_packs** theo [workspace-resolution.md Effective Packs Resolution](../../agents/pipeline/workspace-resolution.md#effective-packs-resolution):
 
 ```
-local_packs    = wiki.json#packs           (per-codebase override)
+local_packs    = config.json#packs           (per-codebase override)
 workspace_packs = workspace.md ## Packs    (workspace-wide default)
 effective_packs = local_packs IF isinstance(local_packs, list) ELSE workspace_packs
 ```

@@ -1,6 +1,6 @@
 # /contextd-eval — Evaluate Pipeline Effectiveness
 
-Aggregate trace JSON từ nhiều run dưới `{project_dir}/.claude/runs/` → 1 báo cáo Markdown đo **hiệu quả wiki**: coverage, hallucination rate, top knowledge gaps, context-selector block rate, violation hotspots.
+Aggregate trace JSON từ nhiều run dưới `{project_dir}/.contextd/runs/` → 1 báo cáo Markdown đo **hiệu quả wiki**: coverage, hallucination rate, top knowledge gaps, context-selector block rate, violation hotspots.
 
 > One-shot: 1 lệnh → 1 file Markdown trong `{ws}/reports/`. Read-only — KHÔNG sửa runs/.
 > Reference: [observability.md](../../agents/pipeline/observability.md), [run-trace.schema.json](../../templates/run-trace.schema.json).
@@ -19,15 +19,15 @@ Aggregate trace JSON từ nhiều run dưới `{project_dir}/.claude/runs/` → 
 
 ## Bước 0 — Workspace check
 
-Theo [workspace-resolution.md Profile A](../../agents/pipeline/workspace-resolution.md#profile-a--active-workspace-required). Set: `wiki_json_dir` (= `project_dir`), `workspace_active`, `effective_wiki_root`, `{ws}`. Đồng thời:
+Theo [workspace-resolution.md Profile A](../../agents/pipeline/workspace-resolution.md#profile-a--active-workspace-required). Set: `config_dir` (= `project_dir`), `workspace_active`, `effective_knowledge_root`, `{ws}`. Đồng thời:
 
-- Validate `{project_dir}/.claude/runs/` tồn tại. Nếu không → STOP `No runs found. Chạy /use-contextd ít nhất 1 lần trước.`.
+- Validate `{project_dir}/.contextd/runs/` tồn tại. Nếu không → STOP `No runs found. Chạy /use-contextd ít nhất 1 lần trước.`.
 
 ---
 
 ## Bước 1 — Discover runs
 
-Glob `{project_dir}/.claude/runs/*/`. Mỗi sub-dir = 1 run. Lưu danh sách `run_ids`.
+Glob `{project_dir}/.contextd/runs/*/`. Mỗi sub-dir = 1 run. Lưu danh sách `run_ids`.
 
 Với mỗi run:
 1. Đọc `run.json` (nếu có) — lấy `ts_start`, `user_task`, `workspace_at_run`, `stages_completed`.

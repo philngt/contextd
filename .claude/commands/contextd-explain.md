@@ -33,7 +33,7 @@ Resolve workspace. Set `{ws}`. STOP nếu chưa init.
    - `{ws}/domains/{topic}/*.md`
    - Glob fallback: any `*.md` chứa H1 match (case-insensitive substring)
 3. Multiple match → AskUserQuestion liệt kê paths cho user chọn.
-4. Zero match → STOP với suggestion: "Topic không tìm thấy trong `{ws}`. Có thể đây là engine/pack concept — check `{wiki_root}/agents/`, `{wiki_root}/packs/*/`, hoặc tạo doc mới."
+4. Zero match → STOP với suggestion: "Topic không tìm thấy trong `{ws}`. Có thể đây là engine/pack concept — check `{knowledge_root}/agents/`, `{knowledge_root}/packs/*/`, hoặc tạo doc mới."
 
 ## Bước 2 — Read source + cross-references
 
@@ -124,7 +124,7 @@ Run pack-product `pack-product-jargon-leak` rule trên rendered output:
 ## Notes
 
 - **No file output**: kết quả chỉ in console — vì topic & audience thay đổi mỗi lần gọi, không cần persist.
-- **Workspace isolation**: chỉ tra cứu trong `{ws}/` (+ engine/pack docs nếu user explicit reference path tới `{wiki_root}/agents/` hoặc `{wiki_root}/packs/`).
+- **Workspace isolation**: chỉ tra cứu trong `{ws}/` (+ engine/pack docs nếu user explicit reference path tới `{knowledge_root}/agents/` hoặc `{knowledge_root}/packs/`).
 - **Language**: nếu workspace.md có metadata `language: vi` → output Vietnamese mặc định. Override với `--lang en`.
 - **Khác slash command khác**:
   - `/contextd-report` → HTML technical report toàn workspace (engineering audience)

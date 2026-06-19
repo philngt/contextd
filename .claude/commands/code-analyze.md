@@ -11,7 +11,7 @@ Phân tích **codebase có sẵn** → snapshot metadata → đẩy vào evidenc
 
 | Arg              | Required | Notes                                                                |
 |------------------|----------|----------------------------------------------------------------------|
-| `--ref`          | optional | Repo path. Default: `<cwd>` của codebase (parent của `.claude/wiki.json`). **Mutually exclusive với `--bundle`.** |
+| `--ref`          | optional | Repo path. Default: `<cwd>` của codebase (parent của `.contextd/config.json`). **Mutually exclusive với `--bundle`.** |
 | `--scope`        | optional | (Single-repo) Comma-separated paths/globs included. Default heuristic: `src/**`, `pom.xml`/`package.json`/`build.gradle`/`Cargo.toml`/`go.mod`, `application.*`, `Dockerfile`, `*.yaml` config. |
 | `--bundle`       | optional | **Bundle mode**: đường dẫn tới thư mục staging chứa `bundle.yaml`. Nếu pass `--bundle`, ignore `--ref` và `--scope`. **Mutually exclusive với `--ref`.** |
 | `--label`        | optional | Mô tả ngắn (≤ 30 ký tự). Single-repo: default `bootstrap-{project}` hoặc `refresh-{project}-{date}`. Bundle: override `bundle.yaml#label`. |
@@ -26,13 +26,13 @@ Nếu user gọi `/code-analyze` không có arg → confirm qua AskUserQuestion:
 
 ## Bước 0 — Workspace check
 
-Theo [workspace-resolution.md Profile A](../../agents/pipeline/workspace-resolution.md#profile-a--active-workspace-required). Set: `wiki_json_dir`, `workspace_active`, `effective_wiki_root`, `{ws}`.
+Theo [workspace-resolution.md Profile A](../../agents/pipeline/workspace-resolution.md#profile-a--active-workspace-required). Set: `config_dir`, `workspace_active`, `effective_knowledge_root`, `{ws}`.
 
 ---
 
 ## Bước 1 — Resolve repo + variant + scope  (single-repo mode — skip nếu `--bundle`)
 
-1. `repo_path` = `--ref` (default `wiki_json_dir`).
+1. `repo_path` = `--ref` (default `config_dir`).
 
 2. **Variant detection** (Bước 1.4):
    - Nếu `--variant` pass → dùng nguyên (`code` hoặc `agentic-engine`).
@@ -58,7 +58,7 @@ Theo [workspace-resolution.md Profile A](../../agents/pipeline/workspace-resolut
    - Nếu `--scope` set → dùng nguyên (split comma, expand glob khi enumerate file).
    - Nếu không → default heuristic theo variant:
      - `variant=code`: `src/**`, `pom.xml`/`package.json`/`build.gradle`/`Cargo.toml`/`go.mod`, `application.*`, `Dockerfile`, `*.yaml` config.
-     - `variant=agentic-engine`: `agents/**/*.md`, `.claude/commands/**/*.md`, `.claude/agents/**/*.md`, `templates/**`, `.mcp.json`/`mcp.json`, `README.md`, `CLAUDE.md`. Configs (`settings.json`, `wiki-global.json`) chỉ include khi `--allow-configs`.
+     - `variant=agentic-engine`: `agents/**/*.md`, `.claude/commands/**/*.md`, `.claude/agents/**/*.md`, `templates/**`, `.mcp.json`/`mcp.json`, `README.md`, `CLAUDE.md`. Configs (`settings.json`, `.contextd/config.json`) chỉ include khi `--allow-configs`.
    - Validate scope tồn tại tương đối `repo_path`. Cảnh báo nếu glob không match file nào.
 
 ---

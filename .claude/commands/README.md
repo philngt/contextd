@@ -1,11 +1,11 @@
 # Slash Commands — Index
 
-Đây là slash commands cho workflow contextd-aware. Trong migration window chúng vẫn cài dưới `.claude/commands`, nhưng canonical engine/config là `contextd` CLI + `<cwd>/.contextd/config.json`. Legacy `<cwd>/.claude/wiki.json` và `<cwd>/.Codex/wiki.json` chỉ là compatibility adapters. Pipeline kiến trúc tổng thể: [agents/pipeline/README.md](../../agents/pipeline/README.md).
+Đây là slash commands cho workflow contextd-aware. Trong migration window chúng vẫn cài dưới `.claude/commands`, nhưng canonical engine/config là `contextd` CLI + `<cwd>/.contextd/config.json`. Pipeline kiến trúc tổng thể: [agents/pipeline/README.md](../../agents/pipeline/README.md).
 
 Quy tắc chung:
 - Mỗi command có Bước 0 resolve workspace + `knowledge_root` bằng shared resolver trước khi làm bất cứ gì.
 - Mọi knowledge access scope CHỈ trong workspace active (không cross-workspace).
-- Command edit wiki (update-contextd, rebase-contextd, evidence-apply) delegate qua `contextd-curator` subagent + main agent verify path sau khi curator return.
+- Command edit knowledge docs (update-contextd, rebase-contextd, evidence-apply) delegate qua `contextd-curator` subagent + main agent verify path sau khi curator return.
 
 ---
 
@@ -13,7 +13,7 @@ Quy tắc chung:
 
 | Command | Purpose | When to use |
 |---------|---------|-------------|
-| [`/contextd-setup`](contextd-setup.md) | Bootstrap `.contextd/config.json`; legacy `.claude/wiki.json` có thể được giữ làm adapter | Lần đầu tích hợp contextd vào codebase mới, hoặc đổi workspace |
+| [`/contextd-setup`](contextd-setup.md) | Bootstrap `.contextd/config.json` | Lần đầu tích hợp contextd vào codebase mới, hoặc đổi workspace |
 | [`/contextd-detect`](contextd-detect.md) | Validate config/workspace + scan dependency để propose update | Sanity check sau khi setup, hoặc khi `/use-contextd` lỗi resolve |
 | [`/switch-workspace`](switch-workspace.md) `{name}` | Đổi `workspace` field trong config hiện tại, ưu tiên `.contextd/config.json` | Khi cùng codebase phục vụ nhiều domain workspace, hoặc khi clone codebase nội bộ |
 | [`/new-workspace`](new-workspace.md) `{name}` | Scaffold workspace mới trong `{knowledge_root}/workspaces/{name}/` từ template | Khi join công ty/dự án mới, cần knowledge sandbox riêng |
@@ -21,28 +21,28 @@ Quy tắc chung:
 
 ---
 
-## Wiki usage (per-task pipeline)
+## Context Usage (per-task pipeline)
 
 | Command | Purpose | When to use |
 |---------|---------|-------------|
 | [`/use-contextd`](use-contextd.md) | Gọi canonical `contextd context` để sinh `.contextd/context/current-task.json` + markdown render + materialized pack | Trước MỌI task implement_feature / fix_bug / design / incident / review |
 | [`/find`](find.md) `<keywords>` | Advisory fuzzy discovery patterns + contracts + services + packs — không override artifact deterministic | Quick lookup khi đã biết mình cần gì; trước khi mở `/use-contextd` đầy đủ |
-| [`/update-contextd`](update-contextd.md) | Sync wiki với code đã thay đổi (git diff → curator áp dụng) | Sau khi code merge để wiki không drift; tự detect engine vs workspace scope |
-| [`/rebase-contextd`](rebase-contextd.md) | Quét wiki vs codebase thực tế để vá mọi chỗ wiki nói khác code chạy | Định kỳ (hằng tuần/tháng) hoặc khi nghi wiki lỗi thời lớn |
+| [`/update-contextd`](update-contextd.md) | Sync knowledge docs với code đã thay đổi (git diff → curator áp dụng) | Sau khi code merge để knowledge không drift; tự detect engine vs workspace scope |
+| [`/rebase-contextd`](rebase-contextd.md) | Quét knowledge docs vs codebase thực tế để vá mọi chỗ docs nói khác code chạy | Định kỳ (hằng tuần/tháng) hoặc khi nghi knowledge lỗi thời lớn |
 
 ---
 
-## Codebase analysis (bootstrap wiki từ source code)
+## Codebase analysis (bootstrap knowledge từ source code)
 
 | Command | Purpose | When to use |
 |---------|---------|-------------|
-| [`/code-analyze`](code-analyze.md) | Snapshot metadata codebase → ingest vào evidence pipeline với `source_type=code` → sinh proposals patterns/contracts/services/ADRs để đưa vào wiki | Onboard codebase legacy; refresh platform knowledge sau major change; bootstrap workspace mới |
+| [`/code-analyze`](code-analyze.md) | Snapshot metadata codebase → ingest vào evidence pipeline với `source_type=code` → sinh proposals patterns/contracts/services/ADRs để đưa vào knowledge docs | Onboard codebase legacy; refresh platform knowledge sau major change; bootstrap workspace mới |
 
 > Dưới capô gọi `/evidence-ingest --source code` rồi `/evidence-analyze` (CORE-CODE prompts c01–c04 + CORE 4/8). Sau đó user dùng `/evidence-qa` + `/evidence-apply` như mọi evidence khác.
 
 ---
 
-## Reporting (wiki → tài liệu trình bày)
+## Reporting (knowledge → tài liệu trình bày)
 
 | Command | Purpose | When to use |
 |---------|---------|-------------|
@@ -84,8 +84,8 @@ Dành cho **chuyên gia ngành khác** (cơ khí, kế toán, y tế, luật, gi
 
 | Command | Purpose | When to use |
 |---------|---------|-------------|
-| [`/contextd-trace`](contextd-trace.md) `{run_id}` | Render Markdown timeline 1 run pipeline (5 stage) từ trace JSON dưới `.claude/runs/{run_id}/` | Khi output `/use-contextd` sai — debug stage nào divergence |
-| [`/contextd-eval`](contextd-eval.md) | Aggregate trace nhiều run → báo cáo Markdown: hallucination rate, top knowledge gaps, plan-block rate, violation hotspots | Định kỳ review hiệu quả wiki, sau update wiki lớn, hoặc khi nghi pattern không được follow |
+| [`/contextd-trace`](contextd-trace.md) `{run_id}` | Render Markdown timeline 1 run pipeline (5 stage) từ trace JSON dưới `.contextd/runs/{run_id}/` | Khi output `/use-contextd` sai — debug stage nào divergence |
+| [`/contextd-eval`](contextd-eval.md) | Aggregate trace nhiều run → báo cáo Markdown: hallucination rate, top knowledge gaps, plan-block rate, violation hotspots | Định kỳ review hiệu quả contextd, sau update knowledge lớn, hoặc khi nghi pattern không được follow |
 | [`/contextd-viz`](contextd-viz.md) | HTML viewer + live watch cho pipeline traces | Khi muốn inspect nhiều trace cùng lúc trong browser |
 
 > Schema + design: [observability.md](../../agents/pipeline/observability.md). Manual A/B đánh giá: `{ws}/eval/golden-tasks/README.md` (per-workspace) + [task-scorecard template](../../templates/task-scorecard.md).
@@ -105,7 +105,7 @@ Meta-commands operating **on contextd itself** (install / backup / version / upg
 | [`/contextd-backup`](contextd-backup.md) | Snapshot workspace active sang archive |
 | [`/contextd-restore`](contextd-restore.md) | Restore workspace từ backup |
 | [`/contextd-report`](contextd-report.md) | Sinh HTML report toàn workspace (xem section Reporting ở trên) |
-| [`/contextd-explain`](contextd-explain.md) | Plain-language explainer cho 1 wiki concept |
+| [`/contextd-explain`](contextd-explain.md) | Plain-language explainer cho 1 knowledge concept |
 
 ---
 
@@ -128,5 +128,9 @@ Reference: [agents/pipeline/evidence-lifecycle.md](../../agents/pipeline/evidenc
 
 - [agents/pipeline/README.md](../../agents/pipeline/README.md) — Pipeline architecture (5 stage)
 - [agents/pipeline/multi-agent-pipeline.md](../../agents/pipeline/multi-agent-pipeline.md) — Subagent roles + I/O schema
-- [agents/system-prompt.md](../../agents/system-prompt.md) — Engine system prompt + wiki_root resolution rule
+- [agents/system-prompt.md](../../agents/system-prompt.md) — Engine system prompt + `knowledge_root` resolution rule
 - [workspaces/README.md](../../workspaces/README.md) — Workspace philosophy (per-codebase, no cross-workspace knowledge bleed)
+
+## Compatibility
+
+Legacy `<cwd>/.claude/wiki.json` và `<cwd>/.Codex/wiki.json` chỉ là compatibility adapters trong migration window. Các command mới phải ghi `.contextd/config.json` trước.

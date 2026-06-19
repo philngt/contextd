@@ -5,7 +5,7 @@ Chạy command này trước khi viết code cần workspace knowledge. Trong mi
 ## Canonical Flow
 
 1. Resolve workspace bằng shared resolver:
-   `.contextd/config.json` → legacy `.claude/wiki.json` → legacy `.Codex/wiki.json` → `~/.contextd/config.json` → legacy globals.
+   `.contextd/config.json` → `~/.contextd/config.json`.
 2. Chạy:
 
 ```bash
@@ -24,6 +24,10 @@ contextd context "{user_task}" --format json
 - Nếu `gaps[]` có blocking gap về contract/pattern/domain workflow → STOP, báo user cập nhật knowledge trước.
 - Nếu `warnings[]` có legacy config conflict → dùng `.contextd/config.json` vì canonical config thắng.
 - Không đọc knowledge ngoài active workspace, trừ engine docs và active pack baseline docs đã được artifact reference.
+
+## Compatibility
+
+During migration, the shared resolver may read legacy `.claude/wiki.json`, legacy `.Codex/wiki.json`, then legacy globals after canonical configs fail. Legacy files are adapters only; `.contextd/config.json` wins on disagreement.
 
 ## Builder Output
 

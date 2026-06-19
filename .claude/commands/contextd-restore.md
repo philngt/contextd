@@ -1,6 +1,6 @@
 # /contextd-restore — Restore Workspace From Backup
 
-Khôi phục dữ liệu Wiki trong `~/.claude/` từ backup gần nhất hoặc backup do user chỉ định.
+Khôi phục contextd config và Claude adapter artifacts từ backup gần nhất hoặc backup do user chỉ định.
 
 ## CHECKPOINT 0 — Chọn backup source
 
@@ -19,7 +19,7 @@ Nếu không tìm thấy file phù hợp thì dừng và báo rõ.
 In cảnh báo:
 
 ```text
-⚠️ Restore sẽ ghi đè dữ liệu hiện tại trong ~/.claude (commands/agents/config).
+⚠️ Restore sẽ ghi đè dữ liệu hiện tại trong ~/.contextd và ~/.claude (commands/agents/config).
 Nên backup trạng thái hiện tại trước khi restore.
 ```
 
@@ -31,13 +31,13 @@ Hỏi user xác nhận restore từ `{backup_path}`. Chỉ chạy khi user đồ
 
 ## CHECKPOINT 3 — Khôi phục theo OS
 
-- macOS/Linux: giải nén `.tgz` về `~/.claude/`
-- Windows PowerShell: giải nén `.zip` về `~/.claude/`
+- macOS/Linux: giải nén `.tgz` về home config paths trong archive
+- Windows PowerShell: giải nén `.zip` về home config paths trong archive
 
 ## CHECKPOINT 4 — Verify sau restore
 
 Bắt buộc verify ít nhất một trong các path tồn tại sau restore:
-- `~/.claude/wiki-global.json`
+- `~/.contextd/config.json`
 - `~/.claude/commands/`
 - `~/.claude/agents/`
 
@@ -51,3 +51,7 @@ Restore complete
 - Next step: /contextd-version
 - Gợi ý: /exit rồi mở lại Claude Code session
 ```
+
+## Compatibility
+
+Legacy `~/.claude/wiki-global.json` may exist in older backups. Restore it only as a migration adapter; canonical config is `~/.contextd/config.json`.

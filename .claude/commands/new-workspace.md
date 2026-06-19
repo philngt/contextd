@@ -1,10 +1,10 @@
 # Tạo Workspace Mới
 
-Scaffold một workspace mới trong `{wiki_root}/workspaces/{name}/` từ `templates/workspace.md`.
+Scaffold một workspace mới trong `{knowledge_root}/workspaces/{name}/` từ `templates/workspace.md`.
 
-## Bước 0 — Resolve `wiki_root`
+## Bước 0 — Resolve `knowledge_root`
 
-Theo [workspace-resolution.md Profile B](../../agents/pipeline/workspace-resolution.md#profile-b--wiki-root-only-active-workspace-optional). Set: `wiki_json_dir`, `effective_wiki_root`. Nếu cả `wiki.json#wiki_root` và `~/.claude/wiki-global.json#wiki_root` đều thiếu → STOP, hướng dẫn user chạy `bash {wiki-template}/scripts/install-to-claude.sh` trước.
+Theo [workspace-resolution.md Profile B](../../agents/pipeline/workspace-resolution.md#profile-b--knowledge-root-only-active-workspace-optional). Set: `config_dir`, `effective_knowledge_root`. Nếu cả project config và `~/.contextd/config.json#knowledge_root` đều thiếu → STOP, hướng dẫn user chạy `bash {contextd-root}/scripts/install-to-claude.sh` trước.
 
 ## Bước 1 — Thu thập metadata
 
@@ -106,7 +106,7 @@ Xoá README này khi đã có runbook thực.
 Section `## Packs`:
 - Nếu user khai báo packs → render mỗi pack thành 1 list item `- {pack-name}`.
 - Nếu user chọn `none` hoặc skip → giữ section trống với comment `(none)` để user dễ thêm sau.
-- Validate mỗi pack name có tồn tại trong `{wiki_root}/packs/{name}/pack.yaml` — nếu không → warning, vẫn ghi nhưng cảnh báo user.
+- Validate mỗi pack name có tồn tại trong `{knowledge_root}/packs/{name}/pack.yaml` — nếu không → warning, vẫn ghi nhưng cảnh báo user.
 
 ## Bước 5 — Generate patterns-index.md trống
 
@@ -144,7 +144,7 @@ Hỏi user (AskUserQuestion 2 options):
 
 > "Set workspace `{name}` cho codebase hiện tại (`<cwd>`)?"
 
-- Yes → cập nhật field `workspace = "{name}"` trong `<cwd>/.claude/wiki.json` (tạo file minimal nếu chưa có — xem `/switch-workspace` Bước 3).
+- Yes → cập nhật field `workspace = "{name}"` trong `<cwd>/.contextd/config.json` (tạo file minimal nếu chưa có — xem `/switch-workspace` Bước 3).
 - No → in hướng dẫn `/switch-workspace {name}` để dùng sau ở codebase phù hợp.
 
 > Active workspace là per-codebase. Tạo workspace mới KHÔNG tự động set nó làm active ở mọi nơi — phải chạy `/switch-workspace` trong codebase muốn dùng.
@@ -154,16 +154,16 @@ Hỏi user (AskUserQuestion 2 options):
 In bảng tóm tắt:
 
 ```
-✓ Workspace created: {wiki_root}/workspaces/{name}/
+✓ Workspace created: {knowledge_root}/workspaces/{name}/
   - workspace.md       ({company}, {role})
   - patterns-index.md  (empty)
   - 7 folders          (platform/{arch,contracts,infra,patterns}, domains, projects, runbooks, decisions)
   - 4 stub READMEs     (architecture, infrastructure, domains, runbooks — xoá khi có doc thực)
 
-Active for this codebase: {name | unchanged}    (file: <cwd>/.claude/wiki.json)
+Active for this codebase: {name | unchanged}    (file: <cwd>/.contextd/config.json)
 
 Next steps:
-  1. Thêm platform contracts vào {wiki_root}/workspaces/{name}/platform/contracts/
+  1. Thêm platform contracts vào {knowledge_root}/workspaces/{name}/platform/contracts/
   2. Thêm patterns vào workspaces/{name}/platform/patterns/ và update patterns-index.md
   3. Tạo project đầu tiên: workspaces/{name}/projects/{project}/knowledge-map.md (dùng templates/service.md cho service docs)
 ```

@@ -59,13 +59,17 @@ cd ~/contextd && git pull
 bash scripts/install-to-claude.sh --knowledge-repo ~/company-wiki
 ```
 
-This updates slash commands and subagents in `~/.claude/` while keeping canonical `knowledge_root` pointed at your team knowledge repo. Legacy `wiki_root` is still written for Claude Code adapters.
+This updates slash commands and subagents in `~/.claude/` while keeping canonical `knowledge_root` pointed at your team knowledge repo.
+
+### Compatibility
+
+Legacy `wiki_root` may still be written for Claude Code adapters during migration.
 
 ## What NOT to Commit
 
 - `evidence/` — large, ingestable data. Use `.gitignore` to exclude.
 - `.observations/prompts.jsonl` — may contain sensitive prompts.
 - `eval/results/` — per-machine evaluation data.
-- `.claude/` — runtime context (regenerated per task).
+- `.contextd/context/`, `.contextd/runs/`, `.contextd/cache/` — runtime artifacts (regenerated per task).
 
 These are already excluded by the provided `.gitignore`.

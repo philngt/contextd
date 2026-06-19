@@ -14,7 +14,7 @@ Không pass `{cluster_id}` → list top clusters từ `{ws}/.observations/cluste
 
 ## Bước 0 — Resolve workspace
 
-Theo [agents/pipeline/workspace-resolution.md](../../agents/pipeline/workspace-resolution.md) Profile B. Set `{ws} = {effective_wiki_root}/workspaces/{workspace}/`. STOP nếu thiếu.
+Theo [agents/pipeline/workspace-resolution.md](../../agents/pipeline/workspace-resolution.md) Profile B. Set `{ws} = {effective_knowledge_root}/workspaces/{workspace}/`. STOP nếu thiếu.
 
 ## Bước 1 — Load clusters
 
@@ -38,7 +38,7 @@ Dùng `AskUserQuestion` (single-select):
 
 | Loại | Khi dùng | Ghi vào |
 |------|----------|---------|
-| **Slash command** | Workflow gồm bước rõ ràng, ít suy luận | `{ws}/.claude/commands/<name>.md` hoặc `<wiki_root>/.claude/commands/<name>.md` |
+| **Slash command** | Workflow gồm bước rõ ràng, ít suy luận | `{ws}/.claude/commands/<name>.md` hoặc `<knowledge_root>/.claude/commands/<name>.md` |
 | **Subagent** | Cần phân tích/tổng hợp riêng, model + tool whitelist riêng | `{ws}/agents/<name>.md` hoặc `.claude/agents/<name>.md` |
 | **Skill** | Khả năng tái sử dụng — Claude auto-invoke khi keyword match | `~/.claude/skills/<name>/` hoặc `packs/<pack>/skills/<name>/` |
 | **Pack** | Cả stack mới (Kafka, Mobile, ML...) | `packs/<pack-name>/` qua `scripts/scaffold-pack.py` |
@@ -83,7 +83,7 @@ Sau khi user accept + file đã ghi:
 
 ## Self-check
 
-- [ ] Chỉ ghi trong `{ws}/`, `<wiki_root>/.claude/`, hoặc `packs/{pack}/`. KHÔNG ghi workspace khác.
+- [ ] Chỉ ghi trong `{ws}/`, `<knowledge_root>/.claude/`, hoặc `packs/{pack}/`. KHÔNG ghi workspace khác.
 - [ ] Front-matter có đủ field bắt buộc (xem skeletons.md mục cuối).
 - [ ] Đã thêm cluster vào suppressions.
 - [ ] Không hardcode path — dùng `{ws}` placeholder hoặc relative.

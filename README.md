@@ -85,10 +85,10 @@ Existing `.claude/commands` and `.claude/agents` remain supported adapters durin
 
 ## Mental Model
 
-Wiki = **engine** (shared) + **N workspaces** (independent sandboxes).
+contextd = **engine** (shared) + **N workspaces** (independent sandboxes).
 
 ```text
-wiki-template/
+contextd/
 ├── agents/         ← ENGINE — system prompt, pipeline, coding rules (workspace-agnostic)
 ├── templates/      ← ENGINE — templates for new workspaces and docs
 ├── .contextd/      ← ENGINE — manifest/config/context runtime namespace
@@ -97,8 +97,11 @@ wiki-template/
     └── {name}/...
 
 # Active workspace is per-codebase, stored in <project>/.contextd/config.json.
-# Legacy <project>/.claude/wiki.json and <project>/.Codex/wiki.json are read as adapters.
 ```
+
+### Compatibility: Legacy Adapters
+
+Legacy `<project>/.claude/wiki.json` and `<project>/.Codex/wiki.json` are read as adapters during the migration window. They are not the source of truth.
 
 ## Packs (Stack-specific Knowledge)
 
@@ -112,7 +115,6 @@ Enable packs via:
 
 - Workspace default: `workspaces/{ws}/workspace.md` → `## Packs`
 - Per-codebase override: `<cwd>/.contextd/config.json` → `packs` (replace semantics)
-- Legacy adapters: `<cwd>/.claude/wiki.json` and `<cwd>/.Codex/wiki.json`
 
 See [packs/README.md](packs/README.md) for the full catalog.
 
@@ -227,7 +229,7 @@ contextd can also be used with OpenAI Codex CLI via the exported skill.
    ```bash
    contextd export --runtime codex-plugin --install
    ```
-3. In any project with `.contextd/config.json` (or legacy `.claude/wiki.json`), Codex can now use contextd:
+3. In any project with `.contextd/config.json`, Codex can now use contextd:
    ```bash
    codex 'Run contextd resolve and find the relevant contract for this task'
    ```
@@ -257,7 +259,7 @@ Workflow: [release.yml](.github/workflows/release.yml)
 
 - Slash commands not visible: re-run `bash scripts/install-to-claude.sh` and restart Claude Code.
 - Missing `.contextd/config.json`: run `contextd migrate-config`, `/contextd-setup`, or `/switch-workspace`.
-- Wrong workspace context: verify `workspace` in `<cwd>/.contextd/config.json`; legacy `.claude/wiki.json` is lower priority.
+- Wrong workspace context: verify `workspace` in `<cwd>/.contextd/config.json`; legacy adapters are lower priority during migration.
 
 ## Contributing
 

@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft-07/schema#",
-  "$id": "https://wiki-template/run-trace.schema.json",
-  "title": "Wiki Pipeline Run Trace",
-  "description": "Schema chung cho mọi trace file dưới {project_dir}/.claude/runs/{run_id}/. Mỗi stage emit 1 file theo discriminator field 'stage'.",
+  "$id": "https://contextd/run-trace.schema.json",
+  "title": "Contextd Pipeline Run Trace",
+  "description": "Schema chung cho mọi trace file dưới {project_dir}/.contextd/runs/{run_id}/. Mỗi stage emit 1 file theo discriminator field 'stage'.",
 
   "type": "object",
   "required": ["run_id", "stage", "ts", "workspace_at_run"],
@@ -23,7 +23,7 @@
     },
     "workspace_at_run": {
       "type": "string",
-      "description": "Tên workspace active. Phải khớp .claude/wiki.json#workspace lúc run."
+      "description": "Tên workspace active. Phải khớp .contextd/config.json#workspace lúc run."
     },
     "duration_ms": {
       "type": "integer",

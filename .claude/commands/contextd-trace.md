@@ -1,6 +1,6 @@
 # /contextd-trace — Inspect Pipeline Trace
 
-View 1 run cụ thể của pipeline đã chạy (qua `/use-contextd`). Đọc các trace JSON dưới `{project_dir}/.claude/runs/{run_id}/` → render Markdown timeline để debug nhanh.
+View 1 run cụ thể của pipeline đã chạy (qua `/use-contextd`). Đọc các trace JSON dưới `{project_dir}/.contextd/runs/{run_id}/` → render Markdown timeline để debug nhanh.
 
 > Read-only. KHÔNG sửa file run nào.
 > Cần HTML viewer (collapsible cards, side-by-side retrieved-vs-used, Mermaid)? Dùng [`/contextd-viz`](contextd-viz.md) — sister command output HTML thay vì Markdown.
@@ -179,5 +179,5 @@ Nếu `--out` có → Write file. Ngược lại in stdout.
 
 - Read-only.
 - Nếu run_dir không tồn tại → STOP, in danh sách run gần nhất (top 5 sorted desc) để user chọn.
-- KHÔNG render content của `current-task.md` — chỉ stats từ trace JSON. (User mở context file riêng nếu muốn.)
+- KHÔNG render content của `current-task.json` — chỉ stats từ trace JSON. (User mở context file riêng nếu muốn.)
 - Workspace check: in cảnh báo nếu `run.workspace_at_run != workspace_active` (có thể user đã `/switch-workspace` sau khi run xong).

@@ -14,10 +14,13 @@ Active packs are surfaced separately in `02-context.referenced_docs[].category =
 
 **`workspace`**
 - Default = `<cwd>/.contextd/config.json.workspace` (active của codebase).
-- Legacy adapters: `<cwd>/.claude/wiki.json.workspace`, `<cwd>/.Codex/wiki.json.workspace`.
-- Fallback nếu file thiếu: `~/.contextd/config.json.default_workspace`, rồi legacy globals.
+- Fallback nếu file thiếu: `~/.contextd/config.json.default_workspace`.
 - Nếu task chỉ rõ workspace khác (vd "trong workspace company-b, ...") → cảnh báo, gợi ý `/switch-workspace` trước. KHÔNG silently override.
 - Cả 2 nguồn thiếu → STOP (xem [workspace-resolution.md](workspace-resolution.md)).
+
+### Compatibility
+
+During migration, legacy adapters `<cwd>/.claude/wiki.json.workspace`, `<cwd>/.Codex/wiki.json.workspace`, and legacy globals may be read after canonical config fails.
 
 **`domain` & `scope`**
 - `domain` ∈ subdirs của `{ws}/domains/`.

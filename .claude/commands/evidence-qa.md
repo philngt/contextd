@@ -20,9 +20,9 @@ Q&A loop với user dựa trên question pool + knowledge gaps + contradictions.
 
 ## Bước 0 — Workspace check + Pack detection
 
-1. Theo [workspace-resolution.md Profile A](../../agents/pipeline/workspace-resolution.md#profile-a--active-workspace-required). Set: `wiki_json_dir`, `workspace`, `effective_wiki_root`, `{ws}`.
+1. Theo [workspace-resolution.md Profile A](../../agents/pipeline/workspace-resolution.md#profile-a--active-workspace-required). Set: `config_dir`, `workspace`, `effective_knowledge_root`, `{ws}`.
 
-2. **Pack detection** — resolve **effective_packs** theo [workspace-resolution.md Effective Packs Resolution](../../agents/pipeline/workspace-resolution.md#effective-packs-resolution) (`wiki.json#packs` override `workspace.md ## Packs`):
+2. **Pack detection** — resolve **effective_packs** theo [workspace-resolution.md Effective Packs Resolution](../../agents/pipeline/workspace-resolution.md#effective-packs-resolution) (`config.json#packs` override `workspace.md ## Packs`):
    - `solo_builder_active = "pack-solo-builder" in effective_packs`
    - Nếu `solo_builder_active = true` → **áp Non-tech UX overrides** suốt slash command này (xem [qa-batch-non-tech.md](../../packs/pack-solo-builder/agents/pipeline/qa-batch-non-tech.md)).
    - In: `📋 Non-tech UX mode active (pack-solo-builder)` ở đầu output.

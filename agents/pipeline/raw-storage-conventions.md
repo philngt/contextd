@@ -218,7 +218,7 @@ Nếu nguồn (vd 1 file 50MB hoặc 1 changelog 500 commits) quá lớn:
 [ ] Đã redact sensitive data?
 [ ] Size < 1MB? (>1MB cần extract phần liên quan)
 [ ] Có label rõ ràng để slugify?
-[ ] Workspace active đúng? (check `<cwd>/.claude/wiki.json.workspace`)
+[ ] Workspace active đúng? (check `<cwd>/.contextd/config.json.workspace`)
 [ ] Related files (nếu biết) thuộc {ws}/?
 [ ] Nếu MCP/API: tool/URL đã confirm?
 ```

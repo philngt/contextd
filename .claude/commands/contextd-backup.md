@@ -1,17 +1,16 @@
 # /contextd-backup — Backup Workspace
 
-Tạo bản sao lưu local cho dữ liệu Wiki trong `~/.claude/` trước khi upgrade.
+Tạo bản sao lưu local cho contextd config và Claude adapter artifacts trước khi upgrade.
 
 ## CHECKPOINT 0 — Pre-check
 
-Xác nhận tồn tại thư mục `~/.claude/`.
+Xác nhận tồn tại ít nhất một trong `~/.contextd/` hoặc `~/.claude/`.
 Nếu không tồn tại: dừng và báo rõ không có dữ liệu để backup.
 
 ## CHECKPOINT 1 — Scope backup (in trước khi chạy)
 
 In danh sách sẽ backup nếu tồn tại:
-- `~/.claude/wiki-global.json`
-- `~/.claude/wiki-install-meta.json`
+- `~/.contextd/config.json`
 - `~/.claude/commands/`
 - `~/.claude/agents/`
 
@@ -30,6 +29,10 @@ Chỉ chạy khi user đồng ý.
 - Windows PowerShell: dùng `Compress-Archive`
 
 Luôn tạo `~/.claude/backups/` nếu chưa có.
+
+## Compatibility
+
+Legacy `~/.claude/wiki-global.json` and `~/.claude/wiki-install-meta.json` are included only as migration adapters. Canonical config is `~/.contextd/config.json`.
 
 ## CHECKPOINT 4 — Verify artifact
 
