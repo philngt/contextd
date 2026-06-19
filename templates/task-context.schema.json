@@ -203,6 +203,35 @@
       },
       "additionalProperties": true
     },
+    "budget_report": {
+      "type": "object",
+      "description": "Deterministic, model-neutral budget estimate for selected context.",
+      "properties": {
+        "estimator": { "type": "string" },
+        "max_docs": { "type": "integer" },
+        "considered_docs": { "type": "integer" },
+        "selected_docs": { "type": "integer" },
+        "dropped_docs": { "type": "integer" },
+        "estimated_tokens_selected": { "type": "integer" },
+        "estimated_tokens_by_category": {
+          "type": "object",
+          "additionalProperties": { "type": "integer" }
+        },
+        "category_budgets": {
+          "type": "object",
+          "additionalProperties": { "type": "integer" }
+        },
+        "used_by_category": {
+          "type": "object",
+          "additionalProperties": { "type": "integer" }
+        },
+        "drops_by_reason": {
+          "type": "object",
+          "additionalProperties": { "type": "integer" }
+        }
+      },
+      "additionalProperties": true
+    },
     "source_hashes": {
       "type": "object",
       "additionalProperties": {

@@ -15,6 +15,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Tuple
 
+from context_security import block_reason, is_relative_to, redact_text, reject_unsafe_entry
+
 
 INTENT_KEYWORDS = {
     "implement_feature": [
@@ -486,12 +488,20 @@ def _expand_map_entry(
     entry: str,
     wiki_root: Path,
     ws_dir: Path,
+    pack_name: str,
     domain: Optional[str],
     project: Optional[str],
 ) -> Tuple[List[Path], Optional[Dict]]:
     raw = entry.strip()
     if not raw:
         return [], None
+    unsafe = reject_unsafe_entry(raw)
+    if unsafe:
+        return [], {
+            "category": "security-policy",
+            "missing": f"Unsafe pack retrieval path `{raw}`: {unsafe}",
+            "blocking_hint": True,
+        }
     if "{domain}" in raw and not domain:
         return [], {
             "category": "pack-retrieval",
@@ -505,22 +515,33 @@ def _expand_map_entry(
             "blocking_hint": False,
         }
     expanded = raw.replace("{domain}", domain or "").replace("{project}", project or "")
+    allowed_root = ws_dir
     if expanded.startswith("{ws}/"):
         base_path = ws_dir / expanded[len("{ws}/"):]
-    elif expanded.startswith("workspaces/") or expanded.startswith("packs/") or expanded.startswith("templates/"):
+    elif expanded.startswith("packs/"):
         base_path = wiki_root / expanded
+        allowed_root = wiki_root / "packs" / pack_name
+    elif expanded.startswith("templates/"):
+        base_path = wiki_root / expanded
+        allowed_root = wiki_root / "templates"
     else:
         base_path = ws_dir / expanded
 
     paths: List[Path] = []
     if any(ch in base_path.as_posix() for ch in "*?["):
-        paths = sorted(p for p in wiki_root.glob(_rel(base_path, wiki_root)) if p.is_file())
+        paths = sorted(
+            p for p in wiki_root.glob(_rel(base_path, wiki_root))
+            if p.is_file() and is_relative_to(p, allowed_root)
+        )
     elif "/evidence/" in base_path.as_posix() or base_path.name == "evidence":
-        paths = _safe_evidence_files(base_path)
+        paths = [p for p in _safe_evidence_files(base_path) if is_relative_to(p, allowed_root)]
     elif base_path.is_dir():
-        paths = sorted(p for p in base_path.rglob("*.md") if p.is_file())
+        paths = sorted(
+            p for p in base_path.rglob("*.md")
+            if p.is_file() and is_relative_to(p, allowed_root)
+        )
     elif base_path.is_file():
-        paths = [base_path]
+        paths = [base_path] if is_relative_to(base_path, allowed_root) else []
     if not paths:
         return [], {
             "category": "pack-retrieval",
@@ -537,6 +558,7 @@ def _collect_pack_retrieval_candidates(
     components: List[str],
     domain: Optional[str],
     project: Optional[str],
+    warnings: Optional[List[str]] = None,
 ) -> Tuple[List[Dict], List[Dict]]:
     ws_dir = wiki_root / "workspaces" / workspace
     candidates: List[Dict] = []
@@ -551,13 +573,13 @@ def _collect_pack_retrieval_candidates(
             if not entries:
                 continue
             for entry in entries:
-                paths, gap = _expand_map_entry(entry, wiki_root, ws_dir, domain, project)
+                paths, gap = _expand_map_entry(entry, wiki_root, ws_dir, pack_name, domain, project)
                 if gap:
                     gaps.append(gap)
                 for path in paths:
                     rel = _rel(path, wiki_root)
                     category = _category_from_path(path, rel)
-                    item = _doc(path, category, wiki_root)
+                    item = _doc(path, category, wiki_root, gaps=gaps, warnings=warnings)
                     if item is not None:
                         candidates.append(item)
     return candidates, gaps
@@ -572,17 +594,37 @@ def _iter_files(base: Path, patterns: Iterable[str]) -> List[Path]:
     return out
 
 
-def _doc(path: Path, category: str, wiki_root: Path) -> Optional[Dict]:
+def _doc(path: Path, category: str, wiki_root: Path,
+         gaps: Optional[List[Dict]] = None,
+         warnings: Optional[List[str]] = None) -> Optional[Dict]:
+    rel = _rel(path, wiki_root)
+    reason = block_reason(path)
+    if reason:
+        if gaps is not None:
+            gaps.append({
+                "category": "security-policy",
+                "missing": f"Blocked secret-like path: {rel} ({reason})",
+                "blocking_hint": False,
+            })
+        return None
     text = _read(path)
     if text is None:
         return None
-    return {
+    source_hash = _sha256_text(text)
+    safe_text, findings = redact_text(text)
+    if findings and warnings is not None:
+        warnings.append(f"Redacted sensitive-looking content in {rel}")
+    doc = {
         "category": category,
-        "path": _rel(path, wiki_root),
+        "path": rel,
         "abs_path": path,
-        "content_full": text,
-        "source_hash": _sha256_text(text),
+        "content_full": safe_text,
+        "source_hash": source_hash,
     }
+    if findings:
+        doc["redacted"] = True
+        doc["redaction_findings"] = findings
+    return doc
 
 
 def _dedupe_paths(paths: Iterable[Path]) -> List[Path]:
@@ -634,6 +676,7 @@ def _collect_candidates(
     components: Optional[List[str]] = None,
     domain: Optional[str] = None,
     project: Optional[str] = None,
+    warnings: Optional[List[str]] = None,
 ) -> Tuple[List[Dict], List[Dict]]:
     ws_dir = wiki_root / "workspaces" / workspace
     candidates: List[Dict] = []
@@ -642,7 +685,7 @@ def _collect_candidates(
 
     def add_many(paths: List[Path], category: str) -> None:
         for path in paths:
-            item = _doc(path, category, wiki_root)
+            item = _doc(path, category, wiki_root, gaps=gaps, warnings=warnings)
             if item is not None:
                 candidates.append(item)
 
@@ -680,7 +723,7 @@ def _collect_candidates(
         add_many(_iter_files(domains, ["*/workflow.md"]), "domain")
 
     pack_candidates, pack_gaps = _collect_pack_retrieval_candidates(
-        wiki_root, workspace, packs, components, domain, project,
+        wiki_root, workspace, packs, components, domain, project, warnings=warnings,
     )
     candidates.extend(pack_candidates)
     gaps.extend(pack_gaps)
@@ -731,30 +774,104 @@ def _score(doc: Dict, words: List[str]) -> int:
     return score
 
 
+def _estimate_tokens(text: str) -> int:
+    """Deterministic rough budget estimate, intentionally not model-specific."""
+    if not text:
+        return 0
+    return max(1, (len(text) + 3) // 4)
+
+
+def _trace_doc(doc: Dict, score: int, reason: str) -> Dict:
+    return {
+        "path": doc["path"],
+        "category": doc["category"],
+        "selection_score": score,
+        "selection_reason": reason,
+        "estimated_tokens": _estimate_tokens(doc.get("content_full", "")),
+        "source_hash": doc["source_hash"],
+        "redacted": bool(doc.get("redacted")),
+    }
+
+
+def _rank_budget_trace(candidates: List[Dict], task: str, components: List[str],
+                       workstream: str = "engineering",
+                       max_docs: int = 7) -> Tuple[List[Dict], Dict, Dict]:
+    words = _keywords(task, components)
+    scored = [(doc, _score(doc, words)) for doc in candidates]
+    ranked = sorted(
+        scored,
+        key=lambda item: (-item[1], PRIORITY.get(item[0]["category"], 9), item[0]["path"]),
+    )
+
+    budgets = WORKSTREAM_BUDGETS.get(workstream, CATEGORY_BUDGETS)
+    used_by_category: Dict[str, int] = {}
+    selected: List[Dict] = []
+    selected_trace: List[Dict] = []
+    dropped_trace: List[Dict] = []
+    considered_trace: List[Dict] = []
+    seen: set[str] = set()
+
+    for doc, score in ranked:
+        category = doc["category"]
+        reason = "selected"
+        if doc["path"] in seen:
+            reason = "duplicate_path"
+        elif len(selected) >= max_docs:
+            reason = "max_docs_exhausted"
+        elif used_by_category.get(category, 0) >= budgets.get(category, 1):
+            reason = "category_budget_exhausted"
+
+        trace_item = _trace_doc(doc, score, reason)
+        considered_trace.append(trace_item)
+        if reason == "selected":
+            selected.append(doc)
+            selected_trace.append(trace_item)
+            seen.add(doc["path"])
+            used_by_category[category] = used_by_category.get(category, 0) + 1
+        else:
+            dropped_trace.append(trace_item)
+
+    tokens_by_category: Dict[str, int] = {}
+    selected_tokens = 0
+    for doc in selected:
+        tokens = _estimate_tokens(doc.get("content_full", ""))
+        selected_tokens += tokens
+        category = doc["category"]
+        tokens_by_category[category] = tokens_by_category.get(category, 0) + tokens
+
+    drops_by_reason: Dict[str, int] = {}
+    for item in dropped_trace:
+        reason = item["selection_reason"]
+        drops_by_reason[reason] = drops_by_reason.get(reason, 0) + 1
+
+    budget_report = {
+        "estimator": "chars_div_4",
+        "max_docs": max_docs,
+        "considered_docs": len(ranked),
+        "selected_docs": len(selected),
+        "dropped_docs": len(dropped_trace),
+        "estimated_tokens_selected": selected_tokens,
+        "estimated_tokens_by_category": dict(sorted(tokens_by_category.items())),
+        "category_budgets": {
+            key: budgets[key] for key in sorted(budgets)
+            if key in used_by_category or key in {doc["category"] for doc in candidates}
+        },
+        "used_by_category": dict(sorted(used_by_category.items())),
+        "drops_by_reason": dict(sorted(drops_by_reason.items())),
+    }
+    trace = {
+        "workstream": workstream,
+        "considered_docs": considered_trace,
+        "selected_docs": selected_trace,
+        "dropped_docs": dropped_trace,
+    }
+    return selected, trace, budget_report
+
+
 def _rank_and_budget(candidates: List[Dict], task: str, components: List[str],
                      workstream: str = "engineering", max_docs: int = 7) -> List[Dict]:
-    words = _keywords(task, components)
-    ranked = sorted(
-        candidates,
-        key=lambda d: (-_score(d, words), PRIORITY.get(d["category"], 9), d["path"]),
-    )
-    used_by_category: Dict[str, int] = {}
-    out: List[Dict] = []
-    seen: set[str] = set()
-    for doc in ranked:
-        if doc["path"] in seen:
-            continue
-        category = doc["category"]
-        budgets = WORKSTREAM_BUDGETS.get(workstream, CATEGORY_BUDGETS)
-        budget = budgets.get(category, 1)
-        if used_by_category.get(category, 0) >= budget:
-            continue
-        out.append(doc)
-        seen.add(doc["path"])
-        used_by_category[category] = used_by_category.get(category, 0) + 1
-        if len(out) >= max_docs:
-            break
-    return out
+    selected, _, _ = _rank_budget_trace(candidates, task, components, workstream, max_docs)
+    return selected
 
 
 def _split_sections(text: str) -> Dict[str, str]:
@@ -792,13 +909,17 @@ def _slice_doc(doc: Dict) -> Dict:
             sliced = text.strip()
         else:
             sliced = "\n\n".join(chunks).strip()
-    return {
+    out = {
         "category": category,
         "path": doc["path"],
         "sections": selected_sections,
         "content": sliced,
         "source_hash": doc["source_hash"],
     }
+    if doc.get("redacted"):
+        out["redacted"] = True
+        out["redaction_findings"] = doc.get("redaction_findings", [])
+    return out
 
 
 def _load_index(index_path: Path) -> Dict[str, str]:
@@ -939,6 +1060,7 @@ def build_context_artifact(
     packs: List[str],
     project_dir: Optional[Path] = None,
     warnings: Optional[List[str]] = None,
+    include_selection_trace: bool = False,
 ) -> Dict:
     """Build the canonical JSON context artifact."""
     warnings_out = list(warnings or [])
@@ -955,8 +1077,11 @@ def build_context_artifact(
         components=components,
         domain=domain,
         project=scope,
+        warnings=warnings_out,
     )
-    selected = _rank_and_budget(candidates, task, components, workstream=workstream)
+    selected, selection_trace, budget_report = _rank_budget_trace(
+        candidates, task, components, workstream=workstream,
+    )
     docs = [_slice_doc(doc) for doc in selected]
     static_docs = _collect_static_context(wiki_root, workspace, packs)
     context_pack = _build_context_pack(workspace, packs, docs, static_docs)
@@ -998,9 +1123,51 @@ def build_context_artifact(
             "max_docs": 7,
             "rag_policy": "advisory-only-disabled-by-default",
         },
+        "budget_report": budget_report,
         "source_hashes": source_hashes,
     }
+    if include_selection_trace:
+        artifact["_selection_trace"] = selection_trace
     return artifact
+
+
+def build_context_explanation(
+    task: str,
+    wiki_root: Path,
+    workspace: str,
+    packs: List[str],
+    project_dir: Optional[Path] = None,
+    warnings: Optional[List[str]] = None,
+) -> Dict:
+    """Build a human/debug-oriented explanation around the canonical artifact."""
+    artifact = build_context_artifact(
+        task=task,
+        wiki_root=wiki_root,
+        workspace=workspace,
+        packs=packs,
+        project_dir=project_dir,
+        warnings=warnings,
+        include_selection_trace=True,
+    )
+    trace = artifact.pop("_selection_trace", {})
+    summary = {
+        "artifact_type": artifact["artifact_type"],
+        "workspace": artifact["workspace"],
+        "intent": artifact["intent"],
+        "referenced_doc_count": len(artifact["referenced_docs"]),
+        "gap_count": len(artifact["gaps"]),
+        "warning_count": len(artifact["warnings"]),
+        "context_pack_key": artifact["contextPack"]["packKey"],
+        "budget_report": artifact.get("budget_report", {}),
+    }
+    return {
+        "artifact_type": "contextd_context_explanation.v1",
+        "version": "1",
+        "task": task,
+        "summary": summary,
+        "artifact": artifact,
+        "selection_trace": trace,
+    }
 
 
 def render_markdown(artifact: Dict) -> str:

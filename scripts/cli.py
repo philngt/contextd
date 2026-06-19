@@ -7,6 +7,8 @@ Subcommands:
     find        Fuzzy search across workspace knowledge
     bundle      Merge workspace knowledge into a single markdown file
     export      Export workspace knowledge to runtime-specific format
+    doctor      Diagnose config, packs, adapter drift, and context safety
+    explain     Explain deterministic task-context selection
     mcp-server  Run contextd as a stdio MCP tools server
     mcp-config  Print MCP client configuration snippets
 
@@ -47,6 +49,8 @@ import cmd_bundle  # noqa: E402
 import cmd_task_context  # noqa: E402
 import cmd_contract_path  # noqa: E402
 import cmd_migrate_config  # noqa: E402
+import cmd_doctor  # noqa: E402
+import cmd_explain  # noqa: E402
 import cmd_mcp_config  # noqa: E402
 import mcp_server  # noqa: E402
 import render_runtime  # noqa: E402
@@ -174,6 +178,22 @@ def _migrate_config_cmd(args) -> int:
     )
 
 
+def _doctor_cmd(args) -> int:
+    return cmd_doctor.run(
+        cwd=args.cwd,
+        fmt=args.format,
+    )
+
+
+def _explain_cmd(args) -> int:
+    return cmd_explain.run(
+        task=args.task,
+        workspace=args.workspace,
+        cwd=args.cwd,
+        fmt=args.format,
+    )
+
+
 def _mcp_server_cmd(args) -> int:
     argv = []
     if args.knowledge_root:
@@ -289,6 +309,20 @@ def main() -> int:
     p_migrate.add_argument("--force", action="store_true", help="Overwrite existing .contextd/config.json")
     p_migrate.add_argument("--dry-run", action="store_true", help="Print config without writing")
     p_migrate.set_defaults(func=_migrate_config_cmd)
+
+    # doctor
+    p_doctor = sub.add_parser("doctor", help="Diagnose contextd config, packs, and safety")
+    p_doctor.add_argument("--cwd", default=None, help="Start directory (default: current)")
+    p_doctor.add_argument("--format", choices=["text", "json"], default="json")
+    p_doctor.set_defaults(func=_doctor_cmd)
+
+    # explain
+    p_explain = sub.add_parser("explain", help="Explain deterministic task context selection")
+    p_explain.add_argument("task", help="Task description (quote if multi-word)")
+    p_explain.add_argument("--workspace", default=None, help="Override workspace name")
+    p_explain.add_argument("--cwd", default=None, help="Start directory (default: current)")
+    p_explain.add_argument("--format", choices=["text", "json"], default="json")
+    p_explain.set_defaults(func=_explain_cmd)
 
     # mcp-server
     p_mcp_server = sub.add_parser("mcp-server", help="Run contextd as a stdio MCP tools server")

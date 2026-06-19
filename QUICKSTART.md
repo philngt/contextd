@@ -40,7 +40,7 @@ This script:
 - The CLI reads canonical `.contextd/config.json` first, then legacy adapters.
 - Is idempotent — run again after `git pull` to update.
 
-> Verify: `contextd resolve` and confirm `knowledge_root` is correct.
+> Verify: `contextd resolve` and confirm `knowledge_root` is correct. Then run `contextd doctor` to catch config, pack, adapter, or safety drift before the first task.
 
 ### Migration
 
@@ -105,7 +105,10 @@ It snapshots codebase metadata (without copying source), sends it through the ev
 Runtime-neutral CLI:
 
 ```bash
+contextd resolve --format json
+contextd doctor --format text
 contextd context "Add a Kafka consumer for surgery file processed events" --format json
+contextd explain "Add a Kafka consumer for surgery file processed events" --format text
 ```
 
 Claude Code adapter:
@@ -121,6 +124,7 @@ The context pipeline:
 4. Builder/reviewer — agent uses the context and validator rules.
 
 > Output: generated code + `current-task.json`/`current-task.md` showing which knowledge was applied.
+> Debug selection: `contextd explain` shows selected docs, dropped docs, gaps, warnings, source hashes, and budget estimates.
 
 ---
 

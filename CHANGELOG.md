@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added — Production context diagnostics
+
+Added P0 production-readiness diagnostics and context quality tooling:
+
+- New `contextd doctor --format text|json --cwd PATH?` command for config, workspace, active-pack, retrieval-map, schema, adapter-drift, and secret-path diagnostics.
+- New `contextd explain "task" --format text|json --workspace NAME? --cwd PATH?` command for deterministic selection trace, selected/dropped docs, gaps, warnings, source hashes, and budget summary.
+- `contextd_task_context.v1` artifacts now include optional `budget_report` with deterministic, model-neutral context budget estimates.
+- Runtime retrieval now blocks unsafe retrieval-map paths and secret-like files, and redacts suspicious inline secrets before context enters `referenced_docs`.
+- Added `docs/context-quality.md` and a `context-quality-degradation` runbook.
+
 ### Added — First-class non-code context
 
 `contextd context` now treats product, BA, QC, UX/design, ops, security, and domain-research context as first-class retrieval targets without breaking `contextd_task_context.v1`.

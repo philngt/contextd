@@ -21,7 +21,9 @@ ROOT = HERE.parent
 sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE / "lib"))
 
+import cmd_doctor  # noqa: E402
 import cmd_resolve  # noqa: E402
+import render_runtime  # noqa: E402
 from lib import contextd_resolver, task_context_engine  # noqa: E402
 
 
@@ -178,6 +180,43 @@ def test_context_artifact_and_materialized_pack() -> None:
         print("  ok context_artifact_and_materialized_pack")
 
 
+def test_budget_report_and_explain_trace() -> None:
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        _workspace(root)
+        _pack(root)
+        artifact = task_context_engine.build_context_artifact(
+            task="Implement demo feature",
+            wiki_root=root,
+            workspace="default",
+            packs=["pack-demo"],
+            project_dir=root,
+        )
+        again = task_context_engine.build_context_artifact(
+            task="Implement demo feature",
+            wiki_root=root,
+            workspace="default",
+            packs=["pack-demo"],
+            project_dir=root,
+        )
+        assert "budget_report" in artifact, artifact
+        assert "_selection_trace" not in artifact, artifact
+        assert artifact["budget_report"] == again["budget_report"]
+        assert artifact["budget_report"]["selected_docs"] == len(artifact["referenced_docs"])
+
+        explanation = task_context_engine.build_context_explanation(
+            task="Implement demo feature",
+            wiki_root=root,
+            workspace="default",
+            packs=["pack-demo"],
+            project_dir=root,
+        )
+        assert explanation["artifact_type"] == "contextd_context_explanation.v1"
+        assert explanation["selection_trace"]["selected_docs"], explanation
+        assert explanation["summary"]["budget_report"] == artifact["budget_report"]
+        print("  ok budget_report_and_explain_trace")
+
+
 def test_non_code_product_pack_retrieval() -> None:
     with tempfile.TemporaryDirectory() as td:
         root = Path(td)
@@ -299,6 +338,52 @@ def test_qc_evidence_retrieval_excludes_raw_sources() -> None:
         print("  ok qc_evidence_retrieval_excludes_raw_sources")
 
 
+def test_retrieval_map_safety_and_redaction() -> None:
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        _workspace(root)
+        _workspace(root, "other")
+        _pack_with_retrieval(
+            root,
+            "pack-security",
+            {"guard": ["guard", "secret"]},
+            {
+                "guard": (
+                    "security/guidance.md, security/.env, ../outside.md, "
+                    f"{root}/absolute.md, workspaces/other/workspace.md"
+                )
+            },
+        )
+        _write(root / "workspaces" / "default" / "security" / "guidance.md",
+               "# Security\n\n## Scope\n\napi_key = abc123\npassword: hunter2\n")
+        _write(root / "workspaces" / "default" / "security" / ".env",
+               "TOKEN=should-not-read\n")
+        _write(root / "absolute.md", "# Absolute\n")
+        artifact = task_context_engine.build_context_artifact(
+            task="guard secret handling",
+            wiki_root=root,
+            workspace="default",
+            packs=["pack-security"],
+            project_dir=root,
+        )
+        paths = {doc["path"] for doc in artifact["referenced_docs"]}
+        assert any(path.endswith("security/guidance.md") for path in paths), paths
+        assert not any(path.endswith("security/.env") for path in paths), paths
+        redacted_docs = [doc for doc in artifact["referenced_docs"] if doc.get("redacted")]
+        assert redacted_docs, artifact["referenced_docs"]
+        assert "<REDACTED-SECRET>" in redacted_docs[0]["content"], redacted_docs[0]
+        assert any(gap["category"] == "security-policy" and "../outside.md" in gap["missing"]
+                   for gap in artifact["gaps"]), artifact["gaps"]
+        assert any(gap["category"] == "security-policy" and "absolute paths" in gap["missing"]
+                   for gap in artifact["gaps"]), artifact["gaps"]
+        assert any(gap["category"] == "security-policy" and "workspaces/other" in gap["missing"]
+                   for gap in artifact["gaps"]), artifact["gaps"]
+        assert any(gap["category"] == "security-policy" and "security/.env" in gap["missing"]
+                   for gap in artifact["gaps"]), artifact["gaps"]
+        assert any("Redacted sensitive-looking content" in warning for warning in artifact["warnings"])
+        print("  ok retrieval_map_safety_and_redaction")
+
+
 def test_contract_index_missing_target_is_gap() -> None:
     with tempfile.TemporaryDirectory() as td:
         root = Path(td)
@@ -328,11 +413,49 @@ def test_contract_path_index_and_fallback() -> None:
         print("  ok contract_path_index_and_fallback")
 
 
+def test_doctor_and_adapter_drift_checks() -> None:
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        _workspace(root)
+        _pack(root)
+        _write(root / ".contextd" / "config.json",
+               json.dumps({"workspace": "default", "knowledge_root": ".", "packs": ["pack-demo"]}))
+        clean = cmd_doctor.diagnose(cwd=str(root))
+        assert clean["status"] == "ok", clean
+
+        _write(root / ".contextd" / "config.json",
+               json.dumps({"workspace": "default", "knowledge_root": ".", "packs": ["pack-missing"]}))
+        missing = cmd_doctor.diagnose(cwd=str(root))
+        assert missing["status"] == "warning", missing
+        assert any(issue["check"] == "active-packs" for issue in missing["issues"]), missing
+
+        _pack_with_retrieval(
+            root,
+            "pack-bad",
+            {"bad": ["bad"]},
+            {"bad": "../outside.md"},
+        )
+        _write(root / ".contextd" / "config.json",
+               json.dumps({"workspace": "default", "knowledge_root": ".", "packs": ["pack-bad"]}))
+        unsafe = cmd_doctor.diagnose(cwd=str(root))
+        assert unsafe["status"] == "error", unsafe
+        assert any(issue["check"] == "retrieval-map-safety" for issue in unsafe["issues"]), unsafe
+
+    artifacts = render_runtime.render("codex-plugin", workspace="default", include_engine=False)
+    skill = artifacts["skills/contextd/SKILL.md"]
+    assert "Look for `.contextd/config.json`" in skill, skill
+    assert "Look for `.claude/wiki.json`" not in skill, skill
+    assert skill.find("`.contextd/config.json`") < skill.find("`.claude/wiki.json`"), skill
+    print("  ok doctor_and_adapter_drift_checks")
+
+
 def test_cli_smoke() -> None:
     commands = [
         [sys.executable, "-m", "scripts.cli", "resolve", "--format", "json"],
         [sys.executable, "-m", "scripts.cli", "find", "citation", "--limit", "1", "--format", "json"],
         [sys.executable, "-m", "scripts.cli", "context", "design context", "--format", "json", "--no-materialize"],
+        [sys.executable, "-m", "scripts.cli", "doctor", "--format", "json"],
+        [sys.executable, "-m", "scripts.cli", "explain", "design context", "--format", "json"],
         [sys.executable, "-m", "scripts.cli", "contract-path", "citation-format", "--format", "json"],
         [sys.executable, "-m", "scripts.cli", "mcp-config", "--client", "codex",
          "--knowledge-root", str(ROOT), "--workspace", "default"],
@@ -647,12 +770,15 @@ def run() -> int:
         test_pack_override_replace_semantics,
         test_missing_workspace_lists_available,
         test_context_artifact_and_materialized_pack,
+        test_budget_report_and_explain_trace,
         test_non_code_product_pack_retrieval,
         test_ba_unknown_domain_becomes_gap,
         test_ux_pack_retrieves_design_sections,
         test_qc_evidence_retrieval_excludes_raw_sources,
+        test_retrieval_map_safety_and_redaction,
         test_contract_index_missing_target_is_gap,
         test_contract_path_index_and_fallback,
+        test_doctor_and_adapter_drift_checks,
         test_cli_smoke,
         test_mcp_server_smoke,
         test_installer_dry_run_knowledge_root,

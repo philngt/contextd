@@ -56,6 +56,7 @@ Use is provided under the repository license ([MIT](LICENSE)) and is offered **"
 | Workspace/packs markdown engine | Stable |
 | CLI: resolve/find/bundle | Available from GitHub Releases or source checkout |
 | CLI: deterministic task context | Available (`contextd context`) |
+| CLI: diagnostics and selection explain | Available (`contextd doctor`, `contextd explain`) |
 | Plain markdown bundle export | Available |
 | Codex skill/plugin export | Available |
 | Cursor rules export | Available |
@@ -72,8 +73,8 @@ Use is provided under the repository license ([MIT](LICENSE)) and is offered **"
 
 contextd is a markdown-first context engine:
 
-1. **CLI core**: `contextd resolve`, `contextd find`, `contextd bundle`
-2. **Task context artifact**: `contextd context "task" --format json`
+1. **CLI core**: `contextd resolve`, `contextd doctor`, `contextd find`, `contextd bundle`
+2. **Task context artifact**: `contextd context "task" --format json`, with `contextd explain "task"` for selection trace
 3. **Manifest index**: `.contextd/manifest.json`
 4. **Runtime export/adapters**: plain markdown, Codex skill/plugin, Cursor rules, Claude Code artifacts, MCP stdio tools
 
@@ -198,6 +199,13 @@ This creates `<project>/.contextd/config.json` from an existing `.claude/wiki.js
 /switch-workspace {name}
 ```
 
+Verify the runtime before asking an agent to work:
+
+```bash
+contextd resolve --format json
+contextd doctor --format text
+```
+
 ### When you receive a task
 
 ```text
@@ -208,8 +216,13 @@ Or with the runtime-neutral CLI:
 
 ```bash
 contextd context "Add Kafka consumer..." --format json
+contextd explain "Add Kafka consumer..." --format text
 contextd contract-path citation-format
 ```
+
+`contextd context` emits the canonical JSON artifact. `contextd explain` shows why docs were selected or dropped, including gaps, warnings, source hashes, and the lightweight budget report.
+
+See [docs/context-quality.md](docs/context-quality.md) for budget semantics, safety guard behavior, and rollout scorecards.
 
 ### MCP Adapter
 

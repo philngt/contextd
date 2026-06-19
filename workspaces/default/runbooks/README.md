@@ -7,6 +7,7 @@ Mỗi runbook mô tả một failure mode vận hành của contextd v1. Khi `co
 | [config-resolution-failure.md](config-resolution-failure.md) | `resolve`, `/use-contextd`, hoặc `contextd context` không tìm được `.contextd/config.json`, `workspace`, hoặc `knowledge_root`. |
 | [workspace-switch-mismatch.md](workspace-switch-mismatch.md) | Workspace active sai sau `/switch-workspace`, workspace directory thiếu, hoặc pack override không như mong đợi. |
 | [context-artifact-generation-failure.md](context-artifact-generation-failure.md) | `contextd context` fail, artifact thiếu field, có blocking gaps, hoặc contract/pattern missing. |
+| [context-quality-degradation.md](context-quality-degradation.md) | `contextd context` chạy được nhưng chọn sai docs, over-budget, có gaps bất ngờ, hoặc agent dùng context yếu. |
 | [materialized-context-pack-stale.md](materialized-context-pack-stale.md) | `.contextd/context/current-task.*` hoặc `packs/{packKey}.md` có vẻ stale sau khi đổi static docs. |
 | [runtime-adapter-drift.md](runtime-adapter-drift.md) | Claude/Codex/Cursor/plain export không thống nhất với JSON artifact hoặc còn coi legacy path là canonical. |
 | [release-manifest-build-failure.md](release-manifest-build-failure.md) | Release, manifest, PyInstaller, wheel, hoặc version smoke fail từ clean checkout. |
