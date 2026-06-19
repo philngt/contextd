@@ -22,9 +22,10 @@ sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE / "lib"))
 
 import cmd_doctor  # noqa: E402
+import cmd_eval  # noqa: E402
 import cmd_resolve  # noqa: E402
 import render_runtime  # noqa: E402
-from lib import contextd_resolver, task_context_engine  # noqa: E402
+from lib import contextd_resolver, pack_validation, task_context_engine  # noqa: E402
 
 
 def _write(path: Path, text: str) -> None:
@@ -52,9 +53,11 @@ def _workspace(root: Path, name: str = "default") -> Path:
 
 def _pack(root: Path) -> None:
     _write(root / "packs" / "pack-demo" / "pack.yaml",
-           "name: pack-demo\nversion: 1.0.0\nkeywords:\n  demo: [demo, sample]\n")
+           "name: pack-demo\nversion: 1.0.0\ndescription: Demo pack\ncomponents:\n  - demo\nkeywords:\n  demo: [demo, sample]\n")
     _write(root / "packs" / "pack-demo" / "agents" / "common-pitfalls.md",
            "# Common Pitfalls\n\n## Rules\n\nDo not guess.\n")
+    _write(root / "packs" / "pack-demo" / "agents" / "pipeline" / "retrieval-map.md",
+           "# Retrieval Map\n\n| Component | Docs to retrieve |\n|---|---|\n| `demo` | platform/contracts/, platform/patterns/ |\n")
 
 
 def _pack_with_retrieval(root: Path, name: str, keywords: dict, rows: dict) -> None:
@@ -215,6 +218,138 @@ def test_budget_report_and_explain_trace() -> None:
         assert explanation["selection_trace"]["selected_docs"], explanation
         assert explanation["summary"]["budget_report"] == artifact["budget_report"]
         print("  ok budget_report_and_explain_trace")
+
+
+def test_policy_check_pass_and_failures() -> None:
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        _workspace(root)
+        _pack(root)
+        policy_path = root / "workspaces" / "default" / "policy" / "context-policy.json"
+        _write(policy_path, json.dumps({
+            "rules": [
+                {
+                    "id": "require-contract",
+                    "severity": "error",
+                    "when": {"workstream": "engineering"},
+                    "require": {"categories": ["contract"]},
+                }
+            ]
+        }))
+        artifact = task_context_engine.build_context_artifact(
+            task="Implement demo feature",
+            wiki_root=root,
+            workspace="default",
+            packs=["pack-demo"],
+            project_dir=root,
+        )
+        assert artifact["governance_report"]["status"] == "ok", artifact["governance_report"]
+
+        _write(policy_path, json.dumps({
+            "rules": [
+                {
+                    "id": "require-quality",
+                    "severity": "error",
+                    "when": {"workstream": "engineering"},
+                    "require": {"categories": ["quality"]},
+                }
+            ]
+        }))
+        missing_quality = task_context_engine.build_context_artifact(
+            task="Implement demo feature",
+            wiki_root=root,
+            workspace="default",
+            packs=["pack-demo"],
+            project_dir=root,
+        )
+        assert missing_quality["governance_report"]["status"] == "error", missing_quality["governance_report"]
+        assert any(v["check"] == "require.categories"
+                   for v in missing_quality["governance_report"]["violations"])
+
+        _write(policy_path, json.dumps({
+            "rules": [
+                {
+                    "id": "deny-demo-contract",
+                    "severity": "error",
+                    "deny": {"docs": ["*demo.contract.json"]},
+                }
+            ]
+        }))
+        denied = task_context_engine.build_context_artifact(
+            task="Implement demo feature",
+            wiki_root=root,
+            workspace="default",
+            packs=["pack-demo"],
+            project_dir=root,
+        )
+        assert denied["governance_report"]["status"] == "error", denied["governance_report"]
+        assert any(v["check"] == "deny.docs"
+                   for v in denied["governance_report"]["violations"])
+    print("  ok policy_check_pass_and_failures")
+
+
+def test_pack_validation_catches_bad_pack_api() -> None:
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        _workspace(root)
+        _write(root / "packs" / "pack-other" / "pack.yaml",
+               "name: pack-other\nversion: 1.0.0\ndescription: Other\ncomponents:\n  - other\nkeywords:\n  other: [other]\n")
+        _write(root / "packs" / "pack-bad" / "pack.yaml",
+               "name: pack-bad\nversion: 1.0.0\ndescription: Bad\ncomponents:\n  - known\nkeywords:\n  unknown: [bad]\nfiles:\n  missing: missing.md\n")
+        _write(root / "packs" / "pack-bad" / "agents" / "pipeline" / "retrieval-map.md",
+               "# Retrieval Map\n\n| Component | Docs to retrieve |\n|---|---|\n"
+               "| `unknown` | ../outside.md |\n"
+               "| `known` | packs/pack-other/agents/common-pitfalls.md |\n")
+        report = pack_validation.validate_packs(root, ["pack-bad"])
+        checks = {issue["check"] for issue in report["issues"]}
+        assert report["status"] == "error", report
+        assert "pack.keywords" in checks, report
+        assert "retrieval-map.components" in checks, report
+        assert "retrieval-map.path" in checks, report
+        assert "retrieval-map.cross-pack" in checks, report
+    print("  ok pack_validation_catches_bad_pack_api")
+
+
+def test_golden_eval_passes_and_fails_deterministically() -> None:
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        _workspace(root)
+        _pack(root)
+        _write(root / ".contextd" / "config.json",
+               json.dumps({"workspace": "default", "knowledge_root": "."}))
+        fixture_dir = root / "workspaces" / "default" / "eval" / "golden-tasks"
+        _write(fixture_dir / "pass.json", json.dumps({
+            "id": "pass-demo-contract",
+            "task": "Implement demo feature",
+            "workspace": "default",
+            "packs": ["pack-demo"],
+            "expected_docs": ["*demo.contract.json"],
+            "expected_categories": ["contract"],
+            "forbidden_docs": [],
+            "expected_gaps": [],
+            "policy_expectation": "ok",
+        }))
+        report_path = root / ".contextd" / "runs" / "eval-pass.json"
+        assert cmd_eval.run(golden=True, workspace="default", cwd=str(root),
+                            fmt="json", output=str(report_path)) == 0
+        report = json.loads(report_path.read_text(encoding="utf-8"))
+        assert report["status"] == "ok", report
+        assert report["summary"]["passed"] == 1, report
+
+        _write(fixture_dir / "fail.json", json.dumps({
+            "id": "fail-missing-doc",
+            "task": "Implement demo feature",
+            "workspace": "default",
+            "packs": ["pack-demo"],
+            "expected_docs": ["workspaces/default/missing.md"],
+        }))
+        fail_path = root / ".contextd" / "runs" / "eval-fail.json"
+        assert cmd_eval.run(golden=True, workspace="default", cwd=str(root),
+                            fmt="json", output=str(fail_path)) == 1
+        failed = json.loads(fail_path.read_text(encoding="utf-8"))
+        assert failed["status"] == "error", failed
+        assert failed["summary"]["failed"] == 1, failed
+    print("  ok golden_eval_passes_and_fails_deterministically")
 
 
 def test_non_code_product_pack_retrieval() -> None:
@@ -426,8 +561,9 @@ def test_doctor_and_adapter_drift_checks() -> None:
         _write(root / ".contextd" / "config.json",
                json.dumps({"workspace": "default", "knowledge_root": ".", "packs": ["pack-missing"]}))
         missing = cmd_doctor.diagnose(cwd=str(root))
-        assert missing["status"] == "warning", missing
+        assert missing["status"] == "error", missing
         assert any(issue["check"] == "active-packs" for issue in missing["issues"]), missing
+        assert any(issue["check"] == "pack.manifest" for issue in missing["issues"]), missing
 
         _pack_with_retrieval(
             root,
@@ -456,6 +592,9 @@ def test_cli_smoke() -> None:
         [sys.executable, "-m", "scripts.cli", "context", "design context", "--format", "json", "--no-materialize"],
         [sys.executable, "-m", "scripts.cli", "doctor", "--format", "json"],
         [sys.executable, "-m", "scripts.cli", "explain", "design context", "--format", "json"],
+        [sys.executable, "-m", "scripts.cli", "pack-validate", "--all", "--format", "json"],
+        [sys.executable, "-m", "scripts.cli", "policy-check", "debug context quality", "--format", "json"],
+        [sys.executable, "-m", "scripts.cli", "eval", "--golden", "--workspace", "default", "--format", "json"],
         [sys.executable, "-m", "scripts.cli", "contract-path", "citation-format", "--format", "json"],
         [sys.executable, "-m", "scripts.cli", "mcp-config", "--client", "codex",
          "--knowledge-root", str(ROOT), "--workspace", "default"],
@@ -511,6 +650,8 @@ def test_mcp_server_smoke() -> None:
             })
             assert init["result"]["protocolVersion"] == "2025-11-25", init
             assert init["result"]["capabilities"]["tools"]["listChanged"] is False, init
+            assert init["result"]["capabilities"]["resources"]["listChanged"] is False, init
+            assert init["result"]["capabilities"]["prompts"]["listChanged"] is False, init
 
             assert proc.stdin is not None
             proc.stdin.write(json.dumps({
@@ -528,6 +669,37 @@ def test_mcp_server_smoke() -> None:
                 "contextd.contract_path",
                 "contextd.bundle",
             }.issubset(names), names
+
+            resources = _mcp_request(proc, {"jsonrpc": "2.0", "id": 21, "method": "resources/list"})
+            resource_uris = {resource["uri"] for resource in resources["result"]["resources"]}
+            assert "contextd://workspace/default/workspace.md" in resource_uris, resources
+
+            workspace_doc = _mcp_request(proc, {
+                "jsonrpc": "2.0",
+                "id": 22,
+                "method": "resources/read",
+                "params": {"uri": "contextd://workspace/default/workspace.md"},
+            })
+            assert "# Workspace" in workspace_doc["result"]["contents"][0]["text"], workspace_doc
+
+            prompts = _mcp_request(proc, {"jsonrpc": "2.0", "id": 23, "method": "prompts/list"})
+            prompt_names = {prompt["name"] for prompt in prompts["result"]["prompts"]}
+            assert {
+                "contextd.build_task_context",
+                "contextd.explain_context",
+                "contextd.run_policy_check",
+            }.issubset(prompt_names), prompts
+
+            prompt = _mcp_request(proc, {
+                "jsonrpc": "2.0",
+                "id": 24,
+                "method": "prompts/get",
+                "params": {
+                    "name": "contextd.build_task_context",
+                    "arguments": {"task": "Implement demo feature"},
+                },
+            })
+            assert "contextd context" in prompt["result"]["messages"][0]["content"]["text"], prompt
 
             resolved = _mcp_request(proc, {
                 "jsonrpc": "2.0",
@@ -771,6 +943,9 @@ def run() -> int:
         test_missing_workspace_lists_available,
         test_context_artifact_and_materialized_pack,
         test_budget_report_and_explain_trace,
+        test_policy_check_pass_and_failures,
+        test_pack_validation_catches_bad_pack_api,
+        test_golden_eval_passes_and_fails_deterministically,
         test_non_code_product_pack_retrieval,
         test_ba_unknown_domain_becomes_gap,
         test_ux_pack_retrieves_design_sections,

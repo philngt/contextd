@@ -24,6 +24,7 @@ sys.path.insert(0, str(SCRIPT_DIR / "lib"))
 import cmd_bundle  # noqa: E402
 import cmd_resolve  # noqa: E402
 import contextd_resolver  # noqa: E402
+import context_security  # noqa: E402
 import find_engine  # noqa: E402
 import task_context_engine  # noqa: E402
 
@@ -322,6 +323,207 @@ def _relative_or_abs(path: Path, root: Path) -> str:
         return str(path)
 
 
+def _mime_type(path: Path) -> str:
+    if path.suffix == ".json":
+        return "application/json"
+    if path.suffix in {".yaml", ".yml"}:
+        return "application/yaml"
+    if path.suffix == ".txt":
+        return "text/plain"
+    return "text/markdown"
+
+
+def _resource_allowed(path: Path) -> bool:
+    if not path.is_file():
+        return False
+    if path.suffix not in {".md", ".json", ".yaml", ".yml", ".txt"}:
+        return False
+    if context_security.block_reason(path):
+        return False
+    parts = set(path.parts)
+    if {".git", "node_modules", "__pycache__"}.intersection(parts):
+        return False
+    if "evidence" in parts and "sources" in parts:
+        return False
+    return True
+
+
+def _add_resource(resources: Dict[str, Dict[str, Any]], uri: str, path: Path,
+                  name: str, description: str) -> None:
+    if not _resource_allowed(path):
+        return
+    resources[uri] = {
+        "uri": uri,
+        "name": name,
+        "description": description,
+        "mimeType": _mime_type(path),
+        "_path": path,
+    }
+
+
+def _resource_map(options: ServerOptions, cwd: Optional[str] = None) -> Dict[str, Dict[str, Any]]:
+    state = resolve_state(options, cwd=cwd, require_workspace=True)
+    assert state.knowledge_root is not None and state.workspace is not None
+    resources: Dict[str, Dict[str, Any]] = {}
+
+    ws_dir = state.knowledge_root / "workspaces" / state.workspace
+    for path in sorted(ws_dir.rglob("*")):
+        if not _resource_allowed(path):
+            continue
+        rel = path.relative_to(ws_dir).as_posix()
+        _add_resource(
+            resources,
+            f"contextd://workspace/{state.workspace}/{rel}",
+            path,
+            f"{state.workspace}/{rel}",
+            "Active workspace document",
+        )
+
+    for pack in state.packs:
+        pack_dir = state.knowledge_root / "packs" / pack
+        if not pack_dir.is_dir():
+            continue
+        for path in sorted(pack_dir.rglob("*")):
+            if not _resource_allowed(path):
+                continue
+            rel = path.relative_to(pack_dir).as_posix()
+            _add_resource(
+                resources,
+                f"contextd://pack/{pack}/{rel}",
+                path,
+                f"{pack}/{rel}",
+                "Active pack document",
+            )
+
+    for doc_name in ("context-quality.md", "governance.md", "pack-validation.md", "evaluation.md", "mcp.md"):
+        path = state.knowledge_root / "docs" / doc_name
+        _add_resource(
+            resources,
+            f"contextd://docs/{doc_name}",
+            path,
+            f"docs/{doc_name}",
+            "contextd runtime documentation",
+        )
+
+    context_dir = state.project_dir / ".contextd" / "context"
+    for filename in ("current-task.json", "current-task.md"):
+        path = context_dir / filename
+        _add_resource(
+            resources,
+            f"contextd://context/{filename}",
+            path,
+            f"context/{filename}",
+            "Materialized current task artifact",
+        )
+
+    return resources
+
+
+def list_resources(options: ServerOptions, params: Dict[str, Any]) -> Dict[str, Any]:
+    _validate_no_extra(params, {"cwd", "cursor"})
+    resources = []
+    for entry in _resource_map(options, cwd=params.get("cwd")).values():
+        public = {k: v for k, v in entry.items() if k != "_path"}
+        resources.append(public)
+    resources.sort(key=lambda item: item["uri"])
+    return {"resources": resources}
+
+
+def read_resource(options: ServerOptions, params: Dict[str, Any]) -> Dict[str, Any]:
+    _validate_no_extra(params, {"uri", "cwd"})
+    uri = params.get("uri")
+    if not isinstance(uri, str) or not uri:
+        raise ValueError("resources/read requires params.uri")
+    resources = _resource_map(options, cwd=params.get("cwd"))
+    entry = resources.get(uri)
+    if not entry:
+        raise ValueError(f"Unknown or unavailable resource: {uri}")
+    path = entry["_path"]
+    return {
+        "contents": [
+            {
+                "uri": uri,
+                "mimeType": entry["mimeType"],
+                "text": path.read_text(encoding="utf-8"),
+            }
+        ]
+    }
+
+
+def prompt_definitions() -> List[Dict[str, Any]]:
+    return [
+        {
+            "name": "contextd.build_task_context",
+            "title": "Build task context",
+            "description": "Ask contextd to build the canonical task context artifact.",
+            "arguments": [
+                {"name": "task", "description": "Task to prepare context for.", "required": True},
+                {"name": "workspace", "description": "Optional workspace override.", "required": False},
+            ],
+        },
+        {
+            "name": "contextd.explain_context",
+            "title": "Explain context",
+            "description": "Ask contextd to explain selected, dropped, and missing context.",
+            "arguments": [
+                {"name": "task", "description": "Task to explain context for.", "required": True},
+                {"name": "workspace", "description": "Optional workspace override.", "required": False},
+            ],
+        },
+        {
+            "name": "contextd.run_policy_check",
+            "title": "Run policy check",
+            "description": "Ask contextd to evaluate policy-as-code for a task.",
+            "arguments": [
+                {"name": "task", "description": "Task to check.", "required": True},
+                {"name": "workspace", "description": "Optional workspace override.", "required": False},
+            ],
+        },
+    ]
+
+
+def get_prompt(params: Dict[str, Any]) -> Dict[str, Any]:
+    _validate_no_extra(params, {"name", "arguments"})
+    name = params.get("name")
+    if not isinstance(name, str) or not name:
+        raise ValueError("prompts/get requires params.name")
+    known = {prompt["name"] for prompt in prompt_definitions()}
+    if name not in known:
+        raise ValueError(f"Unknown prompt: {name}")
+    arguments = params.get("arguments") or {}
+    if not isinstance(arguments, dict):
+        raise ValueError("params.arguments must be an object")
+    task = str(arguments.get("task") or "<task>")
+    workspace = str(arguments.get("workspace") or "").strip()
+    workspace_flag = f" --workspace {workspace}" if workspace else ""
+    commands = {
+        "contextd.build_task_context": (
+            f"Build deterministic context for this task with "
+            f"`contextd context {json.dumps(task)}{workspace_flag} --format json --no-materialize`."
+        ),
+        "contextd.explain_context": (
+            f"Explain context selection for this task with "
+            f"`contextd explain {json.dumps(task)}{workspace_flag} --format json`."
+        ),
+        "contextd.run_policy_check": (
+            f"Run governance checks for this task with "
+            f"`contextd policy-check {json.dumps(task)}{workspace_flag} --format json`."
+        ),
+    }
+    return {
+        "description": next(prompt["description"] for prompt in prompt_definitions() if prompt["name"] == name),
+        "messages": [
+            {
+                "role": "user",
+                "content": {
+                    "type": "text",
+                    "text": commands[name],
+                },
+            }
+        ],
+    }
+
+
 def call_tool(name: str, arguments: Dict[str, Any], options: ServerOptions) -> Dict[str, Any]:
     if name == "contextd.resolve":
         _validate_no_extra(arguments, {"cwd"})
@@ -488,6 +690,13 @@ def handle_request(message: Dict[str, Any], options: ServerOptions) -> Optional[
                 "tools": {
                     "listChanged": False,
                 },
+                "resources": {
+                    "subscribe": False,
+                    "listChanged": False,
+                },
+                "prompts": {
+                    "listChanged": False,
+                },
             },
             "serverInfo": {
                 "name": "contextd",
@@ -512,6 +721,45 @@ def handle_request(message: Dict[str, Any], options: ServerOptions) -> Optional[
         if is_notification:
             return None
         return _success_response(request_id, {"tools": tool_definitions()})
+
+    if method == "resources/list":
+        if is_notification:
+            return None
+        try:
+            return _success_response(request_id, list_resources(options, _require_object(params, "params")))
+        except ToolExecutionError as exc:
+            return _error_response(request_id, INVALID_PARAMS, str(exc), exc.payload)
+        except ValueError as exc:
+            return _error_response(request_id, INVALID_PARAMS, str(exc))
+
+    if method == "resources/read":
+        if is_notification:
+            return None
+        try:
+            return _success_response(request_id, read_resource(options, _require_object(params, "params")))
+        except ToolExecutionError as exc:
+            return _error_response(request_id, INVALID_PARAMS, str(exc), exc.payload)
+        except ValueError as exc:
+            return _error_response(request_id, INVALID_PARAMS, str(exc))
+
+    if method == "prompts/list":
+        if is_notification:
+            return None
+        try:
+            _validate_no_extra(_require_object(params, "params"), {"cursor"})
+        except ToolExecutionError as exc:
+            return _error_response(request_id, INVALID_PARAMS, str(exc), exc.payload)
+        return _success_response(request_id, {"prompts": prompt_definitions()})
+
+    if method == "prompts/get":
+        if is_notification:
+            return None
+        try:
+            return _success_response(request_id, get_prompt(_require_object(params, "params")))
+        except ToolExecutionError as exc:
+            return _error_response(request_id, INVALID_PARAMS, str(exc), exc.payload)
+        except ValueError as exc:
+            return _error_response(request_id, INVALID_PARAMS, str(exc))
 
     if method == "tools/call":
         if is_notification:

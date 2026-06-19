@@ -2,10 +2,10 @@
 
 contextd ships a stdlib-only MCP stdio server. It is another adapter over the same deterministic CLI/runtime engine; it does not add a queue, worker runtime, remote transport, or orchestration layer.
 
-The implementation targets the MCP `2025-11-25` tools flow:
+The implementation targets the MCP `2025-11-25` stdio flow:
 - stdio transport with newline-delimited JSON-RPC messages.
-- server capability: `tools: { listChanged: false }`.
-- methods: `initialize`, `notifications/initialized`, `tools/list`, `tools/call`.
+- server capabilities: tools, read-only resources, and prompts.
+- methods: `initialize`, `notifications/initialized`, `tools/list`, `tools/call`, `resources/list`, `resources/read`, `prompts/list`, `prompts/get`.
 
 References: [MCP transports](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports) and [MCP tools](https://modelcontextprotocol.io/specification/2025-11-25/server/tools).
 
@@ -78,6 +78,27 @@ Add the generated JSON to the client MCP config location used by your client:
 | `contextd.context` | `task`, `workspace?`, `cwd?`, `materialize? = false` | Canonical `contextd_task_context.v1` JSON artifact. |
 | `contextd.contract_path` | `contract_id`, `workspace?`, `cwd?` | Resolved contract path via `contract-index.json` and fallback filename lookup. |
 | `contextd.bundle` | `workspace?`, `include_packs?`, `include_engine?`, `max_chars?` | Capped markdown bundle, default `max_chars=20000`. |
+
+## Resources
+
+The MCP server exposes read-only resources with fixed `contextd://` URIs:
+
+- Active workspace docs: `contextd://workspace/{workspace}/...`
+- Active pack docs: `contextd://pack/{pack}/...`
+- Runtime docs: `contextd://docs/context-quality.md`, `contextd://docs/governance.md`, `contextd://docs/pack-validation.md`, `contextd://docs/evaluation.md`, `contextd://docs/mcp.md`
+- Materialized current task, when present: `contextd://context/current-task.json` and `contextd://context/current-task.md`
+
+`resources/read` accepts only URIs returned by `resources/list`; it does not map arbitrary paths. Secret-like paths and raw evidence source folders are not exposed as MCP resources.
+
+## Prompts
+
+Prompts are small command-oriented templates for clients that support MCP prompts:
+
+- `contextd.build_task_context`
+- `contextd.explain_context`
+- `contextd.run_policy_check`
+
+They describe which local `contextd` command to run for the given task. They do not execute tools by themselves.
 
 ## Error Semantics
 
