@@ -1,9 +1,9 @@
 # contextd
-**A scoped context daemon for AI coding agents.**
+**A build system for reliable AI coding-agent context.**
 
-Strict per-project knowledge isolation. Layered packs. Deterministic retrieval.
+Compile team knowledge into deterministic, inspectable agent input artifacts.
 
-Designed for developers using AI coding agents across multiple projects/companies who need agents that don't mix context between repos. The canonical runtime namespace is `.contextd`; Claude Code, Codex, Cursor, and plain markdown exports are adapters over the same deterministic context engine.
+contextd turns workspace docs, packs, contracts, policies, and runbooks into reproducible context artifacts for Claude Code, Codex, Cursor, MCP, and plain markdown. It is designed for teams using AI coding agents across multiple projects who need agent inputs that are workspace-isolated, explainable, and team-owned.
 
 
 ## Onboarding
@@ -14,11 +14,11 @@ Designed for developers using AI coding agents across multiple projects/companie
 
 ## Thesis (non-negotiables)
 
-1. **Workspace isolation is mandatory**  
-   Retrieval and context generation are scoped to the active workspace for the current codebase.
+1. **Agent context is a build artifact**
+   Team knowledge is source material; `contextd context` compiles the task-specific artifact consumed by agent adapters.
 
-2. **Runtime context over static documentation**  
-   This repo is built to feed agents with task-relevant context, not just to serve as a human-readable wiki.
+2. **Workspace isolation is mandatory**
+   Retrieval and context generation are scoped to the active workspace for the current codebase.
 
 3. **Packs are cognitive scaffolds, not just templates**  
    Packs are reusable reasoning modules that shape task framing, validation, and execution quality.
@@ -70,9 +70,9 @@ Use is provided under the repository license ([MIT](LICENSE)) and is offered **"
 - Release binary installer prerequisites: `curl` or `wget` on macOS/Linux; PowerShell `Invoke-WebRequest` on Windows.
 - Source/developer installs require Python 3 and Git.
 
-## Roadmap: Runtime-Agnostic Context
+## Mental Model: Build Agent Context
 
-contextd is a markdown-first context engine:
+contextd is a local build system for agent inputs:
 
 1. **CLI core**: `contextd resolve`, `contextd doctor`, `contextd find`, `contextd bundle`
 2. **Task context artifact**: `contextd context "task" --format json`, with `contextd explain "task"` for selection trace
@@ -85,11 +85,11 @@ Existing `.claude/commands` and `.claude/agents` remain supported adapters durin
 
 - contextd is not a vector database.
 - MCP is optional. contextd does not require an MCP SDK, remote MCP server, or orchestrator runtime.
-- contextd does not replace the coding agent; it prepares scoped, auditable context for the agent.
+- contextd does not replace the coding agent; it builds scoped, auditable inputs for the agent.
 
-## Mental Model
+## Repository Model
 
-contextd = **engine** (shared) + **N workspaces** (independent sandboxes).
+contextd = **build engine** (shared) + **N workspaces** (source knowledge) + **adapter outputs**.
 
 ```text
 contextd/
