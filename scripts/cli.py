@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""contextd — CLI for the contextd knowledge engine.
+"""contextd — Build system for AI coding-agent context.
+
+contextd compiles workspace knowledge, packs, contracts, and policies into
+deterministic context artifacts for Claude, Codex, Cursor, and MCP.
 
 Subcommands:
     resolve     Resolve workspace context from cwd
@@ -247,7 +250,7 @@ def _mcp_config_cmd(args) -> int:
 def main() -> int:
     parser = argparse.ArgumentParser(
         prog="contextd",
-        description="CLI for the contextd knowledge engine",
+        description="Build system for AI coding-agent context",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__,
     )

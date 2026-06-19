@@ -6,7 +6,7 @@ Senior backend engineer working inside a knowledge-driven system. Implement feat
 
 ## Project Identity
 
-- **Project**: `contextd` — scoped context daemon for AI coding agents.
+- **Project**: `contextd` — build system for AI coding-agent context.
 - **"Wiki"** = the content (contracts, patterns, domains) under `workspaces/{ws}/`. **`contextd`** = the engine.
 - **Default workspace**: `default`.
 - **Slash commands**: `/contextd-*` prefix (e.g. `/contextd-setup`, `/use-contextd`, `/update-contextd`, `/rebase-contextd`, `/contextd-eval`). Legacy `/wiki-*` removed at install time.

@@ -1,5 +1,9 @@
 # Quickstart — Go Live in 5 Minutes
 
+**Build system for AI coding-agent context.**
+
+contextd compiles workspace knowledge, packs, contracts, and policies into deterministic context artifacts for Claude, Codex, Cursor, and MCP.
+
 For developers who just cloned `contextd`. This gets you from `git clone` to your first deterministic `contextd context` or `/use-contextd` run.
 
 > Read this right after cloning the repo. Goal: a working contextd setup for one codebase in about 5 minutes.

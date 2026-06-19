@@ -177,7 +177,7 @@ def render_codex_plugin(manifest: Dict, workspace: str, wiki_root: Path,
     plugin_json = {
         "name": "contextd",
         "version": manifest.get("schema_version", "1.0.0"),
-        "description": "Scoped context daemon for AI coding agents",
+        "description": "Build system for AI coding-agent context",
         "skills": [
             {
                 "name": "contextd",
@@ -265,7 +265,7 @@ def render_codex_plugin(manifest: Dict, workspace: str, wiki_root: Path,
     yaml_content = """---
 interface:
   display_name: "contextd"
-  short_description: "Scoped context daemon for AI coding agents — workspace knowledge, contracts, and patterns."
+  short_description: "Build system for AI coding-agent context."
   default_prompt: "Resolve the active workspace and find relevant patterns for this task."
 ---
 """
@@ -285,7 +285,7 @@ def render_cursor(manifest: Dict, workspace: str, wiki_root: Path,
     """
     # .cursorrules
     rules_lines: List[str] = [
-        "# contextd — Scoped Context Daemon",
+        "# contextd — Build System for AI Coding-Agent Context",
         "",
         f"Workspace: {workspace}",
         f"Packs: {', '.join(packs) if packs else '(none)'}",

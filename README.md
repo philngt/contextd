@@ -1,9 +1,7 @@
 # contextd
-**A build system for reliable AI coding-agent context.**
+**Build system for AI coding-agent context.**
 
-Compile team knowledge into deterministic, inspectable agent input artifacts.
-
-contextd turns workspace docs, packs, contracts, policies, and runbooks into reproducible context artifacts for Claude Code, Codex, Cursor, MCP, and plain markdown. It is designed for teams using AI coding agents across multiple projects who need agent inputs that are workspace-isolated, explainable, and team-owned.
+contextd compiles workspace knowledge, packs, contracts, and policies into deterministic context artifacts for Claude, Codex, Cursor, and MCP.
 
 
 ## Onboarding
