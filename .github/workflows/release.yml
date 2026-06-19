@@ -61,7 +61,7 @@ jobs:
         include:
           - os: ubuntu-latest
             asset_name: contextd-linux-x86_64
-          - os: macos-13
+          - os: macos-15-intel
             asset_name: contextd-darwin-x86_64
           - os: macos-latest
             asset_name: contextd-darwin-arm64
