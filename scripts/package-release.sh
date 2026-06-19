@@ -2,7 +2,7 @@
 #
 # package-release.sh
 #
-# Package wiki-template thành 1 file zip để distribute cho user không có Git.
+# Package contextd source zip để distribute cho user không có Git.
 # Output (both names emitted in parallel for migration window):
 #   - release/contextd-{version}.zip       + release/contextd-latest.zip     (canonical)
 #   - release/wiki-template-{version}.zip  + release/wiki-template-latest.zip (legacy alias)
@@ -62,7 +62,7 @@ if [[ -z "$VERSION" ]]; then
     fi
 fi
 
-echo "📦 Packaging wiki-template v${VERSION}"
+echo "📦 Packaging contextd v${VERSION}"
 
 # ---------- check zip available (skip for dry-run) ----------
 if [[ $DRY_RUN -eq 0 ]] && ! command -v zip > /dev/null 2>&1; then
@@ -86,7 +86,7 @@ LEGACY_LATEST_PATH="$RELEASE_DIR/wiki-template-latest.zip"
 
 # ---------- staging area ----------
 STAGE_DIR="$(mktemp -d 2>/dev/null || mktemp -d -t wiki-pkg)"
-STAGE_ROOT="$STAGE_DIR/wiki-template"
+STAGE_ROOT="$STAGE_DIR/wiki-template"  # Legacy zip root kept for v0.x compatibility.
 mkdir -p "$STAGE_ROOT"
 
 cleanup() {

@@ -6,6 +6,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added — MCP stdio tools adapter
+
+Added a stdlib-only MCP server surface over the existing contextd runtime:
+
+- `contextd mcp-server --knowledge-root PATH --workspace NAME` runs a newline-delimited stdio JSON-RPC server.
+- `contextd mcp-config --client claude|cursor|codex|all --knowledge-root PATH --workspace NAME` prints client snippets without mutating client config files.
+- Exposed tools: `contextd.resolve`, `contextd.find`, `contextd.context`, `contextd.contract_path`, and `contextd.bundle`.
+- MCP calls are adapter-only: deterministic context artifacts and contracts remain canonical; search remains advisory.
+
+### Changed — Installer knowledge root selection
+
+`scripts/install-to-claude.{sh,py}` now use canonical installer terminology:
+
+- `ENGINE_ROOT` = contextd engine repo used for commands/agents/scripts.
+- `KNOWLEDGE_ROOT` = canonical root containing `workspaces/`.
+- New `--knowledge-root PATH` flag, with `--knowledge-repo PATH` kept as a compatibility alias.
+- New `--default-workspace NAME` and `--print-mcp-config CLIENT` flags.
+- Non-interactive installs default `knowledge_root` to the engine repo; interactive shell installs can choose current config root, engine repo root, or a custom path.
+
+### Changed — Release and onboarding MCP guidance
+
+Release installer scripts now print next-step guidance for choosing `knowledge_root`, generating MCP client snippets, and installing source-zip Claude slash-command adapters. Onboarding pages now mention the runtime-neutral CLI and MCP adapter alongside Claude slash commands.
+
 ### Changed — Rename three verb commands to `verb-contextd` form
 
 Three slash commands were renamed so the verb leads (matches the legacy `use-wiki / update-wiki / rebase-wiki` aliases the installer already migrates):

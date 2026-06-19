@@ -44,7 +44,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: source-zip
-          path: release/contextd-*.zip
+          path: |
+            release/contextd-*.zip
+            release/wiki-template-*.zip
 
   # ---------------------------------------------------------------------------
   # Stage 2: Build standalone binaries
@@ -127,6 +129,7 @@ jobs:
 
       - name: Generate release installer scripts
         run: |
+          mkdir -p release
           TAG="${{ steps.tag.outputs.value }}"
           BASE_URL="https://github.com/${{ github.repository }}/releases/download/${TAG}"
 
@@ -195,6 +198,13 @@ jobs:
           fi
 
           echo "Verify: contextd --version"
+          echo ""
+          echo "Next:"
+          echo "  Pick a knowledge_root directory that contains workspaces/."
+          echo "  Generate MCP snippets:"
+          echo "    contextd mcp-config --client codex --knowledge-root /path/to/knowledge-root --workspace default"
+          echo "  If you downloaded the source zip and want Claude slash commands:"
+          echo "    bash scripts/install-to-claude.sh --knowledge-root /path/to/knowledge-root"
           EOF
           perl -pi -e "s#__REPO__#${{ github.repository }}#g; s#__TAG__#${TAG}#g" release/install.sh
           chmod +x release/install.sh
@@ -226,14 +236,22 @@ jobs:
 
           Write-Host "Installed to $exePath"
           Write-Host "Verify: contextd --version"
+          Write-Host ""
+          Write-Host "Next:"
+          Write-Host "  Pick a knowledge_root directory that contains workspaces/."
+          Write-Host "  Generate MCP snippets:"
+          Write-Host "    contextd mcp-config --client codex --knowledge-root C:\path\to\knowledge-root --workspace default"
+          Write-Host "  If you downloaded the source zip and want Claude slash commands:"
+          Write-Host "    bash scripts/install-to-claude.sh --knowledge-root C:\path\to\knowledge-root"
           EOF
           perl -pi -e "s#__REPO__#${{ github.repository }}#g; s#__TAG__#${TAG}#g" release/install.ps1
 
       - name: Generate checksums
         run: |
-          cd release-artifacts
-          sha256sum * > ../release/SHA256SUMS.txt || true
-          cd ..
+          {
+            (cd release-artifacts && sha256sum *)
+            (cd release && sha256sum install.sh install.ps1)
+          } > release/SHA256SUMS.txt
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2

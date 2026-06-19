@@ -162,6 +162,7 @@
     <a href="#cmd-reporting" style="font-size:12px;padding:4px 10px">📊 Report</a>
     <a href="#cmd-evidence" style="font-size:12px;padding:4px 10px">🔬 Evidence</a>
     <a href="#cmd-observability" style="font-size:12px;padding:4px 10px">🔭 Trace</a>
+    <a href="#cmd-runtime" style="font-size:12px;padding:4px 10px">🔌 Runtime</a>
     <span style="display:inline-block;width:1px;height:20px;background:#d0d7de;vertical-align:middle;margin:0 4px"></span>
     <a href="#wf-bootstrap" style="font-size:12px;padding:4px 10px">🚀 Bootstrap</a>
     <a href="#wf-bug" style="font-size:12px;padding:4px 10px">🐛 Bug fix</a>
@@ -481,6 +482,21 @@
       </table>
     </div>
 
+    <div class="cmd-group" id="cmd-runtime">
+      <h3>🔌 Runtime-neutral CLI &amp; MCP</h3>
+      <table class="cmd-table">
+        <thead><tr><th>Command</th><th>Purpose</th><th>When to use</th></tr></thead>
+        <tbody>
+          <tr><td class="cmd-name">contextd context</td><td>Build canonical <code>contextd_task_context.v1</code> JSON</td><td>When an agent or script needs deterministic task context</td></tr>
+          <tr><td class="cmd-name">contextd mcp-config</td><td>Print Claude, Cursor, or Codex MCP snippets</td><td>When connecting contextd to an MCP-capable client</td></tr>
+          <tr><td class="cmd-name">contextd mcp-server</td><td>Run a local stdio MCP tools server over contextd</td><td>When a client should call contextd tools directly</td></tr>
+        </tbody>
+      </table>
+      <div class="callout info">
+        <strong>MCP is optional.</strong> Use <code>--knowledge-root</code> to point the server at a directory containing <code>workspaces/</code>. See <a href="../docs/mcp.md">docs/mcp.md</a>.
+      </div>
+    </div>
+
     <div class="cmd-group" id="cmd-nontech">
       <h3>💼 Non-tech contributors (Product / Business)</h3>
       <table class="cmd-table">
@@ -719,6 +735,14 @@ implement spec at workspaces/{ws}/tools/{slug}-spec.md
     </details>
 
     <details>
+      <summary>Can I use contextd through MCP?</summary>
+      <div class="faq-body">
+        <p>Yes. Run <code>contextd mcp-config --client codex --knowledge-root /path/to/root --workspace default</code> to generate a client snippet, then configure your MCP client to launch <code>contextd mcp-server</code>.</p>
+        <p>MCP is a local stdio adapter. It exposes tools over the same deterministic context engine and does not replace slash commands or project config.</p>
+      </div>
+    </details>
+
+    <details>
       <summary>Can AI hallucinate knowledge not in the wiki?</summary>
       <div class="faq-body">
         <p>The system enforces strict rules: if knowledge is missing, AI must report assumptions or constraint conflicts, not invent facts.
@@ -745,6 +769,7 @@ implement spec at workspaces/{ws}/tools/{slug}-spec.md
       <a href="../README.md">README.md</a> ·
       <a href="../QUICKSTART.md">QUICKSTART.md</a> ·
       <a href="../CLAUDE.md">CLAUDE.md</a> (AI agent instructions) ·
+      <a href="../docs/mcp.md">MCP docs</a> ·
       <a href="../packs/README.md">packs/README.md</a> ·
       <a href="../.claude/commands/README.md">slash commands index</a> ·
       <a href="https://github.com/philngt/contextd">GitHub repository</a>
