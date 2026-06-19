@@ -2,10 +2,10 @@
 
 | Component | Docs to Retrieve |
 |-----------|------------------|
-| `tool-design`    | `packs/pack-solo-builder/recipes/*.md` (toàn bộ — chọn match best); `{ws}/tools/*.md` (catalog scan); `{ws}/domains/*/glossary.md` (term reference); `templates/tool-spec.md` |
-| `tool-extend`    | Existing `{ws}/tools/{slug}-spec.md`; recipe đã dùng (reference từ spec); `{ws}/tools/README.md` (catalog index) |
-| `recipe`         | `packs/pack-solo-builder/recipes/{name}.md` cụ thể; `templates/tool-recipe.md` (nếu user muốn add recipe mới) |
-| `tool-catalog`   | `{ws}/tools/*.md` (full scan); `{ws}/tools/README.md` (index nếu có) |
+| `tool-design`    | `packs/pack-solo-builder/recipes/*.md` (toàn bộ — chọn match best); `tools/*.md` (catalog scan); `domains/*/glossary.md` (term reference); `templates/tool-spec.md` |
+| `tool-extend`    | `tools/*-spec.md`; `tools/README.md` (catalog index) |
+| `recipe`         | `packs/pack-solo-builder/recipes/*.md`; `templates/tool-recipe.md` |
+| `tool-catalog`   | `tools/*.md` (full scan); `tools/README.md` (index nếu có) |
 
 ## Recipe Match Algorithm (cho `/tool-design`)
 

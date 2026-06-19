@@ -3,8 +3,8 @@
 # Mọi field bắt buộc trừ những field đánh dấu (optional).
 
 evid_id: "2026-05-04-paste-PROJ-1234"        # Format: {YYYY-MM-DD}-{src}-{slug}
-source_type: "paste"                          # mcp | api | paste | code
-origin: "user_paste"                          # paste: "user_paste"; api: full URL; mcp: "{server}.{tool}"; code: "code:{repo-name}@{sha7}"; bundle: "platform-bundle:{label}@{date}"
+source_type: "paste"                          # mcp | api | paste | code | document | interview | ticket | analytics | regulation | design | incident
+origin: "user_paste"                          # paste/document/etc: source pointer; api: full URL; mcp: "{server}.{tool}"; code: "code:{repo-name}@{sha7}"; bundle: "platform-bundle:{label}@{date}"
 label: "PROJ-1234 timeout config change"      # Mô tả ngắn user cung cấp khi ingest
 fetched_at: "2026-05-04T10:23:00+07:00"      # ISO8601 với timezone
 fetched_by: "lechihieu.ict@gmail.com"        # Email user (từ env hoặc git config)
@@ -13,6 +13,12 @@ raw_filename: "raw.json"                      # Tên file raw (ext theo content-
 raw_size_bytes: 4821
 normalized: true                              # true nếu có raw.normalized.md
 workspace_at_ingest: "example-surgery"        # CRITICAL: workspace lúc ingest. Apply phải khớp.
+
+# Optional non-code classification — all backward compatible.
+evidence_kind: "requirement"                  # requirement | decision | metric | policy | workflow | bug | risk | research | customer_signal
+audience: "product"                           # engineering | product | ba | qc | security | design | ops
+confidence: "medium"                          # low | medium | high
+review_by: "2026-06-30"                       # ISO date; optional freshness/review hint
 
 # Code-specific — single-repo mode (source_type=code, --ref)
 # Xem agents/pipeline/code-snapshot-conventions.md

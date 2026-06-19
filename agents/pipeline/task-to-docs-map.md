@@ -29,6 +29,11 @@ During migration, legacy adapters `<cwd>/.claude/wiki.json.workspace`, `<cwd>/.C
 
 **Active packs** = list pack từ `{ws}/workspace.md ## Packs` (verify mỗi pack có `packs/{name}/pack.yaml`). Planner đọc trực tiếp từ workspace.md; **không** persist vào `intent` JSON (giảm drift surface).
 
+Optional first-class non-code fields:
+- `workstream`: `engineering | product | business_analysis | quality | security | design | ops | domain_research`.
+- `audience`: `engineering | product | ba | qc | security | design | ops | domain`.
+- `context_goal`: short machine-readable goal such as `shape_product_decision` or `support_quality_decision`.
+
 ### Type definitions
 
 | Type | Triggered When | Example Task |
@@ -91,7 +96,11 @@ Mọi pack active luôn cung cấp `packs/{name}/agents/common-pitfalls.md` (Top
 
 ### By component (pack-driven)
 
-Engine KHÔNG hardcode `component → file` map. Mỗi pack khai báo trong `packs/{name}/agents/pipeline/retrieval-map.md`. Pipeline merge map của tất cả pack active.
+Engine KHÔNG hardcode stack-specific `component → file` map. Mỗi pack khai báo trong `packs/{name}/agents/pipeline/retrieval-map.md`. Pipeline merge map của tất cả pack active.
+
+Retrieval-map rows may point to workspace docs (`product/`, `requirements/`, `platform/design/`, `quality/`, `runbooks/`, `evidence/`), plus pack/template docs. `{domain}` and `{project}` placeholders expand only when detected; otherwise the artifact emits an explicit non-blocking gap.
+
+Evidence retrieval is summary-only: context artifacts may use `_index.md`, analysis, verified facts, recommendations, pending external notes, or applied summaries, but must not retrieve immutable `evidence/sources/*/raw.*` wholesale.
 
 Ví dụ với `pack-event-driven`:
 

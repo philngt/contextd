@@ -20,6 +20,8 @@ keywords:
 # Bỏ field nếu pack không có file đó.
 files:
   constraints: agents/constraints.md
+  # Compatibility filename. Non-code packs may use this as "working rules"
+  # for requirements, product, QC, UX, ops, or research docs.
   coding_rules: agents/coding-rules.md
   validator_rules: agents/pipeline/validator-rules.md
   validator_script: scripts/rules.py

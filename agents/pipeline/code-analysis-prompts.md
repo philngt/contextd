@@ -2,7 +2,7 @@
 
 **Orchestrator**. Dispatch tới 1 trong 2 variant theo `source.yaml#code_variant`. Mỗi variant định nghĩa CORE prompts riêng + ON-DEMAND prompts riêng.
 
-> Sibling: [critical-analysis-prompts.md](critical-analysis-prompts.md) (cho source_type ∈ {paste, api, mcp}).
+> Sibling: [critical-analysis-prompts.md](critical-analysis-prompts.md) (cho non-code text sources such as paste, api, mcp, document, interview, ticket, analytics, regulation, design, incident).
 
 ---
 

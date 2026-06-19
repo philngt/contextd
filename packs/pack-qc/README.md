@@ -17,7 +17,7 @@ Enable when workspace needs:
 ## What it adds
 
 - **Constraints** (`agents/constraints.md`) — hard rules for QC + perf workflow (two sections)
-- **Coding rules** (`agents/coding-rules.md`) — conventions for test cases, bug reports, perf reports
+- **Working rules** (`agents/coding-rules.md`, compatibility filename) — conventions for test cases, bug reports, perf reports
 - **Validator rules** (`agents/pipeline/validator-rules.md` + `scripts/rules.py`) — automated gates
 - **Retrieval map** (`agents/pipeline/retrieval-map.md`) — component → knowledge docs mapping
 - **Prompt overrides** (`agents/pipeline/prompt-overrides.md`) — QC + perf self-check

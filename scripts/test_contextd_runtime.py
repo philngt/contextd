@@ -55,6 +55,22 @@ def _pack(root: Path) -> None:
            "# Common Pitfalls\n\n## Rules\n\nDo not guess.\n")
 
 
+def _pack_with_retrieval(root: Path, name: str, keywords: dict, rows: dict) -> None:
+    keyword_lines = []
+    for component, words in keywords.items():
+        rendered = ", ".join(words)
+        keyword_lines.append(f"  {component}: [{rendered}]")
+    _write(root / "packs" / name / "pack.yaml",
+           f"name: {name}\nversion: 1.0.0\nkeywords:\n" + "\n".join(keyword_lines) + "\n")
+    table = ["# Retrieval Map", "", "| Component | Docs to retrieve |", "|---|---|"]
+    for component, docs in rows.items():
+        table.append(f"| `{component}` | {docs} |")
+    _write(root / "packs" / name / "agents" / "pipeline" / "retrieval-map.md",
+           "\n".join(table) + "\n")
+    _write(root / "packs" / name / "agents" / "common-pitfalls.md",
+           "# Common Pitfalls\n\n## Rules\n\nUse the right context.\n")
+
+
 def test_contextd_config_wins() -> None:
     with tempfile.TemporaryDirectory() as td:
         root = Path(td)
@@ -160,6 +176,127 @@ def test_context_artifact_and_materialized_pack() -> None:
         )
         assert changed["contextPack"]["packKey"] != first_key
         print("  ok context_artifact_and_materialized_pack")
+
+
+def test_non_code_product_pack_retrieval() -> None:
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        _workspace(root)
+        _pack_with_retrieval(
+            root,
+            "pack-product",
+            {"brief": ["brief", "product brief"], "metric": ["metric", "success metric"]},
+            {"brief": "product/briefs/, product/personas/, product/metrics.md"},
+        )
+        _write(root / "workspaces" / "default" / "product" / "briefs" / "checkout.md",
+               "# Brief\n\n## Problem\n\nCheckout drops.\n\n## Target User\n\nBuyer.\n\n## Success Metric\n\nConversion.\n\n## Acceptance Criteria\n\n- measurable.\n")
+        _write(root / "workspaces" / "default" / "product" / "metrics.md",
+               "# Metrics\n\n## Success Metric\n\nConversion + retention.\n")
+        artifact = task_context_engine.build_context_artifact(
+            task="write product brief with success metric for checkout",
+            wiki_root=root,
+            workspace="default",
+            packs=["pack-product"],
+            project_dir=root,
+        )
+        assert artifact["intent"]["workstream"] == "product", artifact["intent"]
+        assert artifact["intent"]["audience"] == "product", artifact["intent"]
+        paths = {doc["path"] for doc in artifact["referenced_docs"]}
+        categories = {doc["category"] for doc in artifact["referenced_docs"]}
+        assert "product" in categories, artifact["referenced_docs"]
+        assert any(path.endswith("product/briefs/checkout.md") for path in paths), paths
+        assert any(path.endswith("product/metrics.md") for path in paths), paths
+        assert "product_context" in artifact["retrieval_policy"]["priority"]
+        print("  ok non_code_product_pack_retrieval")
+
+
+def test_ba_unknown_domain_becomes_gap() -> None:
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        _workspace(root)
+        _pack_with_retrieval(
+            root,
+            "pack-ba",
+            {"acceptance-criteria": ["acceptance criteria", "scenario"]},
+            {"acceptance-criteria": "requirements/, platform/contracts/, domains/{domain}/workflow.md"},
+        )
+        _write(root / "workspaces" / "default" / "requirements" / "checkout.md",
+               "# Requirement\n\n## Actor\n\nBuyer.\n\n## Business Outcome\n\nCheckout succeeds.\n\n## Acceptance Criteria\n\n- testable.\n")
+        artifact = task_context_engine.build_context_artifact(
+            task="write acceptance criteria for checkout",
+            wiki_root=root,
+            workspace="default",
+            packs=["pack-ba"],
+            project_dir=root,
+        )
+        assert artifact["intent"]["workstream"] == "business_analysis", artifact["intent"]
+        assert any(doc["category"] == "requirement" for doc in artifact["referenced_docs"])
+        assert any("domain not detected" in gap["missing"] and not gap["blocking_hint"]
+                   for gap in artifact["gaps"]), artifact["gaps"]
+        print("  ok ba_unknown_domain_becomes_gap")
+
+
+def test_ux_pack_retrieves_design_sections() -> None:
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        _workspace(root)
+        _pack_with_retrieval(
+            root,
+            "pack-ui-ux",
+            {"design-system": ["design system"], "accessibility": ["accessibility", "a11y"]},
+            {
+                "design-system": "platform/design/design-system.md, platform/design/tokens.md",
+                "accessibility": "platform/design/a11y.md",
+            },
+        )
+        _write(root / "workspaces" / "default" / "platform" / "design" / "design-system.md",
+               "# Design System\n\n## Flow\n\nUse canonical flow.\n\n## Accessibility\n\nKeyboard first.\n\n## UX Writing\n\nPlain copy.\n")
+        _write(root / "workspaces" / "default" / "platform" / "design" / "tokens.md",
+               "# Tokens\n\n## Accessibility\n\nContrast tokens.\n")
+        artifact = task_context_engine.build_context_artifact(
+            task="design system accessibility update",
+            wiki_root=root,
+            workspace="default",
+            packs=["pack-ui-ux"],
+            project_dir=root,
+        )
+        design_docs = [doc for doc in artifact["referenced_docs"] if doc["category"] == "design"]
+        assert artifact["intent"]["workstream"] == "design", artifact["intent"]
+        assert design_docs, artifact["referenced_docs"]
+        assert any("Accessibility" in doc["sections"] for doc in design_docs), design_docs
+        print("  ok ux_pack_retrieves_design_sections")
+
+
+def test_qc_evidence_retrieval_excludes_raw_sources() -> None:
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        _workspace(root)
+        _pack_with_retrieval(
+            root,
+            "pack-qc",
+            {"test-execution": ["test execution", "test result"]},
+            {"test-execution": "runbooks/, evidence/"},
+        )
+        _write(root / "workspaces" / "default" / "evidence" / "_index.md",
+               "# Evidence Index\n\n## Active\n\n| id | state |\n")
+        _write(root / "workspaces" / "default" / "evidence" / "sources" / "e1" / "raw.md",
+               "# Raw\n\nSecret-ish raw source should not be retrieved wholesale.\n")
+        _write(root / "workspaces" / "default" / "evidence" / "qa" / "e1" / "verified-facts.md",
+               "# Verified Facts\n\n## Verified Facts\n\n- Tests passed.\n")
+        artifact = task_context_engine.build_context_artifact(
+            task="summarize test execution evidence for release quality",
+            wiki_root=root,
+            workspace="default",
+            packs=["pack-qc"],
+            project_dir=root,
+        )
+        paths = {doc["path"] for doc in artifact["referenced_docs"]}
+        assert artifact["intent"]["workstream"] == "quality", artifact["intent"]
+        assert any("/evidence/_index.md" in path for path in paths), paths
+        assert any(path.endswith("verified-facts.md") for path in paths), paths
+        assert not any("/evidence/sources/" in path for path in paths), paths
+        assert "quality_evidence" in artifact["retrieval_policy"]["priority"]
+        print("  ok qc_evidence_retrieval_excludes_raw_sources")
 
 
 def test_contract_index_missing_target_is_gap() -> None:
@@ -510,6 +647,10 @@ def run() -> int:
         test_pack_override_replace_semantics,
         test_missing_workspace_lists_available,
         test_context_artifact_and_materialized_pack,
+        test_non_code_product_pack_retrieval,
+        test_ba_unknown_domain_becomes_gap,
+        test_ux_pack_retrieves_design_sections,
+        test_qc_evidence_retrieval_excludes_raw_sources,
         test_contract_index_missing_target_is_gap,
         test_contract_path_index_and_fallback,
         test_cli_smoke,

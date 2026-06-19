@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added — First-class non-code context
+
+`contextd context` now treats product, BA, QC, UX/design, ops, security, and domain-research context as first-class retrieval targets without breaking `contextd_task_context.v1`.
+
+- Added optional `intent.workstream`, `intent.audience`, and `intent.context_goal` fields.
+- Added deterministic pack retrieval-map expansion for active pack components.
+- Added non-code referenced-doc categories: `product`, `requirement`, `design`, `quality`, and `evidence`.
+- Extended evidence source metadata for non-code sources such as documents, interviews, tickets, analytics, regulations, design notes, and incidents.
+- Added lightweight templates for requirements, user flows, and research summaries.
+
 ### Added — MCP stdio tools adapter
 
 Added a stdlib-only MCP server surface over the existing contextd runtime:

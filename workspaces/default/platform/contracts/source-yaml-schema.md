@@ -2,13 +2,13 @@
 
 ## Rule
 
-`source.yaml` PHẢI có required fields. Conditional fields cho `source_type=code` và bundle mode.
+`source.yaml` PHẢI có required fields. Conditional fields cho `source_type=code` và bundle mode. Non-code evidence may add optional classification fields for first-class product, BA, QC, design, security, ops, and domain-research context.
 
 ### Always-required (mọi source_type)
 
 ```yaml
 evid_id: "{C-001 evid-id-format}"
-source_type: "paste|api|mcp|code"
+source_type: "paste|api|mcp|code|document|interview|ticket|analytics|regulation|design|incident"
 origin: "{description-with-source-pointer}"
 label: "{≤ 30-char human-readable}"
 fetched_at: "{ISO8601 với timezone}"
@@ -50,6 +50,10 @@ include_docs:                         # optional bundle docs
 ### Optional (informational)
 
 ```yaml
+evidence_kind: "requirement|decision|metric|policy|workflow|bug|risk|research|customer_signal"
+audience: "engineering|product|ba|qc|security|design|ops"
+confidence: "low|medium|high"
+review_by: "{ISO8601 date}"
 related_files: ["{ws}/path/...", ...]
 related_domains: ["{name}", ...]
 related_projects: ["{name}", ...]
@@ -63,6 +67,7 @@ notes: |
 - `sha256` immutable — match raw.{ext} content exactly.
 - `evid_id` match dir name.
 - `source_type=code` mà `git_sha` null → V-02 reject.
+- Non-code `source_type` values MUST NOT require code-specific fields.
 - `code_variant` field default omitted → treat as `code` (backward-compat).
 
 ## Observed evidence
@@ -80,11 +85,12 @@ _(none detected)_
 - Missing required field → reject ingest.
 - `workspace_at_ingest ≠ active` lúc apply → cross-workspace violation STOP.
 - `git_sha` null khi `source_type=code` → V-02 reject.
+- Invalid optional enum (`evidence_kind`, `audience`, `confidence`) → warn or reject before apply, depending on command strictness.
 - `sha256` không match raw content (calculated) → I-1 violation, audit log.
 
 ## Future evolution
 
-Khi conditional grow phức tạp (5+ variant-specific fields), revisit tách C-004a (code-specific schema) thành contract riêng. Hiện tại 5 fields conditional acceptable.
+Khi conditional grow phức tạp (5+ variant-specific fields), revisit tách C-004a (code-specific schema) thành contract riêng. Hiện tại code-specific fields vẫn conditional; non-code classification fields are optional and backward-compatible.
 
 ## Related
 

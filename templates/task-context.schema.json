@@ -49,6 +49,24 @@
         "type": {
           "enum": ["implement_feature", "fix_bug", "design", "incident", "review"]
         },
+        "workstream": {
+          "enum": [
+            "engineering",
+            "product",
+            "business_analysis",
+            "quality",
+            "security",
+            "design",
+            "ops",
+            "domain_research"
+          ]
+        },
+        "audience": {
+          "enum": ["engineering", "product", "ba", "qc", "security", "design", "ops", "domain"]
+        },
+        "context_goal": {
+          "type": "string"
+        },
         "components": {
           "type": "array",
           "items": { "type": "string" }

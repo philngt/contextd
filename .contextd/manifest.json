@@ -503,6 +503,12 @@
     "priority": [
       "contracts",
       "patterns",
+      "requirements",
+      "product_context",
+      "design_context",
+      "quality_evidence",
+      "operational_runbooks",
+      "source_evidence",
       "project_docs",
       "domain_knowledge"
     ],

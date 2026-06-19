@@ -1,11 +1,11 @@
-# Critical Analysis Prompts (10) — Evidence Pipeline (source_type ∈ {paste, api, mcp})
+# Critical Analysis Prompts (10) — Evidence Pipeline (non-code text sources)
 
 Reference cho `/evidence-analyze`. Mỗi prompt chuyển raw data thành 1 file `analysis/{evid-id}/0X-*.md`.
 
 **CORE (1, 2, 4, 8)** — luôn chạy bởi `/evidence-analyze`. Đủ để mở Q&A loop.
 **ON-DEMAND (3, 5, 6, 7, 9, 10)** — user trigger qua `--prompt {n}` hoặc `evidence-apply` cần thêm.
 
-> **Khi `source.yaml#source_type == "code"`** → dùng [code-analysis-prompts.md](code-analysis-prompts.md) thay vì file này. CORE 4 (`04-questions.md`) và CORE 8 (`08-knowledge-gaps.md`) DÙNG CHUNG filename ở cả hai pipeline để `/evidence-qa` và `/evidence-apply` không phân nhánh logic — input và prompt body khác nhau, output schema giống nhau.
+> **Khi `source.yaml#source_type == "code"`** → dùng [code-analysis-prompts.md](code-analysis-prompts.md) thay vì file này. Với non-code text sources (`paste`, `api`, `mcp`, `document`, `interview`, `ticket`, `analytics`, `regulation`, `design`, `incident`) dùng prompt set này hoặc pack-specific override. CORE 4 (`04-questions.md`) và CORE 8 (`08-knowledge-gaps.md`) DÙNG CHUNG filename ở cả hai pipeline để `/evidence-qa` và `/evidence-apply` không phân nhánh logic — input và prompt body khác nhau, output schema giống nhau.
 
 ---
 

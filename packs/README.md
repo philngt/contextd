@@ -14,7 +14,7 @@ packs/{pack-name}/
 ├── README.md                          # docs
 ├── agents/
 │   ├── constraints.md                 # additive constraints (hard rules)
-│   ├── coding-rules.md                # additive coding rules
+│   ├── coding-rules.md                # additive working rules; filename kept for compatibility
 │   ├── common-pitfalls.md             # Top 10 anti-patterns (rule/why/detect/severity)
 │   └── pipeline/
 │       ├── validator-rules.md         # rule table (prefix pack-{name}-)
@@ -60,7 +60,9 @@ The loader is fail-fast when duplicate rule names are found across layers.
 ```bash
 python scripts/scaffold-pack.py pack-{your-name}
 ```
-This generates all 8 files (pack.yaml, README, 5 agent docs, scripts/rules.py with built-in `_vio()` helper). Then customize: `pack.yaml` components + keywords, `constraints.md`, and add rule functions to the `RULES` list in `rules.py`.
+This generates all 8 files (pack.yaml, README, 5 agent docs, scripts/rules.py with built-in `_vio()` helper). Then customize: `pack.yaml` components + keywords, `constraints.md`, retrieval map, and add rule functions to the `RULES` list in `rules.py`.
+
+`agents/coding-rules.md` is a compatibility filename. Non-code packs should treat it as **working rules** for product, BA, QC, UX, security, ops, or domain-research writing.
 
 **Manual path** (when you need fine-grained control):
 

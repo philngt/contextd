@@ -20,7 +20,9 @@ Workspace overrides (`{ws}/agents/constraints.md`, `{ws}/agents/pipeline/validat
 5. Architecture / ADR ← context, not implementation
 ```
 
-If a retrieved doc doesn't fit one of these 5 categories, drop it.
+For non-code workstreams, equivalent first-class categories are also valid:
+`product`, `requirement`, `design`, `quality`, `evidence`, and `runbook`.
+If a retrieved doc doesn't fit one of these categories, drop it.
 
 ## Max Context Budget
 
@@ -32,6 +34,7 @@ Budget applies to **retrieved knowledge docs only** (contracts + patterns + proj
 | Patterns | 2 | Flow, Config, Failure, Rules |
 | Project Docs | 2 | Purpose, Flow, Config Overrides, Failure |
 | Domain | 1 | States, Transitions, Business Rules |
+| Product / Requirement / Design / Quality / Evidence | 1-3 by workstream | Task-specific canonical sections |
 | **Total (retrieved)** | **7** | — |
 | Engine baseline (`agents/constraints.md`, `agents/coding-rules.md`) | out-of-budget | — |
 
@@ -45,6 +48,9 @@ Never feed a full doc when only a section is needed.
 | Debugging a failure | Failure Strategy, DLQ, Config |
 | Reviewing code | Rules, Constraints, Config Overrides |
 | Designing | Flow, Trade-offs, Used By |
+| Product/BA work | Problem, Target User, Success Metric, Acceptance Criteria, Actor, Business Outcome |
+| UX/design work | Flow, Accessibility, UX Writing, Edge Cases |
+| QC/ops/evidence work | Evidence, Scope, Risk, Decision, Verified Facts, Open Questions |
 
 ## Slicing Example
 

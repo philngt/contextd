@@ -19,7 +19,7 @@ Enable khi workspace cần:
 ## What it adds
 
 - **Constraints** (`agents/constraints.md`) — hard rules về token usage, WCAG, keyboard nav, flow coverage
-- **Coding rules** (`agents/coding-rules.md`) — conventions đặt tên token, cấu trúc flow file, accessibility note format
+- **Working rules** (`agents/coding-rules.md`, compatibility filename) — conventions đặt tên token, cấu trúc flow file, accessibility note format
 - **Common pitfalls** (`agents/common-pitfalls.md`) — Top 10 anti-pattern UX/design với detect và severity
 - **Validator rules** (`agents/pipeline/validator-rules.md`) — Layer-1 gates: hardcoded color, missing a11y, flow no error path
 - **Retrieval map** (`agents/pipeline/retrieval-map.md`) — component → workspace doc mapping

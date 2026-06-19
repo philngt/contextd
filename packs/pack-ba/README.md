@@ -13,7 +13,7 @@ Enable when workspace cần:
 ## What it adds
 
 - **Constraints** (`pack-ba/agents/constraints.md`) - hard rules cho requirement quality
-- **Coding rules** (`pack-ba/agents/coding-rules.md`) - conventions viết tài liệu BA
+- **Working rules** (`pack-ba/agents/coding-rules.md`, compatibility filename) - conventions viết tài liệu BA
 - **Validator rules** (`pack-ba/agents/pipeline/validator-rules.md` + `scripts/rules.py`) - automated gates
 - **Retrieval map** (`pack-ba/agents/pipeline/retrieval-map.md`) - mapping component BA -> knowledge docs
 - **Prompt overrides** (`pack-ba/agents/pipeline/prompt-overrides.md`) - self-check bổ sung cho BA tasks

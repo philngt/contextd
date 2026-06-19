@@ -40,6 +40,58 @@ INTENT_KEYWORDS = {
     ],
 }
 
+WORKSTREAM_KEYWORDS = {
+    "product": [
+        "product", "brief", "prd", "okr", "roadmap", "persona", "journey",
+        "metric", "customer", "feature request",
+    ],
+    "business_analysis": [
+        "requirement", "business requirement", "acceptance criteria", "user story",
+        "gherkin", "stakeholder", "process map", "workflow map", "brd",
+    ],
+    "quality": [
+        "test case", "test plan", "qa", "qc", "quality", "defect", "bug triage",
+        "regression", "release gate", "performance", "benchmark", "profiling",
+    ],
+    "security": [
+        "security", "threat", "vulnerability", "pentest", "attack surface",
+        "risk rating", "control", "authz", "secret",
+    ],
+    "design": [
+        "design system", "accessibility", "a11y", "user flow", "wireframe",
+        "ux", "ui", "prototype", "copy", "microcopy",
+    ],
+    "ops": [
+        "incident", "runbook", "oncall", "outage", "alert", "rollback",
+        "restore", "release", "deploy", "team sync",
+    ],
+    "domain_research": [
+        "research", "interview", "regulation", "policy", "evidence", "source",
+        "customer signal", "analytics", "support ticket",
+    ],
+}
+
+PACK_WORKSTREAMS = {
+    "pack-product": "product",
+    "pack-ba": "business_analysis",
+    "pack-qc": "quality",
+    "pack-security": "security",
+    "pack-ui-ux": "design",
+    "pack-dba": "ops",
+    "pack-solo-builder": "domain_research",
+}
+
+AUDIENCE_BY_WORKSTREAM = {
+    "engineering": "engineering",
+    "product": "product",
+    "business_analysis": "ba",
+    "quality": "qc",
+    "security": "security",
+    "design": "design",
+    "ops": "ops",
+    "domain_research": "domain",
+}
+
 SECTION_POLICY = {
     "contract": ["all"],
     "pattern": ["Flow", "Default Config", "Failure Strategy", "Implementation Rules", "Rules"],
@@ -50,6 +102,11 @@ SECTION_POLICY = {
     "architecture": ["all"],
     "decision": ["Status", "Context", "Decision", "Consequences"],
     "runbook": ["Symptoms", "Diagnosis", "Mitigation", "Rollback"],
+    "product": ["Problem", "Target User", "Success Metric", "Acceptance Criteria"],
+    "requirement": ["Actor", "Trigger", "Business Outcome", "Acceptance Criteria"],
+    "design": ["Flow", "Accessibility", "UX Writing", "Edge Cases"],
+    "quality": ["Evidence", "Scope", "Risk", "Decision"],
+    "evidence": ["Verified Facts", "Open Questions", "Source Summary"],
     "pitfalls": ["all"],
     "common-pitfalls": ["all"],
     "workspace-profile": ["all"],
@@ -68,6 +125,11 @@ CATEGORY_BUDGETS = {
     "architecture": 1,
     "decision": 2,
     "runbook": 2,
+    "product": 2,
+    "requirement": 2,
+    "design": 2,
+    "quality": 2,
+    "evidence": 2,
     "pitfalls": 3,
     "common-pitfalls": 3,
     "workspace-profile": 1,
@@ -86,12 +148,133 @@ PRIORITY = {
     "architecture": 4,
     "decision": 4,
     "runbook": 2,
+    "product": 2,
+    "requirement": 2,
+    "design": 2,
+    "quality": 2,
+    "evidence": 3,
     "pitfalls": 1,
     "common-pitfalls": 1,
     "workspace-profile": 2,
     "engine-guidance": 2,
     "engine-rule": 1,
     "pack-rule": 1,
+}
+
+WORKSTREAM_BUDGETS = {
+    "engineering": CATEGORY_BUDGETS,
+    "product": {
+        **CATEGORY_BUDGETS,
+        "product": 3,
+        "requirement": 2,
+        "domain": 1,
+        "decision": 1,
+        "contract": 1,
+        "pattern": 1,
+    },
+    "business_analysis": {
+        **CATEGORY_BUDGETS,
+        "requirement": 3,
+        "domain": 2,
+        "product": 1,
+        "contract": 1,
+        "runbook": 1,
+    },
+    "quality": {
+        **CATEGORY_BUDGETS,
+        "quality": 2,
+        "evidence": 2,
+        "runbook": 2,
+        "project": 1,
+        "contract": 1,
+    },
+    "security": {
+        **CATEGORY_BUDGETS,
+        "contract": 2,
+        "runbook": 2,
+        "project": 1,
+        "architecture": 1,
+        "decision": 1,
+    },
+    "design": {
+        **CATEGORY_BUDGETS,
+        "design": 3,
+        "product": 1,
+        "requirement": 1,
+        "domain": 1,
+        "decision": 1,
+    },
+    "ops": {
+        **CATEGORY_BUDGETS,
+        "runbook": 3,
+        "evidence": 2,
+        "project": 1,
+        "architecture": 1,
+    },
+    "domain_research": {
+        **CATEGORY_BUDGETS,
+        "evidence": 3,
+        "domain": 2,
+        "product": 1,
+        "requirement": 1,
+        "design": 1,
+    },
+}
+
+WORKSTREAM_PRIORITY = {
+    "engineering": {
+        "priority": ["contracts", "patterns", "project_docs", "domain_knowledge"],
+        "context_goal": "prepare_code_change",
+    },
+    "product": {
+        "priority": [
+            "product_context", "requirements", "domain_knowledge",
+            "source_evidence", "contracts", "patterns",
+        ],
+        "context_goal": "shape_product_decision",
+    },
+    "business_analysis": {
+        "priority": [
+            "requirements", "domain_knowledge", "product_context",
+            "contracts", "operational_runbooks",
+        ],
+        "context_goal": "clarify_testable_requirements",
+    },
+    "quality": {
+        "priority": [
+            "quality_evidence", "operational_runbooks", "requirements",
+            "project_docs", "contracts",
+        ],
+        "context_goal": "support_quality_decision",
+    },
+    "security": {
+        "priority": [
+            "contracts", "operational_runbooks", "source_evidence",
+            "project_docs", "architecture",
+        ],
+        "context_goal": "support_security_review",
+    },
+    "design": {
+        "priority": [
+            "design_context", "product_context", "requirements",
+            "domain_knowledge", "source_evidence",
+        ],
+        "context_goal": "shape_user_experience",
+    },
+    "ops": {
+        "priority": [
+            "operational_runbooks", "source_evidence", "project_docs",
+            "architecture", "contracts",
+        ],
+        "context_goal": "support_operational_response",
+    },
+    "domain_research": {
+        "priority": [
+            "source_evidence", "domain_knowledge", "requirements",
+            "product_context", "design_context",
+        ],
+        "context_goal": "ground_domain_understanding",
+    },
 }
 
 
@@ -167,6 +350,219 @@ def detect_components(task: str, wiki_root: Path, packs: List[str]) -> List[str]
     return sorted(components)
 
 
+def detect_scope(task: str, wiki_root: Path, workspace: str) -> Tuple[Optional[str], Optional[str]]:
+    """Detect domain + project by matching directory names in task text."""
+    task_lower = task.lower()
+    ws_dir = wiki_root / "workspaces" / workspace
+
+    def match_dir(parent: Path) -> Optional[str]:
+        if not parent.is_dir():
+            return None
+        for path in sorted(p for p in parent.iterdir() if p.is_dir()):
+            name = path.name.lower()
+            variants = {name, name.replace("-", " "), name.replace("_", " ")}
+            if any(v and v in task_lower for v in variants):
+                return path.name
+        return None
+
+    return match_dir(ws_dir / "domains"), match_dir(ws_dir / "projects")
+
+
+def detect_workstream(task: str, packs: List[str], components: List[str]) -> str:
+    task_lower = task.lower()
+    scores: Dict[str, int] = {}
+    for workstream, keywords in WORKSTREAM_KEYWORDS.items():
+        score = sum(1 for kw in keywords if kw in task_lower)
+        if score:
+            scores[workstream] = scores.get(workstream, 0) + score
+
+    for pack_name in packs:
+        workstream = PACK_WORKSTREAMS.get(pack_name)
+        if not workstream:
+            continue
+        if components:
+            scores[workstream] = scores.get(workstream, 0) + 2
+        else:
+            scores[workstream] = scores.get(workstream, 0) + 1
+
+    if not scores:
+        return "engineering"
+    return max(scores, key=scores.get)
+
+
+def _strip_inline_note(value: str) -> str:
+    return re.sub(r"\s+\([^)]*\)\s*$", "", value).strip()
+
+
+def _parse_retrieval_map(path: Path) -> Dict[str, List[str]]:
+    text = _read(path)
+    if text is None:
+        return {}
+    rows: Dict[str, List[str]] = {}
+    for raw in text.splitlines():
+        line = raw.strip()
+        if not line.startswith("|") or "Component" in line or re.match(r"^\|[-:\s|]+$", line):
+            continue
+        cells = [cell.strip() for cell in line.strip("|").split("|")]
+        if len(cells) < 2:
+            continue
+        component = re.sub(r"`", "", cells[0]).strip()
+        component = re.sub(r"\s+\(.*?\)$", "", component)
+        docs_cell = cells[1]
+        docs = []
+        for item in re.split(r"\s*,\s*|\s*;\s*", docs_cell):
+            item = _strip_inline_note(item.strip().strip("`"))
+            if item:
+                docs.append(item)
+        if component and docs:
+            rows[component] = docs
+    return rows
+
+
+def _category_from_path(path: Path, rel: str, fallback: str = "project") -> str:
+    parts = rel.split("/")
+    path_text = rel.lower()
+    if "/platform/contracts/" in path_text or "/contracts/" in path_text:
+        return "contract"
+    if "/platform/patterns/" in path_text or "/patterns/" in path_text:
+        return "pattern"
+    if "/runbooks/" in path_text:
+        return "runbook"
+    if "/product/" in path_text or path_text.startswith("product/"):
+        return "product"
+    if "/requirements/" in path_text or any(
+        token in path.name.lower() for token in ("requirement", "brd", "story", "acceptance")
+    ):
+        return "requirement"
+    if "/platform/design/" in path_text or "/design/" in path_text or path_text.startswith("design/"):
+        return "design"
+    if any(seg in parts for seg in ("quality", "test", "tests", "release")):
+        return "quality"
+    if "/evidence/" in path_text:
+        return "evidence"
+    if "/domains/" in path_text:
+        return "domain"
+    if "/platform/architecture/" in path_text:
+        return "architecture"
+    if "/decisions/" in path_text:
+        return "decision"
+    if "/services/" in path_text:
+        return "service"
+    return fallback
+
+
+def _safe_evidence_files(path: Path) -> List[Path]:
+    if path.is_file():
+        return [path] if _is_safe_evidence_doc(path) else []
+    if not path.is_dir():
+        return []
+    candidates = []
+    for rel in [
+        "_index.md",
+        "analysis/**/*.md",
+        "qa/**/verified-facts.md",
+        "qa/**/recommendations.md",
+        "qa/**/pending-external.md",
+        "applied/**/diff-summary.md",
+        "applied/**/manifest.yaml",
+    ]:
+        candidates.extend(sorted(path.glob(rel)))
+    return [p for p in candidates if p.is_file() and _is_safe_evidence_doc(p)]
+
+
+def _is_safe_evidence_doc(path: Path) -> bool:
+    parts = path.parts
+    if "sources" in parts:
+        return False
+    name = path.name
+    return (
+        name in {"_index.md", "verified-facts.md", "recommendations.md", "pending-external.md",
+                 "diff-summary.md", "manifest.yaml"}
+        or "/analysis/" in path.as_posix()
+    )
+
+
+def _expand_map_entry(
+    entry: str,
+    wiki_root: Path,
+    ws_dir: Path,
+    domain: Optional[str],
+    project: Optional[str],
+) -> Tuple[List[Path], Optional[Dict]]:
+    raw = entry.strip()
+    if not raw:
+        return [], None
+    if "{domain}" in raw and not domain:
+        return [], {
+            "category": "pack-retrieval",
+            "missing": f"Cannot expand {raw}: domain not detected",
+            "blocking_hint": False,
+        }
+    if "{project}" in raw and not project:
+        return [], {
+            "category": "pack-retrieval",
+            "missing": f"Cannot expand {raw}: project not detected",
+            "blocking_hint": False,
+        }
+    expanded = raw.replace("{domain}", domain or "").replace("{project}", project or "")
+    if expanded.startswith("{ws}/"):
+        base_path = ws_dir / expanded[len("{ws}/"):]
+    elif expanded.startswith("workspaces/") or expanded.startswith("packs/") or expanded.startswith("templates/"):
+        base_path = wiki_root / expanded
+    else:
+        base_path = ws_dir / expanded
+
+    paths: List[Path] = []
+    if any(ch in base_path.as_posix() for ch in "*?["):
+        paths = sorted(p for p in wiki_root.glob(_rel(base_path, wiki_root)) if p.is_file())
+    elif "/evidence/" in base_path.as_posix() or base_path.name == "evidence":
+        paths = _safe_evidence_files(base_path)
+    elif base_path.is_dir():
+        paths = sorted(p for p in base_path.rglob("*.md") if p.is_file())
+    elif base_path.is_file():
+        paths = [base_path]
+    if not paths:
+        return [], {
+            "category": "pack-retrieval",
+            "missing": f"Pack retrieval path not found or empty: {expanded}",
+            "blocking_hint": False,
+        }
+    return _dedupe_paths(paths), None
+
+
+def _collect_pack_retrieval_candidates(
+    wiki_root: Path,
+    workspace: str,
+    packs: List[str],
+    components: List[str],
+    domain: Optional[str],
+    project: Optional[str],
+) -> Tuple[List[Dict], List[Dict]]:
+    ws_dir = wiki_root / "workspaces" / workspace
+    candidates: List[Dict] = []
+    gaps: List[Dict] = []
+    for pack_name in packs:
+        map_path = wiki_root / "packs" / pack_name / "agents" / "pipeline" / "retrieval-map.md"
+        rows = _parse_retrieval_map(map_path)
+        if not rows:
+            continue
+        for component in components:
+            entries = rows.get(component)
+            if not entries:
+                continue
+            for entry in entries:
+                paths, gap = _expand_map_entry(entry, wiki_root, ws_dir, domain, project)
+                if gap:
+                    gaps.append(gap)
+                for path in paths:
+                    rel = _rel(path, wiki_root)
+                    category = _category_from_path(path, rel)
+                    item = _doc(path, category, wiki_root)
+                    if item is not None:
+                        candidates.append(item)
+    return candidates, gaps
+
+
 def _iter_files(base: Path, patterns: Iterable[str]) -> List[Path]:
     if not base.exists():
         return []
@@ -230,11 +626,19 @@ def _contract_files(directory: Path, wiki_root: Path) -> Tuple[List[Path], List[
     return _dedupe_paths(paths), gaps
 
 
-def _collect_candidates(intent: str, wiki_root: Path, workspace: str,
-                        packs: List[str]) -> Tuple[List[Dict], List[Dict]]:
+def _collect_candidates(
+    intent: str,
+    wiki_root: Path,
+    workspace: str,
+    packs: List[str],
+    components: Optional[List[str]] = None,
+    domain: Optional[str] = None,
+    project: Optional[str] = None,
+) -> Tuple[List[Dict], List[Dict]]:
     ws_dir = wiki_root / "workspaces" / workspace
     candidates: List[Dict] = []
     gaps: List[Dict] = []
+    components = components or []
 
     def add_many(paths: List[Path], category: str) -> None:
         for path in paths:
@@ -257,6 +661,7 @@ def _collect_candidates(intent: str, wiki_root: Path, workspace: str,
         add_many(contract_files, "contract")
         add_many(_iter_files(patterns, ["*.md"]), "pattern")
         add_many(_iter_files(projects, ["*/knowledge-map.md", "*/services/*.md"]), "project")
+        add_many(_iter_files(domains, ["*/workflow.md"]), "domain")
     elif intent == "fix_bug":
         add_many(_iter_files(runbooks, ["*.md"]), "runbook")
         add_many(_iter_files(projects, ["*/services/*.md", "*/knowledge-map.md"]), "project")
@@ -273,6 +678,12 @@ def _collect_candidates(intent: str, wiki_root: Path, workspace: str,
         add_many(contract_files, "contract")
         add_many(_iter_files(patterns, ["*.md"]), "pattern")
         add_many(_iter_files(domains, ["*/workflow.md"]), "domain")
+
+    pack_candidates, pack_gaps = _collect_pack_retrieval_candidates(
+        wiki_root, workspace, packs, components, domain, project,
+    )
+    candidates.extend(pack_candidates)
+    gaps.extend(pack_gaps)
 
     for pack_name in packs:
         pack_dir = wiki_root / "packs" / pack_name
@@ -320,8 +731,8 @@ def _score(doc: Dict, words: List[str]) -> int:
     return score
 
 
-def _rank_and_budget(candidates: List[Dict], task: str,
-                     components: List[str], max_docs: int = 7) -> List[Dict]:
+def _rank_and_budget(candidates: List[Dict], task: str, components: List[str],
+                     workstream: str = "engineering", max_docs: int = 7) -> List[Dict]:
     words = _keywords(task, components)
     ranked = sorted(
         candidates,
@@ -334,7 +745,8 @@ def _rank_and_budget(candidates: List[Dict], task: str,
         if doc["path"] in seen:
             continue
         category = doc["category"]
-        budget = CATEGORY_BUDGETS.get(category, 1)
+        budgets = WORKSTREAM_BUDGETS.get(workstream, CATEGORY_BUDGETS)
+        budget = budgets.get(category, 1)
         if used_by_category.get(category, 0) >= budget:
             continue
         out.append(doc)
@@ -496,7 +908,8 @@ def _build_context_pack(
         for doc in pack_sources
         if doc["category"] in {
             "contract", "pattern", "project", "service", "domain", "workflow",
-            "architecture", "decision", "runbook", "pitfalls", "common-pitfalls",
+            "architecture", "decision", "runbook", "product", "requirement",
+            "design", "quality", "evidence", "pitfalls", "common-pitfalls",
             "workspace-profile", "engine-guidance", "engine-rule", "pack-rule",
         }
     ]
@@ -531,8 +944,19 @@ def build_context_artifact(
     warnings_out = list(warnings or [])
     intent_type = detect_intent(task)
     components = detect_components(task, wiki_root, packs)
-    candidates, gaps = _collect_candidates(intent_type, wiki_root, workspace, packs)
-    selected = _rank_and_budget(candidates, task, components)
+    domain, scope = detect_scope(task, wiki_root, workspace)
+    workstream = detect_workstream(task, packs, components)
+    meta = WORKSTREAM_PRIORITY.get(workstream, WORKSTREAM_PRIORITY["engineering"])
+    candidates, gaps = _collect_candidates(
+        intent_type,
+        wiki_root,
+        workspace,
+        packs,
+        components=components,
+        domain=domain,
+        project=scope,
+    )
+    selected = _rank_and_budget(candidates, task, components, workstream=workstream)
     docs = [_slice_doc(doc) for doc in selected]
     static_docs = _collect_static_context(wiki_root, workspace, packs)
     context_pack = _build_context_pack(workspace, packs, docs, static_docs)
@@ -552,8 +976,11 @@ def build_context_artifact(
         "intent": {
             "type": intent_type,
             "components": components,
-            "domain": None,
-            "scope": None,
+            "domain": domain,
+            "scope": scope,
+            "workstream": workstream,
+            "audience": AUDIENCE_BY_WORKSTREAM.get(workstream, "engineering"),
+            "context_goal": meta["context_goal"],
             "patterns_needed": [
                 Path(doc["path"]).stem for doc in docs if doc["category"] == "pattern"
             ],
@@ -567,7 +994,7 @@ def build_context_artifact(
         "retrieval_policy": {
             "mode": "deterministic-file-backed",
             "advisory_retrieval": False,
-            "priority": ["contracts", "patterns", "project_docs", "domain_knowledge"],
+            "priority": meta["priority"],
             "max_docs": 7,
             "rag_policy": "advisory-only-disabled-by-default",
         },
@@ -585,6 +1012,9 @@ def render_markdown(artifact: Dict) -> str:
         "",
         "## Detected Intent",
         f"- **Type**: `{artifact['intent']['type']}`",
+        f"- **Workstream**: `{artifact['intent'].get('workstream', 'engineering')}`",
+        f"- **Audience**: `{artifact['intent'].get('audience', 'engineering')}`",
+        f"- **Context Goal**: `{artifact['intent'].get('context_goal', 'prepare_code_change')}`",
         "- **Components**: "
         + (", ".join(artifact["intent"].get("components") or []) or "(none detected)"),
         f"- **Workspace**: `{artifact['workspace']}`",

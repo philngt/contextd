@@ -16,7 +16,7 @@ Hướng dẫn lưu trữ raw data trong `{ws}/evidence/sources/{evid-id}/`. Áp
 | Token   | Required | Quy tắc                                                          |
 |---------|----------|------------------------------------------------------------------|
 | date    | yes      | ISO date theo timezone +07:00 (vd `2026-05-04`)                  |
-| src     | yes      | `mcp` \| `api` \| `paste`                                        |
+| src     | yes      | `mcp` \| `api` \| `paste` \| `code` \| `document` \| `interview` \| `ticket` \| `analytics` \| `regulation` \| `design` \| `incident` |
 | slug    | yes      | Slugify từ `--label`: lowercase, kebab-case, ≤ 30 ký tự, ASCII only |
 | n       | no       | Số đếm `-2`, `-3`, ... nếu trùng cùng ngày + cùng slug           |
 
@@ -26,6 +26,7 @@ Hướng dẫn lưu trữ raw data trong `{ws}/evidence/sources/{evid-id}/`. Áp
 - `mcp` → tool name slugified
 - `api` → `{hostname}-{path[0..1]}` slugified
 - `paste` → 8 ký tự đầu của sha256
+- non-code sources (`document`, `interview`, `ticket`, `analytics`, `regulation`, `design`, `incident`) → source title/id if known, else 8 ký tự đầu của sha256
 
 ### File naming trong `sources/{evid-id}/`
 

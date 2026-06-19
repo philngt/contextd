@@ -8,11 +8,12 @@ Mọi evidence ID PHẢI follow pattern:
 ```
 
 - `{YYYY-MM-DD}` — ngày ingest theo timezone của user (ISO date).
-- `{src} ∈ {paste, api, mcp, code, engine, platform}`:
+- `{src} ∈ {paste, api, mcp, code, engine, platform, document, interview, ticket, analytics, regulation, design, incident}`:
   - `paste|api|mcp` — text sources (manual paste, HTTP API fetch, MCP tool result).
   - `code` — single-repo code snapshot (variant=code).
   - `engine` — single-repo agentic-engine snapshot (variant=agentic-engine).
   - `platform` — bundle mode (multi-repo).
+  - `document|interview|ticket|analytics|regulation|design|incident` — non-code evidence channels for product, BA, QC, UX, security, ops, and domain research.
 - `{slug}` — kebab-case, ≤ 30 ký tự, derive từ `--label` (slugify) hoặc fallback project-name.
 - `{-n}` suffix khi trùng entry trong `_index.md` (n = 2, 3, ...).
 
