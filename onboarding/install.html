@@ -216,7 +216,7 @@ unzip contextd-latest.zip -d /d/tool</code></pre>
       <div class="step-content">
         <h4>Chạy trình cài đặt</h4>
         <p>Giống Step 2 cách Git clone — file <code>scripts/install-to-claude.sh</code> đã có trong zip:</p>
-        <pre><code>bash scripts/install-to-claude.sh</code></pre>
+        <pre><code>bash scripts/install-to-claude.sh --knowledge-root "$(pwd)"</code></pre>
         <p>Verify giống cách Git: <code>cat ~/.contextd/config.json</code> phải thấy <code>"knowledge_root"</code> đúng path bạn vừa extract.</p>
       </div>
     </div>
@@ -234,7 +234,7 @@ unzip contextd-latest.zip -d /d/tool</code></pre>
     </div>
 
     <div class="callout tip">
-      <strong>💡 Cho quản trị:</strong> tạo zip mới bằng <code>bash scripts/package-release.sh</code>. Output ghi vào <code>release/contextd-{version}.zip</code> + <code>release/contextd-latest.zip</code>. Auto-exclude <code>.git/</code>, evidence raw, workspaces khác <code>wiki/</code>, runs/cache/log files. Xem <code>scripts/package-release.sh --help</code>.
+      <strong>💡 Cho quản trị:</strong> tạo zip mới bằng <code>bash scripts/package-release.sh</code>. Output ghi vào <code>release/contextd-{version}.zip</code> + <code>release/contextd-latest.zip</code>. Auto-exclude <code>.git/</code>, evidence raw, workspaces khác <code>default/</code>, runs/cache/log files. Xem <code>scripts/package-release.sh --help</code>.
     </div>
   </section>
 
@@ -279,7 +279,7 @@ cd /d/tool/contextd</code></pre>
       <div class="step-content">
         <h2 style="margin-top:4px">Chạy trình cài đặt</h2>
         <p>Chạy 1 lệnh sau (có thể chạy lại nhiều lần, vẫn an toàn):</p>
-        <pre><code>bash scripts/install-to-claude.sh</code></pre>
+        <pre><code>bash scripts/install-to-claude.sh --knowledge-root "$(pwd)"</code></pre>
 
         <p>Lệnh này sẽ tự làm 3 việc:</p>
         <ul>
@@ -302,7 +302,7 @@ cd /d/tool/contextd</code></pre>
 
         <div class="os-panel" data-os="verify-windows">
           <pre><code># PowerShell
-type $env:USERPROFILE\.claude\config.json
+	type $env:USERPROFILE\.contextd\config.json
 
 # Hoặc Git Bash
 cat ~/.contextd/config.json</code></pre>
@@ -310,7 +310,7 @@ cat ~/.contextd/config.json</code></pre>
 
         <p>Phải thấy field <code>"knowledge_root"</code> với absolute path đúng repo bạn vừa clone. Vd:</p>
         <pre><code>{
-  "knowledge_root": "/home/user/wiki",
+  "knowledge_root": "/home/user/contextd",
   "default_workspace": null,
   "obsidian": { ... }
 }</code></pre>
@@ -326,7 +326,7 @@ cat ~/.contextd/config.json</code></pre>
       <div class="step-num-bubble">3</div>
       <div class="step-content">
         <h2 style="margin-top:4px">Kết nối vào dự án đầu tiên</h2>
-        <p>Vào thư mục codebase bạn muốn dùng wiki, mở Claude Code (hoặc IDE extension) tại đó, gõ:</p>
+        <p>Vào thư mục codebase bạn muốn dùng contextd, mở Claude Code (hoặc IDE extension) tại đó, gõ:</p>
         <pre><code>/contextd-setup</code></pre>
 
         <p>Hệ thống sẽ hướng dẫn bạn từng bước:</p>
@@ -338,7 +338,7 @@ cat ~/.contextd/config.json</code></pre>
         </ul>
 
         <div class="callout tip">
-          <strong>💡 Mỗi dự án chỉ cần chạy 1 lần.</strong> Sau đó wiki tự work — bạn chỉ gõ slash command bình thường (<code>/use-contextd</code>, <code>/find</code>, <code>/tool-design</code>, ...).
+          <strong>💡 Mỗi dự án chỉ cần chạy 1 lần.</strong> Sau đó contextd tự work — bạn chỉ gõ slash command bình thường (<code>/use-contextd</code>, <code>/find</code>, <code>/tool-design</code>, ...).
         </div>
 
         <p style="margin-top:16px">Tiếp theo: mở <a href="index.html">index.html</a> để chọn đường đi theo persona (PM / Engineer / Wiki Owner / Solo Builder).</p>
@@ -374,7 +374,7 @@ xcopy /E /I /Y .claude\agents %USERPROFILE%\.claude\agents</pre>
     <ul>
       <li>Check folder <code>~/.claude/commands/</code> có file <code>.md</code> không (vd <code>contextd-setup.md</code>)</li>
       <li>Restart Claude Code (CLI: gõ <code>/exit</code> rồi mở lại; IDE: reload window)</li>
-      <li>Re-run installer: <code>bash scripts/install-to-claude.sh</code></li>
+      <li>Re-run installer: <code>bash scripts/install-to-claude.sh --knowledge-root "$(pwd)"</code></li>
       <li>Check log Claude Code có error nào không (CLI: stderr; IDE: Output panel)</li>
     </ul>
 
@@ -402,9 +402,9 @@ xcopy /E /I /Y .claude\agents %USERPROFILE%\.claude\agents</pre>
   <section class="block" id="update">
     <h2>🔄 Cập nhật sau này</h2>
     <p>Sau mỗi <code>git pull</code> trên repo contextd, re-run installer để sync slash commands mới:</p>
-    <pre><code>cd ~/wiki
+    <pre><code>cd ~/contextd
 git pull
-bash scripts/install-to-claude.sh   # idempotent — cập nhật tất cả</code></pre>
+bash scripts/install-to-claude.sh --knowledge-root "$(pwd)"   # idempotent — cập nhật tất cả</code></pre>
 
     <div class="callout tip">
       <strong>💡 Khi nào cần cập nhật?</strong>

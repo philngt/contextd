@@ -59,6 +59,7 @@ Use is provided under the repository license ([MIT](LICENSE)) and is offered **"
 | Plain markdown bundle export | Available |
 | Codex skill/plugin export | Available |
 | Cursor rules export | Available |
+| MCP stdio tools adapter | Available (`contextd mcp-server`) |
 
 **System requirements**
 - macOS/Linux: `bash` required.
@@ -73,14 +74,14 @@ contextd is a markdown-first context engine:
 1. **CLI core**: `contextd resolve`, `contextd find`, `contextd bundle`
 2. **Task context artifact**: `contextd context "task" --format json`
 3. **Manifest index**: `.contextd/manifest.json`
-4. **Runtime export**: plain markdown, Codex skill/plugin, Cursor rules, Claude Code artifacts
+4. **Runtime export/adapters**: plain markdown, Codex skill/plugin, Cursor rules, Claude Code artifacts, MCP stdio tools
 
 Existing `.claude/commands` and `.claude/agents` remain supported adapters during the migration window, but `.contextd/config.json` is the canonical project config.
 
 ## Non-goals
 
 - contextd is not a vector database.
-- contextd does not require MCP for the planned multi-runtime path.
+- MCP is optional. contextd does not require an MCP SDK, remote MCP server, or orchestrator runtime.
 - contextd does not replace the coding agent; it prepares scoped, auditable context for the agent.
 
 ## Mental Model
@@ -167,8 +168,15 @@ Or install from source in this repository (developer/local flow):
 
 ```bash
 bash scripts/install-to-claude.sh
+bash scripts/install-to-claude.sh --knowledge-root ~/contextd --default-workspace default
 bash scripts/install-to-claude.sh --dry-run
 bash scripts/install-to-claude.sh --force
+```
+
+If your workspaces live in a separate team repo:
+
+```bash
+bash scripts/install-to-claude.sh --knowledge-root ~/company-wiki --default-workspace shared
 ```
 
 ### Migrate an existing codebase config
@@ -199,6 +207,17 @@ Or with the runtime-neutral CLI:
 contextd context "Add Kafka consumer..." --format json
 contextd contract-path citation-format
 ```
+
+### MCP Adapter
+
+Run contextd as a local stdio MCP tools server:
+
+```bash
+contextd mcp-server --knowledge-root ~/contextd --workspace default
+contextd mcp-config --client codex --knowledge-root ~/contextd --workspace default
+```
+
+See [docs/mcp.md](docs/mcp.md) for Claude, Cursor, Codex snippets, security notes, and tool details.
 
 ### After coding
 

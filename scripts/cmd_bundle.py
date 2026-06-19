@@ -86,16 +86,27 @@ def bundle(
     max_chars: Optional[int] = None,
     include_packs: bool = False,
     include_engine: bool = False,
+    cwd: Optional[Path] = None,
+    knowledge_root: Optional[Path] = None,
+    packs_override: Optional[List[str]] = None,
 ) -> str:
     """Build a single markdown bundle. Returns the bundle content."""
-    resolved = cmd_resolve.resolve()
-    wiki_root_str = resolved.get("knowledge_root") or resolved.get("wiki_root")
+    resolved = cmd_resolve.resolve(cwd=cwd)
+    wiki_root_str = str(knowledge_root) if knowledge_root else (
+        resolved.get("knowledge_root") or resolved.get("wiki_root")
+    )
     if not wiki_root_str:
         raise RuntimeError("Could not resolve knowledge_root. Run `contextd resolve` to diagnose.")
 
     wiki_root = Path(wiki_root_str).resolve()
     ws = workspace or resolved.get("workspace")
-    packs = resolved.get("packs") or []
+    if packs_override is not None:
+        packs = packs_override
+    elif workspace:
+        ws_md = wiki_root / "workspaces" / workspace / "workspace.md"
+        packs, _ = cmd_resolve.get_effective_packs({}, ws_md)
+    else:
+        packs = resolved.get("packs") or []
 
     if not ws:
         raise RuntimeError("No workspace resolved. Specify --workspace or run `contextd resolve`.")

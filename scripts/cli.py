@@ -7,6 +7,8 @@ Subcommands:
     find        Fuzzy search across workspace knowledge
     bundle      Merge workspace knowledge into a single markdown file
     export      Export workspace knowledge to runtime-specific format
+    mcp-server  Run contextd as a stdio MCP tools server
+    mcp-config  Print MCP client configuration snippets
 
 Examples:
     contextd resolve
@@ -17,6 +19,8 @@ Examples:
     contextd export --runtime cursor --workspace default --output ./
     contextd context "Add a Kafka consumer for surgery file processed events" --format json
     contextd task-context "Add a Kafka consumer for surgery file processed events" --output ./current-task.md
+    contextd mcp-server --knowledge-root ~/contextd --workspace default
+    contextd mcp-config --client codex --knowledge-root ~/contextd --workspace default
 """
 
 from __future__ import annotations
@@ -43,6 +47,8 @@ import cmd_bundle  # noqa: E402
 import cmd_task_context  # noqa: E402
 import cmd_contract_path  # noqa: E402
 import cmd_migrate_config  # noqa: E402
+import cmd_mcp_config  # noqa: E402
+import mcp_server  # noqa: E402
 import render_runtime  # noqa: E402
 
 
@@ -168,6 +174,26 @@ def _migrate_config_cmd(args) -> int:
     )
 
 
+def _mcp_server_cmd(args) -> int:
+    argv = []
+    if args.knowledge_root:
+        argv.extend(["--knowledge-root", args.knowledge_root])
+    if args.workspace:
+        argv.extend(["--workspace", args.workspace])
+    if args.cwd:
+        argv.extend(["--cwd", args.cwd])
+    return mcp_server.main(argv)
+
+
+def _mcp_config_cmd(args) -> int:
+    return cmd_mcp_config.run(
+        client=args.client,
+        knowledge_root=args.knowledge_root,
+        workspace=args.workspace,
+        command=args.command,
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         prog="contextd",
@@ -263,6 +289,29 @@ def main() -> int:
     p_migrate.add_argument("--force", action="store_true", help="Overwrite existing .contextd/config.json")
     p_migrate.add_argument("--dry-run", action="store_true", help="Print config without writing")
     p_migrate.set_defaults(func=_migrate_config_cmd)
+
+    # mcp-server
+    p_mcp_server = sub.add_parser("mcp-server", help="Run contextd as a stdio MCP tools server")
+    p_mcp_server.add_argument("--knowledge-root", default=None,
+                              help="Canonical knowledge_root containing workspaces/")
+    p_mcp_server.add_argument("--workspace", default=None,
+                              help="Default workspace for MCP tool calls")
+    p_mcp_server.add_argument("--cwd", default=None,
+                              help="Directory used for config resolution and materialization")
+    p_mcp_server.set_defaults(func=_mcp_server_cmd)
+
+    # mcp-config
+    p_mcp_config = sub.add_parser("mcp-config", help="Print MCP client configuration snippets")
+    p_mcp_config.add_argument("--client", required=True,
+                              choices=sorted(cmd_mcp_config.VALID_CLIENTS),
+                              help="Client snippet to print")
+    p_mcp_config.add_argument("--knowledge-root", required=True,
+                              help="Canonical knowledge_root containing workspaces/")
+    p_mcp_config.add_argument("--workspace", default=None,
+                              help="Optional default workspace for MCP server")
+    p_mcp_config.add_argument("--command", default="contextd",
+                              help="Command used by the MCP client (default: contextd)")
+    p_mcp_config.set_defaults(func=_mcp_config_cmd)
 
     args = parser.parse_args()
     return args.func(args)

@@ -4,7 +4,7 @@
 #
 # One-liner onboarding script for new team members.
 # Clones the team knowledge repo and runs install-to-claude.sh from the engine repo
-# with --knowledge-repo pointing to the cloned knowledge repo.
+# with --knowledge-root pointing to the cloned knowledge repo.
 #
 # Usage:
 #   bash setup-team-knowledge.sh \
@@ -71,10 +71,10 @@ else
   git clone "$KNOWLEDGE_REPO" "$LOCAL_PATH"
 fi
 
-# Run install-to-claude.sh with --knowledge-repo
+# Run install-to-claude.sh with --knowledge-root
 echo ""
 echo "Installing contextd engine with knowledge repo: $LOCAL_PATH"
-bash "$ENGINE_ROOT/scripts/install-to-claude.sh" --knowledge-repo "$LOCAL_PATH"
+bash "$ENGINE_ROOT/scripts/install-to-claude.sh" --knowledge-root "$LOCAL_PATH"
 
 # Verify
 echo ""

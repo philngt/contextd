@@ -9,6 +9,7 @@ Run:
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -195,6 +196,8 @@ def test_cli_smoke() -> None:
         [sys.executable, "-m", "scripts.cli", "find", "citation", "--limit", "1", "--format", "json"],
         [sys.executable, "-m", "scripts.cli", "context", "design context", "--format", "json", "--no-materialize"],
         [sys.executable, "-m", "scripts.cli", "contract-path", "citation-format", "--format", "json"],
+        [sys.executable, "-m", "scripts.cli", "mcp-config", "--client", "codex",
+         "--knowledge-root", str(ROOT), "--workspace", "default"],
     ]
     with tempfile.TemporaryDirectory() as td:
         commands.append([
@@ -204,6 +207,209 @@ def test_cli_smoke() -> None:
             proc = subprocess.run(cmd, cwd=str(ROOT), text=True, capture_output=True)
             assert proc.returncode == 0, (cmd, proc.stdout, proc.stderr)
     print("  ok cli_smoke")
+
+
+def _mcp_request(proc: subprocess.Popen, payload: dict) -> dict:
+    assert proc.stdin is not None
+    assert proc.stdout is not None
+    proc.stdin.write(json.dumps(payload) + "\n")
+    proc.stdin.flush()
+    line = proc.stdout.readline()
+    assert line, "MCP server closed stdout"
+    return json.loads(line)
+
+
+def test_mcp_server_smoke() -> None:
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        _workspace(root)
+        _pack(root)
+        proc = subprocess.Popen(
+            [
+                sys.executable, "-m", "scripts.cli", "mcp-server",
+                "--knowledge-root", str(root),
+                "--workspace", "default",
+                "--cwd", str(root),
+            ],
+            cwd=str(ROOT),
+            text=True,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+        try:
+            init = _mcp_request(proc, {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "initialize",
+                "params": {
+                    "protocolVersion": "2025-11-25",
+                    "capabilities": {},
+                    "clientInfo": {"name": "contextd-test", "version": "1"},
+                },
+            })
+            assert init["result"]["protocolVersion"] == "2025-11-25", init
+            assert init["result"]["capabilities"]["tools"]["listChanged"] is False, init
+
+            assert proc.stdin is not None
+            proc.stdin.write(json.dumps({
+                "jsonrpc": "2.0",
+                "method": "notifications/initialized",
+            }) + "\n")
+            proc.stdin.flush()
+
+            tools = _mcp_request(proc, {"jsonrpc": "2.0", "id": 2, "method": "tools/list"})
+            names = {tool["name"] for tool in tools["result"]["tools"]}
+            assert {
+                "contextd.resolve",
+                "contextd.find",
+                "contextd.context",
+                "contextd.contract_path",
+                "contextd.bundle",
+            }.issubset(names), names
+
+            resolved = _mcp_request(proc, {
+                "jsonrpc": "2.0",
+                "id": 3,
+                "method": "tools/call",
+                "params": {"name": "contextd.resolve", "arguments": {}},
+            })
+            assert resolved["result"]["structuredContent"]["workspace"] == "default", resolved
+
+            found = _mcp_request(proc, {
+                "jsonrpc": "2.0",
+                "id": 4,
+                "method": "tools/call",
+                "params": {
+                    "name": "contextd.find",
+                    "arguments": {"query": "citation", "limit": 1},
+                },
+            })
+            assert found["result"]["structuredContent"]["advisory"] is True, found
+
+            context = _mcp_request(proc, {
+                "jsonrpc": "2.0",
+                "id": 5,
+                "method": "tools/call",
+                "params": {
+                    "name": "contextd.context",
+                    "arguments": {"task": "Implement demo feature"},
+                },
+            })
+            assert context["result"]["structuredContent"]["artifact_type"] == "contextd_task_context.v1", context
+
+            contract = _mcp_request(proc, {
+                "jsonrpc": "2.0",
+                "id": 6,
+                "method": "tools/call",
+                "params": {
+                    "name": "contextd.contract_path",
+                    "arguments": {"contract_id": "demo.v1"},
+                },
+            })
+            contract_payload = contract["result"]["structuredContent"]
+            assert contract_payload["relative_path"].endswith("demo.contract.json"), contract
+
+            bundle = _mcp_request(proc, {
+                "jsonrpc": "2.0",
+                "id": 7,
+                "method": "tools/call",
+                "params": {
+                    "name": "contextd.bundle",
+                    "arguments": {"max_chars": 5000, "include_packs": True},
+                },
+            })
+            assert "contextd Bundle" in bundle["result"]["structuredContent"]["content"], bundle
+
+            invalid = _mcp_request(proc, {
+                "jsonrpc": "2.0",
+                "id": 8,
+                "method": "tools/call",
+                "params": {"name": "contextd.missing", "arguments": {}},
+            })
+            assert invalid["error"]["code"] == -32602, invalid
+        finally:
+            if proc.stdin:
+                proc.stdin.close()
+            try:
+                proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                proc.terminate()
+                proc.wait(timeout=5)
+        print("  ok mcp_server_smoke")
+
+
+def test_installer_dry_run_knowledge_root() -> None:
+    with tempfile.TemporaryDirectory() as td:
+        base = Path(td)
+        home = base / "home"
+        root = base / "knowledge"
+        home.mkdir()
+        _workspace(root)
+        env = os.environ.copy()
+        env["HOME"] = str(home)
+
+        proc = subprocess.run(
+            [
+                "bash", str(ROOT / "scripts" / "install-to-claude.sh"),
+                "--dry-run",
+                "--knowledge-root", str(root),
+                "--default-workspace", "default",
+            ],
+            cwd=str(ROOT),
+            text=True,
+            capture_output=True,
+            stdin=subprocess.DEVNULL,
+            env=env,
+        )
+        assert proc.returncode == 0, (proc.stdout, proc.stderr)
+        assert "Knowledge root:" in proc.stdout, proc.stdout
+        assert not (home / ".contextd" / "config.json").exists()
+
+        alias = subprocess.run(
+            [
+                "bash", str(ROOT / "scripts" / "install-to-claude.sh"),
+                "--dry-run",
+                "--knowledge-repo", str(root),
+            ],
+            cwd=str(ROOT),
+            text=True,
+            capture_output=True,
+            stdin=subprocess.DEVNULL,
+            env=env,
+        )
+        assert alias.returncode == 0, (alias.stdout, alias.stderr)
+        assert "compatibility alias" in alias.stderr, alias.stderr
+
+        default_root = subprocess.run(
+            ["bash", str(ROOT / "scripts" / "install-to-claude.sh"), "--dry-run"],
+            cwd=str(ROOT),
+            text=True,
+            capture_output=True,
+            stdin=subprocess.DEVNULL,
+            env=env,
+        )
+        assert default_root.returncode == 0, (default_root.stdout, default_root.stderr)
+        assert f"Knowledge root: {ROOT}" in default_root.stdout, default_root.stdout
+
+        mcp_snippet = subprocess.run(
+            [
+                "bash", str(ROOT / "scripts" / "install-to-claude.sh"),
+                "--knowledge-root", str(root),
+                "--default-workspace", "default",
+                "--print-mcp-config", "codex",
+            ],
+            cwd=str(ROOT),
+            text=True,
+            capture_output=True,
+            stdin=subprocess.DEVNULL,
+            env=env,
+        )
+        assert mcp_snippet.returncode == 0, (mcp_snippet.stdout, mcp_snippet.stderr)
+        assert "[mcp_servers.contextd]" in mcp_snippet.stdout, mcp_snippet.stdout
+        assert "mcp-server" in mcp_snippet.stdout, mcp_snippet.stdout
+        assert not (home / ".contextd" / "config.json").exists()
+    print("  ok installer_dry_run_knowledge_root")
 
 
 def run() -> int:
@@ -216,6 +422,8 @@ def run() -> int:
         test_contract_index_missing_target_is_gap,
         test_contract_path_index_and_fallback,
         test_cli_smoke,
+        test_mcp_server_smoke,
+        test_installer_dry_run_knowledge_root,
     ]
     failed = 0
     for test in tests:

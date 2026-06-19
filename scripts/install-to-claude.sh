@@ -2,42 +2,55 @@
 #
 # install-to-claude.sh
 #
-# Sync wiki-template's slash commands + subagents vào ~/.claude/ và setup
-# ~/.claude/wiki-global.json với wiki_root trỏ về repo này.
-#
-# Idempotent: re-run mỗi khi pull wiki-template mới để cập nhật.
-# Không động vào commands/agents user tự tạo (chỉ sync file đến từ wiki-template).
+# Install contextd's Claude adapter files and write canonical global config.
 #
 # Usage:
-#   bash scripts/install-to-claude.sh [WIKI_ROOT] [--knowledge-repo PATH] [--dry-run] [--force]
+#   bash scripts/install-to-claude.sh [ENGINE_ROOT] [options]
 #
-#   WIKI_ROOT        Đường dẫn tuyệt đối đến wiki-template repo (default: parent
-#                    của script này, tức là repo root khi chạy từ scripts/).
-#   --knowledge-repo PATH   Path đến team knowledge repo (chứa workspaces/).
-#                    Nếu được cung cấp, wiki_root trong wiki-global.json sẽ
-#                    trỏ về KNOWLEDGE_REPO thay vì ENGINE_REPO.
-#   --dry-run      In ra những gì sẽ làm, KHÔNG copy/ghi file.
-#   --force          Skip confirmation khi overwrite ~/.claude/wiki-global.json.
+# Options:
+#   --engine-root PATH          Path to the contextd engine repo.
+#   --knowledge-root PATH       Canonical root containing workspaces/.
+#   --knowledge-repo PATH       Compatibility alias for --knowledge-root.
+#   --default-workspace NAME    Write default_workspace in ~/.contextd/config.json.
+#   --print-mcp-config CLIENT   Print MCP snippet for claude|cursor|codex|all and exit.
+#   --dry-run                   Print actions without copying or writing files.
+#   --force                     Overwrite existing global configs when roots differ.
 
 set -euo pipefail
 
 DRY_RUN=0
 FORCE=0
-WIKI_ROOT=""
-KNOWLEDGE_REPO=""
+ENGINE_ROOT=""
+KNOWLEDGE_ROOT=""
+KNOWLEDGE_REPO_ALIAS_USED=0
+DEFAULT_WORKSPACE=""
+PRINT_MCP_CONFIG=""
+
+usage() {
+  sed -n '3,20p' "$0" | sed 's/^# \{0,1\}//'
+}
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --dry-run) DRY_RUN=1 ; shift ;;
-    --force)   FORCE=1 ; shift ;;
-    --knowledge-repo) KNOWLEDGE_REPO="$2"; shift 2 ;;
+    --dry-run) DRY_RUN=1; shift ;;
+    --force) FORCE=1; shift ;;
+    --engine-root) ENGINE_ROOT="$2"; shift 2 ;;
+    --knowledge-root) KNOWLEDGE_ROOT="$2"; shift 2 ;;
+    --knowledge-repo)
+      KNOWLEDGE_ROOT="$2"
+      KNOWLEDGE_REPO_ALIAS_USED=1
+      shift 2
+      ;;
+    --default-workspace) DEFAULT_WORKSPACE="$2"; shift 2 ;;
+    --print-mcp-config) PRINT_MCP_CONFIG="$2"; shift 2 ;;
     -h|--help)
-      sed -n '3,22p' "$0" | sed 's/^# \{0,1\}//'
+      usage
       exit 0
       ;;
     *)
-      if [[ -z "$WIKI_ROOT" ]]; then
-        WIKI_ROOT="$1"; shift
+      if [[ -z "$ENGINE_ROOT" ]]; then
+        ENGINE_ROOT="$1"
+        shift
       else
         echo "Unknown arg: $1" >&2
         exit 2
@@ -46,22 +59,58 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-# Resolve ENGINE_ROOT (where commands/agents come from)
-if [[ -z "$WIKI_ROOT" ]]; then
+expand_path() {
+  local path="$1"
+  case "$path" in
+    "~") path="$HOME" ;;
+    "~/"*) path="$HOME/${path#~/}" ;;
+  esac
+  printf "%s" "$path"
+}
+
+abs_dir() {
+  local path
+  path="$(expand_path "$1")"
+  if [[ ! -d "$path" ]]; then
+    printf "%s" "$path"
+    return 0
+  fi
+  (cd "$path" && pwd)
+}
+
+json_string_or_null() {
+  local value="$1"
+  if [[ -z "$value" ]]; then
+    printf "null"
+  else
+    printf '"%s"' "${value//\"/\\\"}"
+  fi
+}
+
+read_json_string_key() {
+  local file="$1"
+  local key="$2"
+  if [[ ! -f "$file" ]]; then
+    return 0
+  fi
+  grep -oE "\"${key}\"[[:space:]]*:[[:space:]]*\"[^\"]*\"" "$file" \
+    | sed -E 's/.*"([^"]*)"$/\1/' \
+    | head -n 1 || true
+}
+
+if [[ -z "$ENGINE_ROOT" ]]; then
   SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-  WIKI_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+  ENGINE_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+else
+  ENGINE_ROOT="$(abs_dir "$ENGINE_ROOT")"
 fi
 
-# Resolve WIKI_ROOT for config (engine repo or knowledge repo)
-WIKI_ROOT_CONFIG="${KNOWLEDGE_REPO:-$WIKI_ROOT}"
-
-# Validate WIKI_ROOT
-if [[ ! -d "$WIKI_ROOT" ]]; then
-  echo "✗ WIKI_ROOT không tồn tại: $WIKI_ROOT" >&2
+if [[ ! -d "$ENGINE_ROOT" ]]; then
+  echo "Error: ENGINE_ROOT does not exist: $ENGINE_ROOT" >&2
   exit 1
 fi
-if [[ ! -d "$WIKI_ROOT/.claude/commands" ]] || [[ ! -d "$WIKI_ROOT/agents" ]]; then
-  echo "✗ $WIKI_ROOT không phải wiki-template repo (thiếu .claude/commands/ hoặc agents/)." >&2
+if [[ ! -d "$ENGINE_ROOT/.claude/commands" ]] || [[ ! -d "$ENGINE_ROOT/agents" ]]; then
+  echo "Error: $ENGINE_ROOT is not a contextd engine repo (missing .claude/commands or agents)." >&2
   exit 1
 fi
 
@@ -71,16 +120,88 @@ GLOBAL_COMMANDS="$GLOBAL_CLAUDE/commands"
 GLOBAL_AGENTS="$GLOBAL_CLAUDE/agents"
 GLOBAL_CONFIG="$GLOBAL_CLAUDE/wiki-global.json"
 GLOBAL_CONTEXTD_CONFIG="$GLOBAL_CONTEXTD/config.json"
+CURRENT_KNOWLEDGE_ROOT="$(read_json_string_key "$GLOBAL_CONTEXTD_CONFIG" "knowledge_root")"
 
-echo "Engine repo: $WIKI_ROOT"
-if [[ -n "$KNOWLEDGE_REPO" ]]; then
-  echo "Knowledge repo: $KNOWLEDGE_REPO"
+if [[ $KNOWLEDGE_REPO_ALIAS_USED -eq 1 ]]; then
+  echo "Warning: --knowledge-repo is a compatibility alias. Use --knowledge-root for canonical installs." >&2
+fi
+
+if [[ -z "$KNOWLEDGE_ROOT" ]]; then
+  if [[ -t 0 ]]; then
+    echo "Select workspace/knowledge root (canonical knowledge_root):"
+    if [[ -n "$CURRENT_KNOWLEDGE_ROOT" ]]; then
+      echo "  1) Current config root: $CURRENT_KNOWLEDGE_ROOT"
+      echo "  2) Engine repo root:    $ENGINE_ROOT"
+      echo "  3) Custom path"
+      printf "Choice [1]: "
+      read -r choice
+      choice="${choice:-1}"
+      case "$choice" in
+        1) KNOWLEDGE_ROOT="$CURRENT_KNOWLEDGE_ROOT" ;;
+        2) KNOWLEDGE_ROOT="$ENGINE_ROOT" ;;
+        3)
+          printf "Custom knowledge_root: "
+          read -r KNOWLEDGE_ROOT
+          ;;
+        *)
+          echo "Invalid choice: $choice" >&2
+          exit 2
+          ;;
+      esac
+    else
+      echo "  1) Engine repo root: $ENGINE_ROOT"
+      echo "  2) Custom path"
+      printf "Choice [1]: "
+      read -r choice
+      choice="${choice:-1}"
+      case "$choice" in
+        1) KNOWLEDGE_ROOT="$ENGINE_ROOT" ;;
+        2)
+          printf "Custom knowledge_root: "
+          read -r KNOWLEDGE_ROOT
+          ;;
+        *)
+          echo "Invalid choice: $choice" >&2
+          exit 2
+          ;;
+      esac
+    fi
+  else
+    KNOWLEDGE_ROOT="$ENGINE_ROOT"
+  fi
+fi
+
+KNOWLEDGE_ROOT="$(abs_dir "$KNOWLEDGE_ROOT")"
+
+if [[ ! -d "$KNOWLEDGE_ROOT" ]]; then
+  echo "Error: knowledge_root does not exist: $KNOWLEDGE_ROOT" >&2
+  exit 1
+fi
+if [[ ! -d "$KNOWLEDGE_ROOT/workspaces" ]]; then
+  echo "Error: knowledge_root must contain workspaces/: $KNOWLEDGE_ROOT" >&2
+  exit 1
+fi
+if ! git -C "$KNOWLEDGE_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  echo "Warning: knowledge_root is not a git repo: $KNOWLEDGE_ROOT" >&2
+fi
+
+if [[ -n "$PRINT_MCP_CONFIG" ]]; then
+  MCP_ARGS=(mcp-config --client "$PRINT_MCP_CONFIG" --knowledge-root "$KNOWLEDGE_ROOT")
+  if [[ -n "$DEFAULT_WORKSPACE" ]]; then
+    MCP_ARGS+=(--workspace "$DEFAULT_WORKSPACE")
+  fi
+  python3 "$ENGINE_ROOT/scripts/cli.py" "${MCP_ARGS[@]}"
+  exit $?
+fi
+
+echo "Engine root:    $ENGINE_ROOT"
+echo "Knowledge root: $KNOWLEDGE_ROOT"
+if [[ -n "$DEFAULT_WORKSPACE" ]]; then
+  echo "Default workspace: $DEFAULT_WORKSPACE"
 fi
 echo "Global dir:     $GLOBAL_CLAUDE"
-[[ $DRY_RUN -eq 1 ]] && echo "Mode:       DRY RUN (no changes)"
+[[ $DRY_RUN -eq 1 ]] && echo "Mode:           DRY RUN (no changes)"
 echo ""
-
-# --- helpers ---
 
 run() {
   if [[ $DRY_RUN -eq 1 ]]; then
@@ -90,7 +211,17 @@ run() {
   fi
 }
 
-# Sync 1 file. Prints status: NEW / UPDATED / UNCHANGED.
+write_content() {
+  local path="$1"
+  local content="$2"
+  if [[ $DRY_RUN -eq 1 ]]; then
+    echo "  would write: $path"
+  else
+    mkdir -p "$(dirname "$path")"
+    printf "%s\n" "$content" > "$path"
+  fi
+}
+
 sync_file() {
   local src="$1"
   local dst="$2"
@@ -108,86 +239,74 @@ sync_file() {
   fi
 }
 
-# --- 1. sync slash commands ---
-
-echo "── Slash commands → $GLOBAL_COMMANDS"
+echo "-- Slash commands -> $GLOBAL_COMMANDS"
 [[ $DRY_RUN -eq 0 ]] && mkdir -p "$GLOBAL_COMMANDS"
 
 shopt -s nullglob
-for src in "$WIKI_ROOT/.claude/commands"/*.md; do
+for src in "$ENGINE_ROOT/.claude/commands"/*.md; do
   name="$(basename "$src")"
   sync_file "$src" "$GLOBAL_COMMANDS/$name" "$name"
 done
 shopt -u nullglob
 echo ""
 
-# --- 1c. also sync contextd-team-sync command if it exists in knowledge repo ---
-if [[ -n "$KNOWLEDGE_REPO" && -d "$KNOWLEDGE_REPO/.claude/commands" ]]; then
+if [[ "$KNOWLEDGE_ROOT" != "$ENGINE_ROOT" && -d "$KNOWLEDGE_ROOT/.claude/commands" ]]; then
   shopt -s nullglob
-  for src in "$KNOWLEDGE_REPO/.claude/commands"/*.md; do
+  for src in "$KNOWLEDGE_ROOT/.claude/commands"/*.md; do
     name="$(basename "$src")"
-    # Only sync commands that don't exist in engine repo (team-specific overrides)
-    if [[ ! -f "$WIKI_ROOT/.claude/commands/$name" ]]; then
-      sync_file "$src" "$GLOBAL_COMMANDS/$name" "$name (from knowledge repo)"
+    if [[ ! -f "$ENGINE_ROOT/.claude/commands/$name" ]]; then
+      sync_file "$src" "$GLOBAL_COMMANDS/$name" "$name (from knowledge root)"
     fi
   done
   shopt -u nullglob
   echo ""
 fi
 
-# --- 1b. migrate legacy wiki-*.md commands (pre-contextd rename) ---
-
-# Map of legacy_name -> new_name. Most are `wiki-X` -> `contextd-X`,
-# but the verbs use-wiki/update-wiki/rebase-wiki collapse the suffix.
-declare -A LEGACY_MAP=(
-  [wiki-backup]=contextd-backup
-  [wiki-detect]=contextd-detect
-  [wiki-eval]=contextd-eval
-  [wiki-explain]=contextd-explain
-  [wiki-report]=contextd-report
-  [wiki-restore]=contextd-restore
-  [wiki-setup]=contextd-setup
-  [wiki-trace]=contextd-trace
-  [wiki-upgrade]=contextd-upgrade
-  [wiki-version]=contextd-version
-  [wiki-viz]=contextd-viz
-  [use-wiki]=use-contextd
-  [update-wiki]=update-contextd
-  [rebase-wiki]=rebase-contextd
+LEGACY_PAIRS=(
+  "wiki-backup:contextd-backup"
+  "wiki-detect:contextd-detect"
+  "wiki-eval:contextd-eval"
+  "wiki-explain:contextd-explain"
+  "wiki-report:contextd-report"
+  "wiki-restore:contextd-restore"
+  "wiki-setup:contextd-setup"
+  "wiki-trace:contextd-trace"
+  "wiki-upgrade:contextd-upgrade"
+  "wiki-version:contextd-version"
+  "wiki-viz:contextd-viz"
+  "use-wiki:use-contextd"
+  "update-wiki:update-contextd"
+  "rebase-wiki:rebase-contextd"
 )
 LEGACY_FOUND=0
-for legacy in "${!LEGACY_MAP[@]}"; do
+for pair in "${LEGACY_PAIRS[@]}"; do
+  legacy="${pair%%:*}"
+  new_name="${pair#*:}"
   legacy_path="$GLOBAL_COMMANDS/${legacy}.md"
   if [[ -f "$legacy_path" ]]; then
     LEGACY_FOUND=1
-    echo "  [REMOVED]   ${legacy}.md  (renamed → ${LEGACY_MAP[$legacy]}.md)"
+    echo "  [REMOVED]   ${legacy}.md (renamed -> ${new_name}.md)"
     run rm -f "$legacy_path"
   fi
 done
 if [[ $LEGACY_FOUND -eq 1 ]]; then
   echo ""
-  echo "  ⚠ Migration notice:"
-  echo "    Slash commands /wiki-*, /use-wiki, /update-wiki, /rebase-wiki đã đổi tên thành /contextd-*."
-  echo "    Workspace mẫu 'wiki' đã đổi tên thành 'default'."
-  echo "    Nếu codebase nào có .claude/wiki.json với \"workspace\": \"wiki\","
-  echo "    cập nhật thành \"workspace\": \"default\" (hoặc chạy lại /switch-workspace)."
+  echo "  Migration notice:"
+  echo "    Slash commands /wiki-*, /use-wiki, /update-wiki, /rebase-wiki were renamed to /contextd-*."
+  echo "    If a codebase still has legacy config, run: contextd migrate-config"
   echo ""
 fi
 
-# --- 2. sync subagents ---
-
-echo "── Subagents → $GLOBAL_AGENTS"
+echo "-- Subagents -> $GLOBAL_AGENTS"
 [[ $DRY_RUN -eq 0 ]] && mkdir -p "$GLOBAL_AGENTS"
 
 shopt -s nullglob
-for src in "$WIKI_ROOT/.claude/agents"/*.md; do
+for src in "$ENGINE_ROOT/.claude/agents"/*.md; do
   name="$(basename "$src")"
   sync_file "$src" "$GLOBAL_AGENTS/$name" "$name"
 done
 shopt -u nullglob
 echo ""
-
-# --- 2b. migrate legacy wiki-* subagents (pre-contextd rename) ---
 
 LEGACY_AGENTS=(
   wiki-planner wiki-context-selector wiki-plan-reviewer wiki-curator wiki-reviewer
@@ -196,141 +315,110 @@ for legacy in "${LEGACY_AGENTS[@]}"; do
   legacy_path="$GLOBAL_AGENTS/${legacy}.md"
   if [[ -f "$legacy_path" ]]; then
     new_name="contextd-${legacy#wiki-}"
-    echo "  [REMOVED]   ${legacy}.md  (renamed → ${new_name}.md)"
+    echo "  [REMOVED]   ${legacy}.md (renamed -> ${new_name}.md)"
     run rm -f "$legacy_path"
   fi
 done
 
-# --- 2c. remove deprecated subagents (merged into other agents) ---
-# contextd-plan-reviewer was merged into contextd-context-selector (pipeline 5→4 stages).
 DEPRECATED_AGENTS=(
   contextd-plan-reviewer
 )
 for agent in "${DEPRECATED_AGENTS[@]}"; do
   dep_path="$GLOBAL_AGENTS/${agent}.md"
   if [[ -f "$dep_path" ]]; then
-    echo "  [REMOVED]   ${agent}.md  (deprecated — merged into contextd-context-selector)"
+    echo "  [REMOVED]   ${agent}.md (deprecated; merged into contextd-context-selector)"
     run rm -f "$dep_path"
   fi
 done
 echo ""
 
-# --- 3. wiki-global.json ---
+echo "-- Global config -> $GLOBAL_CONFIG"
+echo "-- Canonical config -> $GLOBAL_CONTEXTD_CONFIG"
 
-echo "── Global config → $GLOBAL_CONFIG"
-echo "── Canonical config → $GLOBAL_CONTEXTD_CONFIG"
+KNOWLEDGE_ROOT_FWD="${KNOWLEDGE_ROOT//\\//}"
+DEFAULT_WORKSPACE_JSON="$(json_string_or_null "$DEFAULT_WORKSPACE")"
 
-# Convert WIKI_ROOT_CONFIG to forward-slash form (works trên cả Windows + Unix)
-WIKI_ROOT_FWD="${WIKI_ROOT_CONFIG//\\//}"
-
-if [[ -n "$KNOWLEDGE_REPO" ]]; then
-  NEW_CONTEXTD_CONFIG=$(cat <<EOF
+NEW_CONTEXTD_CONFIG=$(cat <<EOF
 {
-  "_comment": "Generated by contextd/scripts/install-to-claude.sh. knowledge_root points to the team knowledge repo. Legacy wiki_root config is still written for Claude Code adapters.",
-  "knowledge_root": "$WIKI_ROOT_FWD",
-  "default_workspace": null
+  "_comment": "Generated by contextd/scripts/install-to-claude.sh. knowledge_root is canonical; legacy wiki globals are compatibility adapters.",
+  "knowledge_root": "$KNOWLEDGE_ROOT_FWD",
+  "default_workspace": $DEFAULT_WORKSPACE_JSON
 }
 EOF
 )
-  NEW_CONFIG=$(cat <<EOF
-{
-  "_comment": "Generated by wiki-template/scripts/install-to-claude.sh. wiki_root trỏ về team knowledge repo (chứa workspaces/). Engine repo (philngt/contextd) chỉ dùng để cài commands/agents. Edit default_workspace nếu muốn fallback cho codebase chưa có .claude/wiki.json.",
-  "wiki_root": "$WIKI_ROOT_FWD",
-  "default_workspace": null
-}
-EOF
-)
-else
-  NEW_CONTEXTD_CONFIG=$(cat <<EOF
-{
-  "_comment": "Generated by contextd/scripts/install-to-claude.sh. knowledge_root points to the contextd engine repo for the default seed workspace. Legacy wiki_root config is still written for Claude Code adapters.",
-  "knowledge_root": "$WIKI_ROOT_FWD",
-  "default_workspace": null
-}
-EOF
-)
-  NEW_CONFIG=$(cat <<EOF
-{
-  "_comment": "Generated by wiki-template/scripts/install-to-claude.sh. wiki_root trỏ về wiki-template repo. Edit default_workspace nếu muốn fallback cho codebase chưa có .claude/wiki.json.",
-  "wiki_root": "$WIKI_ROOT_FWD",
-  "default_workspace": null
-}
-EOF
-)
-fi
 
-if [[ ! -f "$GLOBAL_CONTEXTD_CONFIG" ]]; then
-  echo "  [NEW] $GLOBAL_CONTEXTD_CONFIG"
-  if [[ $DRY_RUN -eq 0 ]]; then
-    mkdir -p "$GLOBAL_CONTEXTD"
-    echo "$NEW_CONTEXTD_CONFIG" > "$GLOBAL_CONTEXTD_CONFIG"
+NEW_LEGACY_CONFIG=$(cat <<EOF
+{
+  "_comment": "Compatibility adapter generated by contextd/scripts/install-to-claude.sh. Canonical config lives at ~/.contextd/config.json.",
+  "wiki_root": "$KNOWLEDGE_ROOT_FWD",
+  "default_workspace": $DEFAULT_WORKSPACE_JSON
+}
+EOF
+)
+
+write_contextd_config() {
+  if [[ ! -f "$GLOBAL_CONTEXTD_CONFIG" ]]; then
+    echo "  [NEW]       $GLOBAL_CONTEXTD_CONFIG"
+    write_content "$GLOBAL_CONTEXTD_CONFIG" "$NEW_CONTEXTD_CONFIG"
+    return
   fi
-else
-  CURRENT_KNOWLEDGE_ROOT=$(grep -oE '"knowledge_root"[[:space:]]*:[[:space:]]*"[^"]*"' "$GLOBAL_CONTEXTD_CONFIG" | sed -E 's/.*"([^"]*)"$/\1/' || true)
-  if [[ "$CURRENT_KNOWLEDGE_ROOT" == "$WIKI_ROOT_FWD" ]]; then
-    echo "  [UNCHANGED] knowledge_root đã đúng ($WIKI_ROOT_FWD)"
-  elif [[ $FORCE -eq 1 ]]; then
-    echo "  [FORCED]    overwrite $GLOBAL_CONTEXTD_CONFIG (--force)"
-    [[ $DRY_RUN -eq 0 ]] && echo "$NEW_CONTEXTD_CONFIG" > "$GLOBAL_CONTEXTD_CONFIG"
-  else
-    echo "  [CONFLICT] knowledge_root hiện tại: ${CURRENT_KNOWLEDGE_ROOT:-<empty>}"
-    echo "             knowledge_root mới     : $WIKI_ROOT_FWD"
-    echo "    Hoặc edit thủ công:            $GLOBAL_CONTEXTD_CONFIG"
-  fi
-fi
 
-if [[ ! -f "$GLOBAL_CONFIG" ]]; then
-  echo "  [NEW] $GLOBAL_CONFIG"
-  if [[ $DRY_RUN -eq 0 ]]; then
-    echo "$NEW_CONFIG" > "$GLOBAL_CONFIG"
-  fi
-else
-  # File tồn tại — chỉ overwrite nếu wiki_root khác hoặc --force.
-  CURRENT_ROOT=$(grep -oE '"wiki_root"[[:space:]]*:[[:space:]]*"[^"]*"' "$GLOBAL_CONFIG" | sed -E 's/.*"([^"]*)"$/\1/' || true)
-
-  if [[ "$CURRENT_ROOT" == "$WIKI_ROOT_FWD" ]]; then
-    echo "  [UNCHANGED] wiki_root đã đúng ($WIKI_ROOT_FWD)"
-  else
-    echo "  [CONFLICT] wiki_root hiện tại: ${CURRENT_ROOT:-<empty>}"
-    echo "             wiki_root mới     : $WIKI_ROOT_FWD"
-    if [[ $FORCE -eq 1 ]]; then
-      echo "  [FORCED]    overwrite (--force)"
-      [[ $DRY_RUN -eq 0 ]] && echo "$NEW_CONFIG" > "$GLOBAL_CONFIG"
+  local current_root
+  current_root="$(read_json_string_key "$GLOBAL_CONTEXTD_CONFIG" "knowledge_root")"
+  if [[ "$current_root" == "$KNOWLEDGE_ROOT_FWD" ]]; then
+    if [[ -n "$DEFAULT_WORKSPACE" ]]; then
+      echo "  [UPDATED]   default_workspace -> $DEFAULT_WORKSPACE"
+      write_content "$GLOBAL_CONTEXTD_CONFIG" "$NEW_CONTEXTD_CONFIG"
     else
-      echo ""
-      echo "  ⚠ Không tự overwrite (sẽ mất default_workspace user đã set)."
-      if [[ -n "$KNOWLEDGE_REPO" ]]; then
-        echo "    Để overwrite hoàn toàn:        bash $0 $WIKI_ROOT --knowledge-repo $KNOWLEDGE_REPO --force"
-      else
-        echo "    Để overwrite hoàn toàn:        bash $0 $WIKI_ROOT --force"
-      fi
-      echo "    Hoặc edit thủ công:            $GLOBAL_CONFIG"
+      echo "  [UNCHANGED] knowledge_root is already $KNOWLEDGE_ROOT_FWD"
     fi
+  elif [[ $FORCE -eq 1 ]]; then
+    echo "  [FORCED]    overwrite $GLOBAL_CONTEXTD_CONFIG"
+    write_content "$GLOBAL_CONTEXTD_CONFIG" "$NEW_CONTEXTD_CONFIG"
+  else
+    echo "  [CONFLICT]  knowledge_root current: ${current_root:-<empty>}"
+    echo "              knowledge_root new:     $KNOWLEDGE_ROOT_FWD"
+    echo "              Re-run with --force to overwrite or edit $GLOBAL_CONTEXTD_CONFIG"
   fi
-fi
+}
+
+write_legacy_config() {
+  if [[ ! -f "$GLOBAL_CONFIG" ]]; then
+    echo "  [NEW]       $GLOBAL_CONFIG"
+    write_content "$GLOBAL_CONFIG" "$NEW_LEGACY_CONFIG"
+    return
+  fi
+
+  local current_root
+  current_root="$(read_json_string_key "$GLOBAL_CONFIG" "wiki_root")"
+  if [[ "$current_root" == "$KNOWLEDGE_ROOT_FWD" ]]; then
+    if [[ -n "$DEFAULT_WORKSPACE" ]]; then
+      echo "  [UPDATED]   legacy default_workspace -> $DEFAULT_WORKSPACE"
+      write_content "$GLOBAL_CONFIG" "$NEW_LEGACY_CONFIG"
+    else
+      echo "  [UNCHANGED] legacy wiki_root is already $KNOWLEDGE_ROOT_FWD"
+    fi
+  elif [[ $FORCE -eq 1 ]]; then
+    echo "  [FORCED]    overwrite $GLOBAL_CONFIG"
+    write_content "$GLOBAL_CONFIG" "$NEW_LEGACY_CONFIG"
+  else
+    echo "  [CONFLICT]  legacy wiki_root current: ${current_root:-<empty>}"
+    echo "              legacy wiki_root new:     $KNOWLEDGE_ROOT_FWD"
+    echo "              This legacy file is only for adapter compatibility."
+  fi
+}
+
+write_contextd_config
+write_legacy_config
 echo ""
 
-# --- summary ---
-
-echo "✓ Done."
+echo "Done."
 echo ""
-if [[ -n "$KNOWLEDGE_REPO" ]]; then
-  echo "Team sync enabled. knowledge_root → $WIKI_ROOT_FWD"
-  echo ""
-  echo "Test thử:"
-  echo "  cd /path/to/your/codebase"
-  echo "  /contextd-setup              # tạo .claude/wiki.json cho codebase đó"
-  echo "  contextd migrate-config      # tạo .contextd/config.json canonical"
-  echo "  /contextd-team-sync pull     # lấy knowledge mới nhất từ team"
-  echo "  /use-contextd \"...task...\"   # dùng pipeline với context từ workspace active"
-  echo ""
-  echo "Sau khi update wiki:"
-  echo "  /contextd-team-sync push     # đẩy thay đổi lên team repo"
-else
-  echo "Test thử:"
-  echo "  cd /path/to/your/codebase"
-  echo "  /contextd-setup           # tạo .claude/wiki.json cho codebase đó"
-  echo "  contextd migrate-config   # tạo .contextd/config.json canonical"
-  echo "  /list-workspaces      # xem có workspace nào trong wiki-template"
-  echo "  /use-contextd \"...task...\"  # dùng pipeline với context từ workspace active"
-fi
+echo "Try:"
+echo "  cd /path/to/your/codebase"
+echo "  /contextd-setup              # creates .contextd/config.json for that codebase"
+echo "  contextd resolve             # verify workspace and knowledge_root"
+echo "  contextd context \"...task...\" --format json"
+echo ""
+echo "MCP snippets:"
+echo "  bash $0 --knowledge-root \"$KNOWLEDGE_ROOT_FWD\" --print-mcp-config codex"

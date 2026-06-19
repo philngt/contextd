@@ -27,6 +27,8 @@ a = Analysis(
         'cmd_task_context',
         'cmd_contract_path',
         'cmd_migrate_config',
+        'cmd_mcp_config',
+        'mcp_server',
         'render_runtime',
         'pack_loader',
         'contextd_resolver',

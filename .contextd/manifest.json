@@ -30,7 +30,7 @@
     },
     {
       "name": "contextd-detect",
-      "description": "/contextd-detect — Detect contextd Install",
+      "description": "/contextd-detect — Detect contextd Config",
       "template_file": ".claude/commands/contextd-detect.md"
     },
     {
@@ -189,7 +189,7 @@
     },
     {
       "name": "contextd-curator",
-      "description": "Cập nhật wiki sau khi code thay đổi — pattern mới, contract mới, service mới, ADR mới. DÙNG KHI user gọi /update-contextd hoặc khi cần đồng bộ wiki sau merge. KHÔNG DÙNG để chỉnh code project.",
+      "description": "Cập nhật knowledge repo sau khi code thay đổi — pattern mới, contract mới, service mới, ADR mới. DÙNG KHI user gọi /update-contextd hoặc khi cần đồng bộ knowledge sau merge. KHÔNG DÙNG để chỉnh code project.",
       "tools": "Read, Edit, Write, Glob, Grep",
       "model": "sonnet",
       "template_file": ".claude/agents/contextd-curator.md"
@@ -520,6 +520,7 @@
     "cursor",
     "codex-plugin",
     "codex-instructions",
-    "plain"
+    "plain",
+    "mcp"
   ]
 }

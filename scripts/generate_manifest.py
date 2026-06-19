@@ -203,7 +203,7 @@ def generate_manifest() -> Dict:
             "max_docs": 7,
             "intent_types": ["implement_feature", "fix_bug", "design", "incident", "review"],
         },
-        "supported_runtimes": ["claude", "cursor", "codex-plugin", "codex-instructions", "plain"],
+        "supported_runtimes": ["claude", "cursor", "codex-plugin", "codex-instructions", "plain", "mcp"],
     }
 
     return manifest

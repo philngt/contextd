@@ -216,7 +216,7 @@ unzip contextd-latest.zip -d /d/tool</code></pre>
       <div class="step-content">
         <h4>Run the installer</h4>
         <p>Same as Step 2 in the Git clone path — the file <code>scripts/install-to-claude.sh</code> is already in the zip:</p>
-        <pre><code>bash scripts/install-to-claude.sh</code></pre>
+        <pre><code>bash scripts/install-to-claude.sh --knowledge-root "$(pwd)"</code></pre>
         <p>Verify the same way as Git install: <code>cat ~/.contextd/config.json</code> should show <code>"knowledge_root"</code> with your extracted path.</p>
       </div>
     </div>
@@ -234,7 +234,7 @@ unzip contextd-latest.zip -d /d/tool</code></pre>
     </div>
 
     <div class="callout tip">
-      <strong>💡 For maintainers:</strong> create a new zip with <code>bash scripts/package-release.sh</code>. Output is written to <code>release/contextd-{version}.zip</code> + <code>release/contextd-latest.zip</code>. It automatically excludes <code>.git/</code>, raw evidence, workspaces other than <code>wiki/</code>, and runs/cache/log files. See <code>scripts/package-release.sh --help</code>.
+      <strong>💡 For maintainers:</strong> create a new zip with <code>bash scripts/package-release.sh</code>. Output is written to <code>release/contextd-{version}.zip</code> + <code>release/contextd-latest.zip</code>. It automatically excludes <code>.git/</code>, raw evidence, workspaces other than <code>default/</code>, and runs/cache/log files. See <code>scripts/package-release.sh --help</code>.
     </div>
   </section>
 
@@ -279,7 +279,7 @@ cd /d/tool/contextd</code></pre>
       <div class="step-content">
         <h2 style="margin-top:4px">Run the installer</h2>
         <p>Run this command (safe to run multiple times):</p>
-        <pre><code>bash scripts/install-to-claude.sh</code></pre>
+        <pre><code>bash scripts/install-to-claude.sh --knowledge-root "$(pwd)"</code></pre>
 
         <p>This command automatically does 3 things:</p>
         <ul>
@@ -302,7 +302,7 @@ cd /d/tool/contextd</code></pre>
 
         <div class="os-panel" data-os="verify-windows">
           <pre><code># PowerShell
-type $env:USERPROFILE\.claude\config.json
+	type $env:USERPROFILE\.contextd\config.json
 
 # Or Git Bash
 cat ~/.contextd/config.json</code></pre>
@@ -310,7 +310,7 @@ cat ~/.contextd/config.json</code></pre>
 
         <p>You should see field <code>"knowledge_root"</code> with an absolute path to your cloned repo. Example:</p>
         <pre><code>{
-  "knowledge_root": "/home/user/wiki",
+  "knowledge_root": "/home/user/contextd",
   "default_workspace": null,
   "obsidian": { ... }
 }</code></pre>
@@ -326,7 +326,7 @@ cat ~/.contextd/config.json</code></pre>
       <div class="step-num-bubble">3</div>
       <div class="step-content">
         <h2 style="margin-top:4px">Connect your first project</h2>
-        <p>Go to the codebase folder where you want to use the wiki, open Claude Code (or the IDE extension) there, and run:</p>
+        <p>Go to the codebase folder where you want to use contextd, open Claude Code (or the IDE extension) there, and run:</p>
         <pre><code>/contextd-setup</code></pre>
 
         <p>The setup flow guides you step by step:</p>
@@ -338,7 +338,7 @@ cat ~/.contextd/config.json</code></pre>
         </ul>
 
         <div class="callout tip">
-          <strong>💡 You only run this once per project.</strong> After that, the wiki just works — you can use slash commands normally (<code>/use-contextd</code>, <code>/find</code>, <code>/tool-design</code>, ...).
+          <strong>💡 You only run this once per project.</strong> After that, contextd just works — you can use slash commands normally (<code>/use-contextd</code>, <code>/find</code>, <code>/tool-design</code>, ...).
         </div>
 
         <p style="margin-top:16px">Next: open <a href="index.en.html">index.html</a> and choose a persona path (PM / Engineer / Wiki Owner / Solo Builder).</p>
@@ -374,7 +374,7 @@ xcopy /E /I /Y .claude\agents %USERPROFILE%\.claude\agents</pre>
     <ul>
       <li>Check whether <code>~/.claude/commands/</code> contains <code>.md</code> files (e.g. <code>contextd-setup.md</code>)</li>
       <li>Restart Claude Code (CLI: run <code>/exit</code> then reopen; IDE: reload window)</li>
-      <li>Re-run installer: <code>bash scripts/install-to-claude.sh</code></li>
+      <li>Re-run installer: <code>bash scripts/install-to-claude.sh --knowledge-root "$(pwd)"</code></li>
       <li>Check Claude Code logs for errors (CLI: stderr; IDE: Output panel)</li>
     </ul>
 
@@ -402,9 +402,9 @@ xcopy /E /I /Y .claude\agents %USERPROFILE%\.claude\agents</pre>
   <section class="block" id="update">
     <h2>🔄 Future updates</h2>
     <p>After each <code>git pull</code> in the contextd repo, re-run the installer to sync updated slash commands:</p>
-    <pre><code>cd ~/wiki
+    <pre><code>cd ~/contextd
 git pull
-bash scripts/install-to-claude.sh   # idempotent — updates everything</code></pre>
+bash scripts/install-to-claude.sh --knowledge-root "$(pwd)"   # idempotent — updates everything</code></pre>
 
     <div class="callout tip">
       <strong>💡 When should you update?</strong>

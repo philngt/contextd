@@ -28,6 +28,12 @@ pip install -e .
 bash scripts/install-to-claude.sh
 ```
 
+If you keep workspaces in a separate team repo, pass it explicitly:
+
+```bash
+bash scripts/install-to-claude.sh --knowledge-root ~/company-wiki --default-workspace shared
+```
+
 This script:
 - Syncs slash commands + subagents to `~/.claude/{commands,agents}/`.
 - Creates canonical `~/.contextd/config.json` with `knowledge_root` pointing to this repo.
@@ -136,6 +142,17 @@ contextd find "kafka consumer" --format json
 contextd contract-path citation-format
 ```
 
+## Optional MCP Setup
+
+Generate a local stdio MCP snippet for your client:
+
+```bash
+contextd mcp-config --client codex --knowledge-root ~/contextd --workspace default
+contextd mcp-config --client all --knowledge-root ~/company-wiki --workspace shared
+```
+
+See [docs/mcp.md](docs/mcp.md) for the tool list, client snippets, and security notes.
+
 ---
 
 ## Step 7 — After code is merged
@@ -160,10 +177,10 @@ Quick start for teams:
 cp -r templates/team-knowledge-repo ~/company-wiki
 cd ~/company-wiki && git init && git add . && git commit -m "init"
 
-# 2. Each developer clones the knowledge repo and installs with --knowledge-repo
+# 2. Each developer clones the knowledge repo and installs with --knowledge-root
 git clone <team-repo-url> ~/company-wiki
 cd ~/contextd
-bash scripts/install-to-claude.sh --knowledge-repo ~/company-wiki
+bash scripts/install-to-claude.sh --knowledge-root ~/company-wiki
 
 # 3. Daily workflow
 /contextd-team-sync pull        # before working

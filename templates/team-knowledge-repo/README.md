@@ -28,7 +28,7 @@ It contains only `workspaces/` (and optionally packs/contracts local to your tea
    ```bash
    git clone https://github.com/philngt/contextd.git ~/contextd
    cd ~/contextd
-   bash scripts/install-to-claude.sh --knowledge-repo ~/company-wiki
+   bash scripts/install-to-claude.sh --knowledge-root ~/company-wiki
    ```
 
 3. **Verify**
@@ -56,7 +56,7 @@ The engine (`~/contextd`) can be updated independently without touching this rep
 
 ```bash
 cd ~/contextd && git pull
-bash scripts/install-to-claude.sh --knowledge-repo ~/company-wiki
+bash scripts/install-to-claude.sh --knowledge-root ~/company-wiki
 ```
 
 This updates slash commands and subagents in `~/.claude/` while keeping canonical `knowledge_root` pointed at your team knowledge repo.

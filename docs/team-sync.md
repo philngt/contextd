@@ -70,7 +70,7 @@ git commit -m "Initial team knowledge repo"
 
 ```bash
 cd ~/contextd
-bash scripts/install-to-claude.sh --knowledge-repo ~/my-company-wiki
+bash scripts/install-to-claude.sh --knowledge-root ~/my-company-wiki --default-workspace shared
 
 # In Claude Code:
 # /new-workspace shared
@@ -101,7 +101,7 @@ git clone https://github.com/philngt/contextd.git ~/contextd
 cd ~/contextd
 
 # 3. Install with knowledge repo pointing to your team repo
-bash scripts/install-to-claude.sh --knowledge-repo ~/company-wiki
+bash scripts/install-to-claude.sh --knowledge-root ~/company-wiki --default-workspace shared
 
 # 4. Verify
 contextd resolve
@@ -117,6 +117,8 @@ bash ~/contextd/scripts/setup-team-knowledge.sh \
     --local-path ~/company-wiki
 ```
 
+`setup-team-knowledge.sh --knowledge-repo` names the remote git URL for the team knowledge repo. The installer it calls writes canonical `knowledge_root`.
+
 ### Option C: From existing engine
 
 If the developer already has `philngt/contextd` cloned:
@@ -124,7 +126,7 @@ If the developer already has `philngt/contextd` cloned:
 ```bash
 cd ~/contextd
 git pull
-bash scripts/install-to-claude.sh --knowledge-repo ~/company-wiki
+bash scripts/install-to-claude.sh --knowledge-root ~/company-wiki --default-workspace shared
 ```
 
 ---
@@ -173,7 +175,7 @@ When `philngt/contextd` releases updates:
 ```bash
 cd ~/contextd
 git pull
-bash scripts/install-to-claude.sh --knowledge-repo ~/company-wiki
+bash scripts/install-to-claude.sh --knowledge-root ~/company-wiki --default-workspace shared
 ```
 
 This updates:
@@ -193,7 +195,7 @@ Your team knowledge repo is untouched.
 | `git pull` fails with merge conflict | Local uncommitted changes | `cd ~/company-wiki && git stash && git pull && git stash pop` or commit first |
 | Pushed files include `evidence/` | Missing `.gitignore` in knowledge repo | Add template `.gitignore` from `templates/team-knowledge-repo/.gitignore` |
 | Workspace not found after pull | New workspace created by teammate | Run `/list-workspaces` then `/switch-workspace {name}` |
-| Slash commands outdated | Engine not updated | Re-run `install-to-claude.sh --knowledge-repo ~/company-wiki` |
+| Slash commands outdated | Engine not updated | Re-run `install-to-claude.sh --knowledge-root ~/company-wiki` |
 
 ---
 
@@ -220,4 +222,4 @@ Switch by editing `.contextd/config.json` in each codebase:
 
 ### Compatibility
 
-Legacy `.claude/wiki.json` may keep using `wiki_root`; contextd treats it as an adapter alias during migration.
+Legacy `.claude/wiki.json` may keep using `wiki_root`; contextd treats it as an adapter alias during migration. The installer still accepts `--knowledge-repo` as a compatibility alias for local installs, but new commands should use `--knowledge-root`.
