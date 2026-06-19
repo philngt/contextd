@@ -57,6 +57,7 @@ Use is provided under the repository license ([MIT](LICENSE)) and is offered **"
 | CLI: resolve/find/bundle | Available from GitHub Releases or source checkout |
 | CLI: deterministic task context | Available (`contextd context`) |
 | CLI: diagnostics and selection explain | Available (`contextd doctor`, `contextd explain`) |
+| CLI: governance and evaluation | Available (`contextd policy-check`, `contextd pack-validate`, `contextd eval --golden`) |
 | Plain markdown bundle export | Available |
 | Codex skill/plugin export | Available |
 | Cursor rules export | Available |
@@ -224,6 +225,23 @@ contextd contract-path citation-format
 
 See [docs/context-quality.md](docs/context-quality.md) for budget semantics, safety guard behavior, and rollout scorecards.
 
+### Production Governance Loop
+
+Use this loop before rolling contextd into a team workflow or after changing packs/workspace knowledge:
+
+```bash
+contextd doctor --format json
+contextd pack-validate --all --format json
+contextd context "debug context quality" --format json --no-materialize
+contextd explain "debug context quality" --format json
+contextd policy-check "debug context quality" --format json
+contextd eval --golden --workspace default --format json
+```
+
+- [docs/governance.md](docs/governance.md): policy-as-code over selected context.
+- [docs/pack-validation.md](docs/pack-validation.md): pack API and retrieval-map validation.
+- [docs/evaluation.md](docs/evaluation.md): golden-task evaluation for context selection quality.
+
 ### MCP Adapter
 
 Run contextd as a local stdio MCP tools server:
@@ -233,7 +251,7 @@ contextd mcp-server --knowledge-root ~/contextd --workspace default
 contextd mcp-config --client codex --knowledge-root ~/contextd --workspace default
 ```
 
-See [docs/mcp.md](docs/mcp.md) for Claude, Cursor, Codex snippets, security notes, and tool details.
+See [docs/mcp.md](docs/mcp.md) for Claude, Cursor, Codex snippets, security notes, tools, resources, and prompts.
 
 ### After coding
 

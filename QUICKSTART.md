@@ -107,8 +107,10 @@ Runtime-neutral CLI:
 ```bash
 contextd resolve --format json
 contextd doctor --format text
+contextd pack-validate --all --format text
 contextd context "Add a Kafka consumer for surgery file processed events" --format json
 contextd explain "Add a Kafka consumer for surgery file processed events" --format text
+contextd policy-check "Add a Kafka consumer for surgery file processed events" --format text
 ```
 
 Claude Code adapter:
@@ -125,6 +127,15 @@ The context pipeline:
 
 > Output: generated code + `current-task.json`/`current-task.md` showing which knowledge was applied.
 > Debug selection: `contextd explain` shows selected docs, dropped docs, gaps, warnings, source hashes, and budget estimates.
+
+For team rollout or pack changes, run the full quality loop:
+
+```bash
+contextd doctor --format json
+contextd pack-validate --all --format json
+contextd policy-check "debug context quality" --format json
+contextd eval --golden --workspace default --format json
+```
 
 ---
 
@@ -201,6 +212,7 @@ bash scripts/install-to-claude.sh --knowledge-root ~/company-wiki
 - **Pack catalog** (stack-specific bundles): [packs/README.md](packs/README.md).
 - **Cross-cutting principles** (rules spanning multiple packs): [agents/cross-cutting-principles.md](agents/cross-cutting-principles.md).
 - **Pipeline debugging/observability**: [agents/pipeline/observability.md](agents/pipeline/observability.md) — `/contextd-trace`, `/contextd-viz`, `/contextd-eval`.
+- **Governance loop**: [docs/governance.md](docs/governance.md), [docs/pack-validation.md](docs/pack-validation.md), [docs/evaluation.md](docs/evaluation.md).
 
 ## If You Get Stuck
 
