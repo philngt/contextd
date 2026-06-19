@@ -15,6 +15,7 @@ sys.path.insert(0, str(SCRIPT_DIR))
 sys.path.insert(0, str(SCRIPT_DIR / "lib"))
 
 import cmd_resolve  # noqa: E402
+import pack_validation  # noqa: E402
 import render_runtime  # noqa: E402
 import task_context_engine  # noqa: E402
 from context_security import block_reason, reject_unsafe_entry  # noqa: E402
@@ -38,6 +39,9 @@ def _validate_schema_files(issues: List[Issue]) -> None:
     required = [
         "templates/contextd-config.schema.json",
         "templates/task-context.schema.json",
+        "templates/context-policy.schema.json",
+        "templates/pack.schema.json",
+        "templates/retrieval-map.schema.json",
         "templates/run-trace.schema.json",
         ".contextd/manifest.schema.json",
         ".contextd/manifest.json",
@@ -108,6 +112,28 @@ def _scan_blocked_paths(root: Path, workspace: str, packs: List[str],
                 f"Secret-like path will be blocked by runtime reads: {reason}",
                 rel,
             ))
+
+
+def _append_pack_validation(root: Path, packs: List[str], issues: List[Issue],
+                            infos: List[Issue]) -> None:
+    report = pack_validation.validate_packs(root, pack_names=packs)
+    summary = report.get("summary") or {}
+    infos.append(_issue(
+        "info",
+        "pack-validation",
+        (
+            f"Checked {summary.get('packs_checked', 0)} pack(s): "
+            f"{summary.get('errors', 0)} error(s), {summary.get('warnings', 0)} warning(s)."
+        ),
+    ))
+    for issue in report.get("issues") or []:
+        severity = issue.get("severity") or "error"
+        if severity == "info":
+            infos.append(_issue("info", issue.get("check", "pack-validation"),
+                                issue.get("message", ""), issue.get("path")))
+        else:
+            issues.append(_issue(severity, issue.get("check", "pack-validation"),
+                                 issue.get("message", ""), issue.get("path")))
 
 
 def _validate_generated_adapters(root: Path, workspace: str, packs: List[str],
@@ -182,6 +208,7 @@ def diagnose(cwd: str | None = None) -> Dict:
                                  str((ws_dir / "workspace.md").relative_to(root))))
         packs = resolved.get("packs") or []
         _validate_pack_retrieval_maps(root, workspace, packs, issues)
+        _append_pack_validation(root, packs, issues, infos)
         _scan_blocked_paths(root, workspace, packs, issues)
         _validate_generated_adapters(root, workspace, packs, issues)
 

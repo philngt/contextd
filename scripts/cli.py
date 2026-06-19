@@ -9,6 +9,9 @@ Subcommands:
     export      Export workspace knowledge to runtime-specific format
     doctor      Diagnose config, packs, adapter drift, and context safety
     explain     Explain deterministic task-context selection
+    policy-check Evaluate policy-as-code for a task context
+    pack-validate Validate pack API and retrieval maps
+    eval        Evaluate context selection with golden tasks
     mcp-server  Run contextd as a stdio MCP tools server
     mcp-config  Print MCP client configuration snippets
 
@@ -51,6 +54,9 @@ import cmd_contract_path  # noqa: E402
 import cmd_migrate_config  # noqa: E402
 import cmd_doctor  # noqa: E402
 import cmd_explain  # noqa: E402
+import cmd_pack_validate  # noqa: E402
+import cmd_policy_check  # noqa: E402
+import cmd_eval  # noqa: E402
 import cmd_mcp_config  # noqa: E402
 import mcp_server  # noqa: E402
 import render_runtime  # noqa: E402
@@ -194,6 +200,34 @@ def _explain_cmd(args) -> int:
     )
 
 
+def _policy_check_cmd(args) -> int:
+    return cmd_policy_check.run(
+        task=args.task,
+        workspace=args.workspace,
+        cwd=args.cwd,
+        fmt=args.format,
+    )
+
+
+def _pack_validate_cmd(args) -> int:
+    return cmd_pack_validate.run(
+        all_packs=args.all,
+        pack=args.pack,
+        fmt=args.format,
+        cwd=args.cwd,
+    )
+
+
+def _eval_cmd(args) -> int:
+    return cmd_eval.run(
+        golden=args.golden,
+        workspace=args.workspace,
+        cwd=args.cwd,
+        fmt=args.format,
+        output=args.output,
+    )
+
+
 def _mcp_server_cmd(args) -> int:
     argv = []
     if args.knowledge_root:
@@ -323,6 +357,32 @@ def main() -> int:
     p_explain.add_argument("--cwd", default=None, help="Start directory (default: current)")
     p_explain.add_argument("--format", choices=["text", "json"], default="json")
     p_explain.set_defaults(func=_explain_cmd)
+
+    # policy-check
+    p_policy = sub.add_parser("policy-check", help="Evaluate policy-as-code for a task context")
+    p_policy.add_argument("task", help="Task description (quote if multi-word)")
+    p_policy.add_argument("--workspace", default=None, help="Override workspace name")
+    p_policy.add_argument("--cwd", default=None, help="Start directory (default: current)")
+    p_policy.add_argument("--format", choices=["text", "json"], default="json")
+    p_policy.set_defaults(func=_policy_check_cmd)
+
+    # pack-validate
+    p_pack_validate = sub.add_parser("pack-validate", help="Validate pack API and retrieval maps")
+    pack_group = p_pack_validate.add_mutually_exclusive_group()
+    pack_group.add_argument("--all", action="store_true", help="Validate all packs")
+    pack_group.add_argument("--pack", default=None, help="Validate a single pack")
+    p_pack_validate.add_argument("--cwd", default=None, help="Start directory (default: current)")
+    p_pack_validate.add_argument("--format", choices=["text", "json"], default="json")
+    p_pack_validate.set_defaults(func=_pack_validate_cmd)
+
+    # eval
+    p_eval = sub.add_parser("eval", help="Evaluate context selection with golden tasks")
+    p_eval.add_argument("--golden", action="store_true", help="Run golden task fixtures")
+    p_eval.add_argument("--workspace", default=None, help="Workspace name (default: resolved)")
+    p_eval.add_argument("--cwd", default=None, help="Start directory (default: current)")
+    p_eval.add_argument("--format", choices=["text", "json"], default="json")
+    p_eval.add_argument("--output", default=None, help="Output report path")
+    p_eval.set_defaults(func=_eval_cmd)
 
     # mcp-server
     p_mcp_server = sub.add_parser("mcp-server", help="Run contextd as a stdio MCP tools server")

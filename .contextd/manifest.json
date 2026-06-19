@@ -426,7 +426,7 @@
     },
     {
       "name": "critical-analysis-prompts",
-      "description": "Critical Analysis Prompts (10) — Evidence Pipeline (source_type ∈ {paste, api, mcp})",
+      "description": "Critical Analysis Prompts (10) — Evidence Pipeline (non-code text sources)",
       "template_file": "agents/pipeline/critical-analysis-prompts.md"
     },
     {
@@ -487,8 +487,20 @@
   ],
   "schemas": [
     {
+      "name": "context-policy.schema",
+      "template_file": "templates/context-policy.schema.json"
+    },
+    {
       "name": "contextd-config.schema",
       "template_file": "templates/contextd-config.schema.json"
+    },
+    {
+      "name": "pack.schema",
+      "template_file": "templates/pack.schema.json"
+    },
+    {
+      "name": "retrieval-map.schema",
+      "template_file": "templates/retrieval-map.schema.json"
     },
     {
       "name": "run-trace.schema",

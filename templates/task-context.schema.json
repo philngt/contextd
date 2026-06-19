@@ -232,6 +232,38 @@
       },
       "additionalProperties": true
     },
+    "governance_report": {
+      "type": "object",
+      "description": "Optional policy-as-code report for the selected task context.",
+      "properties": {
+        "artifact_type": { "const": "contextd_governance_report.v1" },
+        "status": { "enum": ["ok", "warning", "error"] },
+        "policy_sources": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "path": { "type": "string" },
+              "rule_count": { "type": "integer" }
+            },
+            "additionalProperties": true
+          }
+        },
+        "summary": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "violations": {
+          "type": "array",
+          "items": { "type": "object" }
+        },
+        "load_errors": {
+          "type": "array",
+          "items": { "type": "object" }
+        }
+      },
+      "additionalProperties": true
+    },
     "source_hashes": {
       "type": "object",
       "additionalProperties": {

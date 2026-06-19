@@ -1,0 +1,15 @@
+{
+  "id": "example-context-quality",
+  "task": "debug context quality",
+  "workspace": "default",
+  "packs": [],
+  "expected_docs": [
+    "workspaces/default/runbooks/context-quality-degradation.md"
+  ],
+  "expected_categories": [
+    "runbook"
+  ],
+  "forbidden_docs": [],
+  "expected_gaps": [],
+  "policy_expectation": "ok"
+}

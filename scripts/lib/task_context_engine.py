@@ -15,6 +15,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Tuple
 
+import context_policy
 from context_security import block_reason, is_relative_to, redact_text, reject_unsafe_entry
 
 
@@ -401,9 +402,19 @@ def _parse_retrieval_map(path: Path) -> Dict[str, List[str]]:
     if text is None:
         return {}
     rows: Dict[str, List[str]] = {}
+    in_component_table = False
+    seen_data = False
     for raw in text.splitlines():
         line = raw.strip()
-        if not line.startswith("|") or "Component" in line or re.match(r"^\|[-:\s|]+$", line):
+        if not in_component_table:
+            if line.startswith("|") and "Component" in line:
+                in_component_table = True
+            continue
+        if not line.startswith("|"):
+            if seen_data:
+                break
+            continue
+        if "Component" in line or re.match(r"^\|[-:\s|]+$", line):
             continue
         cells = [cell.strip() for cell in line.strip("|").split("|")]
         if len(cells) < 2:
@@ -417,6 +428,7 @@ def _parse_retrieval_map(path: Path) -> Dict[str, List[str]]:
             if item:
                 docs.append(item)
         if component and docs:
+            seen_data = True
             rows[component] = docs
     return rows
 
@@ -1126,6 +1138,12 @@ def build_context_artifact(
         "budget_report": budget_report,
         "source_hashes": source_hashes,
     }
+    artifact["governance_report"] = context_policy.evaluate_artifact(
+        artifact,
+        wiki_root,
+        workspace,
+        packs,
+    )
     if include_selection_trace:
         artifact["_selection_trace"] = selection_trace
     return artifact

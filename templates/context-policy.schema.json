@@ -1,0 +1,93 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "contextd-context-policy",
+  "title": "contextd Context Policy",
+  "description": "Optional policy-as-code rules for deterministic task context governance.",
+  "type": "object",
+  "properties": {
+    "version": {
+      "type": "string"
+    },
+    "rules": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/rule"
+      }
+    },
+    "policies": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/rule"
+      }
+    }
+  },
+  "anyOf": [
+    { "required": ["rules"] },
+    { "required": ["policies"] }
+  ],
+  "additionalProperties": true,
+  "definitions": {
+    "stringOrArray": {
+      "oneOf": [
+        { "type": "string" },
+        {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      ]
+    },
+    "rule": {
+      "type": "object",
+      "required": ["id", "severity"],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "severity": {
+          "enum": ["error", "warning", "info"]
+        },
+        "when": {
+          "type": "object",
+          "properties": {
+            "intent_type": { "$ref": "#/definitions/stringOrArray" },
+            "type": { "$ref": "#/definitions/stringOrArray" },
+            "workstream": { "$ref": "#/definitions/stringOrArray" },
+            "components": { "$ref": "#/definitions/stringOrArray" }
+          },
+          "additionalProperties": true
+        },
+        "require": {
+          "type": "object",
+          "properties": {
+            "categories": { "$ref": "#/definitions/stringOrArray" },
+            "contracts": { "$ref": "#/definitions/stringOrArray" },
+            "docs": { "$ref": "#/definitions/stringOrArray" },
+            "path_globs": { "$ref": "#/definitions/stringOrArray" }
+          },
+          "additionalProperties": true
+        },
+        "deny": {
+          "type": "object",
+          "properties": {
+            "categories": { "$ref": "#/definitions/stringOrArray" },
+            "docs": { "$ref": "#/definitions/stringOrArray" },
+            "path_globs": { "$ref": "#/definitions/stringOrArray" },
+            "max_selected_docs": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "max_estimated_tokens": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "additionalProperties": true
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    }
+  }
+}
