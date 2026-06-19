@@ -31,8 +31,8 @@ Designed for developers using AI coding agents across multiple projects/companie
 
 ## Who This Is For
 
-- Teams using Claude Code across multiple projects/companies and needing strict workspace-level isolation.
-- Engineers/tech leads who want reusable patterns + commands so agent output is consistent.
+- Teams using AI coding agents across multiple projects/companies and needing strict workspace-level isolation.
+- Engineers/tech leads who want reusable patterns + runtime adapters so agent output is consistent.
 - Product/ops/domain teams who need structured knowledge that agents can execute against.
 - Also useful for solo builders and platform/documentation owners who want repeatable AI-assisted workflows.
 
@@ -54,7 +54,7 @@ Use is provided under the repository license ([MIT](LICENSE)) and is offered **"
 | Claude Code slash commands | Stable |
 | Claude Code subagents | Stable |
 | Workspace/packs markdown engine | Stable |
-| CLI: resolve/find/bundle | Available (`pip install -e .`) |
+| CLI: resolve/find/bundle | Available from GitHub Releases or source checkout |
 | CLI: deterministic task context | Available (`contextd context`) |
 | Plain markdown bundle export | Available |
 | Codex skill/plugin export | Available |
@@ -65,7 +65,8 @@ Use is provided under the repository license ([MIT](LICENSE)) and is offered **"
 - macOS/Linux: `bash` required.
 - Windows: PowerShell + Git Bash or WSL recommended for shell installer execution.
 - Write access to `~/.contextd/` for global config. Claude Code adapters still write to `~/.claude/`.
-- Release installer prerequisites: `curl` or `wget`, plus `unzip`.
+- Release binary installer prerequisites: `curl` or `wget` on macOS/Linux; PowerShell `Invoke-WebRequest` on Windows.
+- Source/developer installs require Python 3 and Git.
 
 ## Roadmap: Runtime-Agnostic Context
 
@@ -140,6 +141,8 @@ PowerShell (Windows):
 iwr https://github.com/philngt/contextd/releases/latest/download/install.ps1 -UseBasicParsing | iex
 ```
 
+These install prebuilt `contextd` binaries from GitHub Releases. Users do not need to build the CLI locally.
+
 ### Secure install (verify SHA256 before run)
 
 ```bash
@@ -164,10 +167,10 @@ if ($actual -ne $expected.ToLower()) { throw "SHA256 mismatch for install.ps1" }
 .\install.ps1
 ```
 
-Or install from source in this repository (developer/local flow):
+Developer/source checkout flow (for editing this repo or installing Claude adapters from a checkout):
 
 ```bash
-bash scripts/install-to-claude.sh
+pip install -e .
 bash scripts/install-to-claude.sh --knowledge-root ~/contextd --default-workspace default
 bash scripts/install-to-claude.sh --dry-run
 bash scripts/install-to-claude.sh --force
@@ -234,19 +237,19 @@ See [docs/mcp.md](docs/mcp.md) for Claude, Cursor, Codex snippets, security note
 
 ## Codex Usage
 
-contextd can also be used with OpenAI Codex CLI via the exported skill.
+contextd can also be used with OpenAI Codex CLI via the exported skill or MCP adapter.
 
-1. Install the CLI:
+1. Install the `contextd` CLI with the release binary installer above. For source checkout development only:
    ```bash
    pip install -e .
    ```
-2. Install the Codex skill:
-   ```bash
-   bash scripts/setup-codex-skills.sh
-   ```
-   Or, if contextd CLI is already installed:
+2. Install the Codex skill from the CLI:
    ```bash
    contextd export --runtime codex-plugin --install
+   ```
+   If you are working from this source checkout, the helper script is equivalent:
+   ```bash
+   bash scripts/setup-codex-skills.sh
    ```
 3. In any project with `.contextd/config.json`, Codex can now use contextd:
    ```bash
