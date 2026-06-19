@@ -212,6 +212,7 @@ bash scripts/install-to-claude.sh --knowledge-root ~/company-wiki
 ## Explore Further
 
 - **Mental model**: [README.md](README.md) — engine vs workspaces vs packs.
+- **Build-system deep dive**: [docs/build-system-model.md](docs/build-system-model.md) — source inputs, build graph, artifact lifecycle, and failure modes.
 - **All commands + when to use**: [.claude/commands/README.md](.claude/commands/README.md).
 - **Pack catalog** (stack-specific bundles): [packs/README.md](packs/README.md).
 - **Cross-cutting principles** (rules spanning multiple packs): [agents/cross-cutting-principles.md](agents/cross-cutting-principles.md).

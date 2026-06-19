@@ -26,6 +26,20 @@ contextd explain "debug checkout timeout" --format text
 - `contextPack`: deterministic static context pack reference.
 - `budget_report`: lightweight deterministic budget estimate.
 
+## Quality Dimensions
+
+Good context is not "more text." It has a few observable properties:
+
+| Dimension | Healthy Signal | Bad Signal |
+|---|---|---|
+| Relevance | Selected docs match task intent, workstream, active packs, and project scope. | Generic contracts or unrelated project docs dominate the artifact. |
+| Completeness | Required contracts, requirements, runbooks, or design docs are present. | The agent has to infer missing rules from vague prose. |
+| Isolation | All workspace docs stay under the active `workspaces/{workspace}/`. | Docs from another workspace appear or influence retrieval. |
+| Explainability | `contextd explain` names selected/dropped docs and reasons. | Users cannot tell why a doc was included. |
+| Budget focus | Drops are expected and category budgets are understandable. | High-value docs are dropped while low-value docs consume slots. |
+| Governance | Policy checks pass or fail with actionable rule IDs. | Policy violations appear only after agent output. |
+| Safety | Secret-like paths are skipped and inline secrets are redacted. | Raw credentials or immutable evidence sources enter `referenced_docs`. |
+
 ## Budget Report
 
 The budget estimator is intentionally model-neutral. It uses a stable character-based approximation so repeated runs produce the same result without depending on a specific LLM tokenizer.
@@ -59,8 +73,23 @@ Use a small scorecard for real tasks:
 
 For a team rollout, keep 5 to 10 golden tasks and compare agent output with and without `contextd context`. Track whether the agent used the expected contract, avoided wrong-workspace knowledge, and needed fewer corrective prompts.
 
+## Reading `explain`
+
+Use `contextd explain "task" --format json` when context feels wrong.
+
+Start with:
+
+1. `summary.budget_report`: whether the selected docs hit max-doc or category limits.
+2. `selection_trace.selected_docs`: the docs the runtime actually emitted.
+3. `selection_trace.dropped_docs`: docs that were considered but lost to score, duplicate detection, category budget, max docs, or safety policy.
+4. `artifact.gaps`: missing required docs, unsafe paths, unresolved placeholders, or invalid contract-index entries.
+5. `artifact.source_hashes`: whether the artifact reflects the source files you expected.
+
+If the selected docs are wrong, fix source knowledge first: pack keywords, retrieval-map paths, workspace project maps, or policy expectations. Use `contextd find` only for discovery; it should not become the hidden source of truth.
+
 ## Related
 
+- [Build system model](build-system-model.md)
 - [MCP adapter](mcp.md)
 - [Runbooks index](../workspaces/default/runbooks/README.md)
 - [Workspace resolution](../agents/pipeline/workspace-resolution.md)

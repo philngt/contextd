@@ -79,6 +79,8 @@ contextd is a local build system for agent inputs:
 
 Existing `.claude/commands` and `.claude/agents` remain supported adapters during the migration window, but `.contextd/config.json` is the canonical project config.
 
+For the deeper model, see [docs/build-system-model.md](docs/build-system-model.md). It explains source inputs, build graph, artifact lifecycle, determinism boundaries, and common failure modes.
+
 ## Non-goals
 
 - contextd is not a vector database.
@@ -239,6 +241,7 @@ contextd eval --golden --workspace default --format json
 - [docs/governance.md](docs/governance.md): policy-as-code over selected context.
 - [docs/pack-validation.md](docs/pack-validation.md): pack API and retrieval-map validation.
 - [docs/evaluation.md](docs/evaluation.md): golden-task evaluation for context selection quality.
+- [docs/build-system-model.md](docs/build-system-model.md): deeper product and artifact model.
 
 ### MCP Adapter
 
