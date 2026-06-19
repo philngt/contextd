@@ -87,7 +87,7 @@ workspaces/{ws}/
 
 ## Bật pack
 
-**Cách 1 — Per-codebase (recommend cho non-tech)**: chạy `/contextd-setup` trong codebase, ở Bước 4.5 tick checkbox `pack-solo-builder`. UI tự ghi vào `<cwd>/.claude/wiki.json#packs` — không cần edit markdown.
+**Cách 1 — Per-codebase (recommend cho non-tech)**: chạy `/contextd-setup` trong codebase, ở Bước 4.5 tick checkbox `pack-solo-builder`. UI tự ghi vào `<cwd>/.contextd/config.json#packs` — không cần edit markdown.
 
 **Cách 2 — Workspace-wide**: edit `workspaces/{ws}/workspace.md` section `## Packs`:
 
@@ -99,7 +99,7 @@ workspaces/{ws}/
 
 Áp dụng mọi codebase trong workspace (trừ codebase có override per-codebase).
 
-> Per-codebase override (`wiki.json#packs`) **replace** workspace default (`workspace.md ## Packs`), không additive. Resolution: xem [workspace-resolution.md#effective-packs-resolution](../../agents/pipeline/workspace-resolution.md#effective-packs-resolution).
+> Per-codebase override (`.contextd/config.json#packs`) **replace** workspace default (`workspace.md ## Packs`), không additive. Legacy `.claude/wiki.json#packs` chỉ là compatibility adapter trong migration window. Resolution: xem [workspace-resolution.md#effective-packs-resolution](../../agents/pipeline/workspace-resolution.md#effective-packs-resolution).
 
 ## Validator rules
 

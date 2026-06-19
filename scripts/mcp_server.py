@@ -10,7 +10,6 @@ over newline-delimited JSON-RPC.
 from __future__ import annotations
 
 import argparse
-import importlib.metadata
 import json
 import sys
 from dataclasses import dataclass
@@ -23,6 +22,7 @@ sys.path.insert(0, str(SCRIPT_DIR / "lib"))
 
 import cmd_bundle  # noqa: E402
 import cmd_resolve  # noqa: E402
+import contextd_version  # noqa: E402
 import contextd_resolver  # noqa: E402
 import context_security  # noqa: E402
 import find_engine  # noqa: E402
@@ -65,14 +65,7 @@ class ResolvedState:
 
 
 def _version() -> str:
-    try:
-        return importlib.metadata.version("contextd")
-    except importlib.metadata.PackageNotFoundError:
-        try:
-            from scripts._version import __version__  # type: ignore
-        except ImportError:
-            return "0.0.0-dev"
-        return __version__
+    return contextd_version.get_version(start_path=SCRIPT_DIR.parent)
 
 
 def _json_dumps(payload: Dict[str, Any]) -> str:

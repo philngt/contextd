@@ -23,6 +23,8 @@ sys.path.insert(0, str(HERE / "lib"))
 
 import cmd_doctor  # noqa: E402
 import cmd_eval  # noqa: E402
+import contextd_version  # noqa: E402
+import generate_manifest  # noqa: E402
 import cmd_resolve  # noqa: E402
 import render_runtime  # noqa: E402
 from lib import contextd_resolver, pack_validation, task_context_engine  # noqa: E402
@@ -545,7 +547,69 @@ def test_contract_path_index_and_fallback() -> None:
         assert path and path.name == "demo.contract.json", (path, warnings)
         fallback, warnings = task_context_engine.resolve_contract_path("citation-format", root, "default", [])
         assert fallback and fallback.name == "citation-format.md", (fallback, warnings)
+        invalid, warnings = task_context_engine.resolve_contract_path("../citation-format", root, "default", [])
+        assert invalid is None, (invalid, warnings)
+        assert any("Invalid contract id" in warning for warning in warnings), warnings
         print("  ok contract_path_index_and_fallback")
+
+
+def test_thesis_hardening_docs_and_release_mapping() -> None:
+    claude = (ROOT / "CLAUDE.md").read_text(encoding="utf-8")
+    agents = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
+    solo = (ROOT / "packs" / "pack-solo-builder" / "README.md").read_text(encoding="utf-8")
+    quickstart = (ROOT / "QUICKSTART.md").read_text(encoding="utf-8")
+    release = (ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
+    pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+
+    assert "Resolve workspace from `<cwd>/.contextd/config.json#workspace`" in claude, claude
+    assert "Resolve workspace from `<cwd>/.claude/wiki.json#workspace`" not in claude, claude
+    assert "knowledge_root" in claude, claude
+    assert ".contextd/config.json#packs" in agents, agents
+    assert "`wiki.json#packs`" not in agents, agents
+    assert ".contextd/config.json#packs" in solo, solo
+    assert ".claude/wiki.json#packs` chỉ là compatibility" in solo, solo
+    assert "Python ≥ 3.9" not in quickstart, quickstart
+    assert "working contextd setup" in quickstart, quickstart
+    assert "macos-15-intel" in release, release
+    assert "macos-13" not in release, release
+    assert 'BINARY="contextd-${PLATFORM}-arm64"' not in release, release
+    assert "Linux arm64 prebuilt binary is not available" in release, release
+    assert "contextd-linux-arm64" not in release, release
+    assert 'version = "1.3.2"' in pyproject, pyproject
+    actual_version = contextd_version.get_version(start_path=ROOT)
+    assert actual_version == "1.3.2", actual_version
+    print("  ok thesis_hardening_docs_and_release_mapping")
+
+
+def test_default_contract_index_and_demo_golden_fixture() -> None:
+    path, warnings = task_context_engine.resolve_contract_path(
+        "citation-format.v1", ROOT, "default", [],
+    )
+    assert path and path.relative_to(ROOT).as_posix() == (
+        "workspaces/default/platform/contracts/citation-format.md"
+    ), (path, warnings)
+    invalid, warnings = task_context_engine.resolve_contract_path(
+        "../citation-format", ROOT, "default", [],
+    )
+    assert invalid is None, (invalid, warnings)
+    assert any("Invalid contract id" in warning for warning in warnings), warnings
+
+    artifact = task_context_engine.build_context_artifact(
+        task="Write a product brief, acceptance criteria, and design system flow for "
+             "agent-context-demo reliable agent inputs",
+        wiki_root=ROOT,
+        workspace="default",
+        packs=["pack-product", "pack-ba", "pack-ui-ux"],
+        project_dir=ROOT,
+    )
+    paths = {doc["path"] for doc in artifact["referenced_docs"]}
+    categories = {doc["category"] for doc in artifact["referenced_docs"]}
+    assert "workspaces/default/product/briefs/agent-context-build.md" in paths, paths
+    assert "workspaces/default/requirements/agent-context-build.md" in paths, paths
+    assert "workspaces/default/platform/design/design-system.md" in paths, paths
+    assert {"product", "requirement", "design"}.issubset(categories), categories
+    assert not any(path.startswith("workspaces/iot-device/") for path in paths), paths
+    print("  ok default_contract_index_and_demo_golden_fixture")
 
 
 def test_doctor_and_adapter_drift_checks() -> None:
@@ -595,7 +659,7 @@ def test_cli_smoke() -> None:
         [sys.executable, "-m", "scripts.cli", "pack-validate", "--all", "--format", "json"],
         [sys.executable, "-m", "scripts.cli", "policy-check", "debug context quality", "--format", "json"],
         [sys.executable, "-m", "scripts.cli", "eval", "--golden", "--workspace", "default", "--format", "json"],
-        [sys.executable, "-m", "scripts.cli", "contract-path", "citation-format", "--format", "json"],
+        [sys.executable, "-m", "scripts.cli", "contract-path", "citation-format.v1", "--format", "json"],
         [sys.executable, "-m", "scripts.cli", "mcp-config", "--client", "codex",
          "--knowledge-root", str(ROOT), "--workspace", "default"],
     ]
@@ -927,7 +991,38 @@ def test_package_release_dry_run_shape() -> None:
         assert not (stage / "build").exists()
         assert not (stage / "dist").exists()
         assert not (stage / "contextd.egg-info").exists()
-        assert not (stage / "scripts" / "_version.py").exists()
+        version_file = stage / "scripts" / "_version.py"
+        assert version_file.is_file()
+        assert "__version__ =" in version_file.read_text(encoding="utf-8")
+        staged_version = (stage / "VERSION").read_text(encoding="utf-8").splitlines()[0].strip()
+        probe = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                (
+                    "import sys; from pathlib import Path; "
+                    "root=Path.cwd(); "
+                    "sys.path.insert(0, str(root/'scripts')); "
+                    "sys.path.insert(0, str(root/'scripts'/'lib')); "
+                    "import contextd_version; "
+                    "print(contextd_version.get_version("
+                    "package_name='contextd-missing-for-test', start_path=root))"
+                ),
+            ],
+            cwd=str(stage),
+            text=True,
+            capture_output=True,
+        )
+        assert probe.returncode == 0, (probe.stdout, probe.stderr)
+        assert probe.stdout.strip() == staged_version, probe.stdout
+        assert contextd_version.get_version(
+            package_name="contextd-missing-for-test",
+            start_path=stage,
+        ) != "0.0.0-dev"
+        committed_manifest = json.loads((ROOT / ".contextd" / "manifest.json").read_text(encoding="utf-8"))
+        assert committed_manifest == generate_manifest.generate_manifest(), committed_manifest
+        manifest = json.loads((stage / ".contextd" / "manifest.json").read_text(encoding="utf-8"))
+        assert manifest == generate_manifest.generate_manifest(), manifest
         assert not (stage / ".contextd" / "runs").exists()
         assert not (stage / ".contextd" / "context").exists()
     finally:
@@ -953,6 +1048,8 @@ def run() -> int:
         test_retrieval_map_safety_and_redaction,
         test_contract_index_missing_target_is_gap,
         test_contract_path_index_and_fallback,
+        test_thesis_hardening_docs_and_release_mapping,
+        test_default_contract_index_and_demo_golden_fixture,
         test_doctor_and_adapter_drift_checks,
         test_cli_smoke,
         test_mcp_server_smoke,

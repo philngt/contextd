@@ -31,20 +31,16 @@ Examples:
 from __future__ import annotations
 
 import argparse
-import importlib.metadata
 import sys
 from pathlib import Path
 
-try:
-    __version__ = importlib.metadata.version("contextd")
-except importlib.metadata.PackageNotFoundError:
-    try:
-        from scripts._version import __version__  # type: ignore
-    except ImportError:
-        __version__ = "0.0.0-dev"
-
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
+sys.path.insert(0, str(SCRIPT_DIR / "lib"))
+
+from contextd_version import get_version  # noqa: E402
+
+__version__ = get_version(start_path=SCRIPT_DIR.parent)
 
 import cmd_resolve  # noqa: E402
 import cmd_find  # noqa: E402

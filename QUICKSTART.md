@@ -2,7 +2,7 @@
 
 For developers who just cloned `contextd`. This gets you from `git clone` to your first deterministic `contextd context` or `/use-contextd` run.
 
-> Read this right after cloning the repo. Goal: a working wiki setup for one codebase in about 5 minutes.
+> Read this right after cloning the repo. Goal: a working contextd setup for one codebase in about 5 minutes.
 
 ---
 
@@ -11,7 +11,7 @@ For developers who just cloned `contextd`. This gets you from `git clone` to you
 You need:
 - Python >= 3.10 for the contextd CLI.
 - Optional: [Claude Code CLI](https://claude.com/claude-code) or an installed IDE extension for slash-command adapters.
-- Python ≥ 3.9 (for lint/trace scripts; optional for basic wiki usage).
+- Python >= 3.10 for lint, trace, release, and runtime scripts.
 - Bash shell (Windows: Git Bash or WSL).
 
 ```bash
@@ -86,7 +86,7 @@ Then run:
 
 ---
 
-## Step 4 — (Optional) Bootstrap wiki from an existing codebase
+## Step 4 — (Optional) Bootstrap contextd from an existing codebase
 
 If the codebase already exists and you want to extract patterns/contracts/services automatically:
 
@@ -96,7 +96,7 @@ If the codebase already exists and you want to extract patterns/contracts/servic
 
 It snapshots codebase metadata (without copying source), sends it through the evidence pipeline, and proposes patterns/contracts/services/ADRs for the workspace. Review via `/evidence-qa`, then apply.
 
-> Great for legacy onboarding. Skip this if you want to build wiki docs manually.
+> Great for legacy onboarding. Skip this if you want to build workspace knowledge manually.
 
 ---
 

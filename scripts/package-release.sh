@@ -14,7 +14,7 @@
 #   - .claude/settings.local.json
 #   - evidence/ trong mọi workspace
 #   - .observations/prompts.jsonl, *.lock
-#   - build/, dist/, *.egg-info/, scripts/_version.py
+#   - build/, dist/, *.egg-info/
 #   - __pycache__/, *.pyc, node_modules/, .DS_Store, Thumbs.db
 #   - release/ (folder output này)
 #
@@ -115,7 +115,6 @@ EXCLUDES=(
     --exclude="build/"
     --exclude="dist/"
     --exclude="*.egg-info/"
-    --exclude="scripts/_version.py"
     --exclude="__pycache__/"
     --exclude="*.pyc"
     --exclude="node_modules/"
@@ -148,7 +147,7 @@ else
            "$STAGE_ROOT/.contextd/context" "$STAGE_ROOT/.contextd/runs" "$STAGE_ROOT/.contextd/cache" \
            "$STAGE_ROOT/.claude/runs" "$STAGE_ROOT/.claude/context" \
            "$STAGE_ROOT/.claude/settings.local.json" \
-           "$STAGE_ROOT/build" "$STAGE_ROOT/dist" "$STAGE_ROOT/scripts/_version.py" 2>/dev/null || true
+           "$STAGE_ROOT/build" "$STAGE_ROOT/dist" 2>/dev/null || true
     find "$STAGE_ROOT" -type d -name "__pycache__" -prune -exec rm -rf {} + 2>/dev/null || true
     find "$STAGE_ROOT" -type d -name "node_modules" -prune -exec rm -rf {} + 2>/dev/null || true
     find "$STAGE_ROOT" -type d -name "*.egg-info" -prune -exec rm -rf {} + 2>/dev/null || true
@@ -172,6 +171,14 @@ cat > "$STAGE_ROOT/VERSION" <<EOF
 $VERSION
 $(date -u +"%Y-%m-%dT%H:%M:%SZ")
 EOF
+
+# Source packages must carry deterministic version and manifest provenance even
+# when built from a clean checkout without ignored local release helper files.
+cat > "$STAGE_ROOT/scripts/_version.py" <<EOF
+__version__ = '${VERSION}'
+EOF
+
+python3 scripts/generate_manifest.py --output "$STAGE_ROOT/.contextd/manifest.json" >/dev/null
 
 # ---------- size summary ----------
 TOTAL_FILES=$(find "$STAGE_ROOT" -type f | wc -l | tr -d ' ')

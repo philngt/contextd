@@ -159,7 +159,16 @@ jobs:
 
           case "$ARCH" in
             x86_64|amd64)  BINARY="contextd-${PLATFORM}-x86_64" ;;
-            arm64|aarch64) BINARY="contextd-${PLATFORM}-arm64" ;;
+            arm64|aarch64)
+              if [ "$PLATFORM" = "linux" ]; then
+                echo "ERROR: Linux arm64 prebuilt binary is not available for ${TAG}." >&2
+                echo "Install from source instead:" >&2
+                echo "  python3 -m pip install git+https://github.com/${REPO}.git@${TAG}" >&2
+                echo "or download the source zip from the release and run: python3 -m pip install -e ." >&2
+                exit 1
+              fi
+              BINARY="contextd-darwin-arm64"
+              ;;
             *)
               echo "ERROR: Unsupported architecture: $ARCH" >&2
               exit 1

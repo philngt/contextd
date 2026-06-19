@@ -10,19 +10,20 @@ Senior backend engineer working inside a knowledge-driven system. Implement feat
 - **"Wiki"** = the content (contracts, patterns, domains) under `workspaces/{ws}/`. **`contextd`** = the engine.
 - **Default workspace**: `default`.
 - **Slash commands**: `/contextd-*` prefix (e.g. `/contextd-setup`, `/use-contextd`, `/update-contextd`, `/rebase-contextd`, `/contextd-eval`). Legacy `/wiki-*` removed at install time.
-- **Legacy filenames kept for v0.x** (deferred to v1.0): `.claude/wiki.json`, `~/.claude/wiki-global.json`, `~/.claude/wiki-install-meta.json`, `wiki-template/`, `lint-wiki.py`, `check-patterns-index.py`. Do not rename.
+- **Canonical config**: `.contextd/config.json` (project) and `~/.contextd/config.json` (global). Legacy `.claude/wiki.json`, `.Codex/wiki.json`, and `wiki_root` aliases remain supported during migration.
+- **Legacy filenames kept for v0.x** (deferred to v1.0): `.Codex/wiki.json`, `~/.Codex/wiki-global.json`, `~/.Codex/wiki-install-meta.json`, `wiki-template/`, `lint-wiki.py`, `check-patterns-index.py`. Do not rename.
 
 ## Workspace Awareness (mandatory)
 
 User works across multiple companies/projects. Each workspace under `workspaces/` is an isolated knowledge sandbox. **Never mix knowledge between workspaces.**
 
-1. Resolve workspace from `<cwd>/.claude/wiki.json#workspace` (fallback `~/.claude/wiki-global.json.default_workspace`). Set `{ws} = {wiki_root}/workspaces/{workspace}/`.
+1. Resolve workspace from `<cwd>/.contextd/config.json#workspace` (fallback legacy `.claude/wiki.json`, `.Codex/wiki.json`, then global configs). Set `{ws} = {knowledge_root}/workspaces/{workspace}/`.
 2. Retrieval is scoped to `{ws}/` only. Never read other workspaces.
-3. If `.claude/wiki.json` is missing or `workspace` is empty → STOP, ask user to `/switch-workspace` or `/contextd-setup`.
+3. If no contextd/legacy config is found or `workspace` is empty → STOP, ask user to `contextd migrate-config`, `/switch-workspace`, or `/contextd-setup`.
 4. If task seems to belong to a different workspace (code path/repo mismatch) → warn, request confirm.
 5. When updating wiki: write only to `{ws}/` or engine files (`agents/*`, `templates/*`).
 
-Active workspace is **per-codebase**, stored in `<cwd>/.claude/wiki.json` — no global pointer inside wiki-template.
+Active workspace is **per-codebase**, stored in `<cwd>/.contextd/config.json`; legacy adapter files may mirror it.
 
 ## Resolution Order
 
@@ -33,7 +34,7 @@ engine  →  packs  →  workspace
 agents/    packs/{name}/    workspaces/{ws}/agents/...
 ```
 
-**Effective packs**: `wiki.json#packs` (per-codebase override, replace semantics) IF array ELSE `workspace.md ## Packs`. See [agents/pipeline/workspace-resolution.md](agents/pipeline/workspace-resolution.md).
+**Effective packs**: `.contextd/config.json#packs` (per-codebase override, replace semantics; legacy adapters still accepted during migration) IF array ELSE `workspace.md ## Packs`. See [agents/pipeline/workspace-resolution.md](agents/pipeline/workspace-resolution.md).
 
 Pack catalog & opt-in mechanism → [packs/README.md](packs/README.md).
 
@@ -47,7 +48,7 @@ Applied within active workspace. On conflict, follow higher priority. On gap, st
 
 ## Before Writing Any Code
 
-1. Read `<cwd>/.claude/wiki.json` → set `{ws}`.
+1. Read `<cwd>/.contextd/config.json` (or supported legacy adapter) → set `{ws}`.
 2. Open `{ws}/patterns-index.md` — find the matching pattern.
 3. Open `{ws}/projects/{scope}/knowledge-map.md` — get context map.
 4. Read relevant contract in `{ws}/platform/contracts/`.
@@ -59,8 +60,8 @@ Missing? State the gap. Do not proceed on assumptions.
 
 ### Step 0 — Workspace check
 
-- Walk up from `<cwd>` to find `.claude/wiki.json`. Save `wiki_json_dir`.
-- Read `workspace` + `wiki_root`. `wiki_root` resolution: absolute = use as-is; relative (`"."`, `"./..."`) = resolve relative to `project_root` (parent of `.claude/`), NOT cwd; null/empty = fallback `~/.claude/wiki-global.json#wiki_root`.
+- Walk up from `<cwd>` to find `.contextd/config.json`, then legacy `.claude/wiki.json` / `.Codex/wiki.json`. Save `config_dir`.
+- Read `workspace` + `knowledge_root` (`wiki_root` accepted as legacy alias). Relative roots resolve relative to project root (parent of config dir), NOT cwd; null/empty falls back to global config.
 - STOP on missing file or empty workspace.
 
 ### Step 1 — Map the task

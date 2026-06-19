@@ -22,6 +22,10 @@
 - Patterns Index: [patterns-index.md](patterns-index.md)
 - Active Projects: [projects/](projects/)
 - Domains: [domains/](domains/)
+- Demo Product Brief: [product/briefs/agent-context-build.md](product/briefs/agent-context-build.md)
+- Demo Requirement: [requirements/agent-context-build.md](requirements/agent-context-build.md)
+- Demo Design Flow: [platform/design/design-system.md](platform/design/design-system.md)
+- Demo Project Map: [projects/agent-context-demo/knowledge-map.md](projects/agent-context-demo/knowledge-map.md)
 - Runbooks (incident): [runbooks/](runbooks/)
 - Workspace ADRs: [decisions/](decisions/)
 

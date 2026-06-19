@@ -1,0 +1,20 @@
+{
+  "contracts": {
+    "citation-format": "citation-format.md",
+    "citation-format.v1": "citation-format.md",
+    "evid-id-format": "evid-id-format.md",
+    "evid-id-format.v1": "evid-id-format.md",
+    "evidence-file-layout": "evidence-file-layout.md",
+    "evidence-file-layout.v1": "evidence-file-layout.md",
+    "evidence-state-machine-transitions": "evidence-state-machine-transitions.md",
+    "evidence-state-machine-transitions.v1": "evidence-state-machine-transitions.md",
+    "raw-md-section-structure": "raw-md-section-structure.md",
+    "raw-md-section-structure.v1": "raw-md-section-structure.md",
+    "slash-command-naming": "slash-command-naming.md",
+    "slash-command-naming.v1": "slash-command-naming.md",
+    "source-yaml-schema": "source-yaml-schema.md",
+    "source-yaml-schema.v1": "source-yaml-schema.md",
+    "sub-agent-frontmatter-schema": "sub-agent-frontmatter-schema.md",
+    "sub-agent-frontmatter-schema.v1": "sub-agent-frontmatter-schema.md"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "id": "agent-context-input-demo",
+  "task": "Write a product brief, acceptance criteria, and design system flow for agent-context-demo reliable agent inputs",
+  "workspace": "default",
+  "packs": ["pack-product", "pack-ba", "pack-ui-ux"],
+  "expected_docs": [
+    "workspaces/default/product/briefs/agent-context-build.md",
+    "workspaces/default/requirements/agent-context-build.md",
+    "workspaces/default/platform/design/design-system.md"
+  ],
+  "expected_categories": ["product", "requirement", "design"],
+  "forbidden_docs": [
+    "workspaces/iot-device/*",
+    "workspaces/default/evidence/sources/*"
+  ],
+  "expected_gaps": [],
+  "policy_expectation": "ok"
+}

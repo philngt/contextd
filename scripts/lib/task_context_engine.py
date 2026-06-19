@@ -964,6 +964,22 @@ def resolve_contract_path(contract_id: str, wiki_root: Path, workspace: str,
     """Resolve a contract id via contract-index.json, then filename fallback."""
     packs = packs or []
     warnings: List[str] = []
+    contract_id = (contract_id or "").strip()
+    if not contract_id:
+        warnings.append("Invalid contract id: id must not be empty")
+        return None, warnings
+    if (
+        "/" in contract_id
+        or "\\" in contract_id
+        or ".." in contract_id
+        or Path(contract_id).is_absolute()
+        or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*", contract_id)
+    ):
+        warnings.append(
+            "Invalid contract id: use only alphanumeric characters, '.', '_', and '-'; "
+            "path separators and '..' are not allowed"
+        )
+        return None, warnings
     for directory in _contract_dirs(wiki_root, workspace, packs):
         if not directory.is_dir():
             continue

@@ -34,7 +34,7 @@ engine  →  packs  →  workspace
 agents/    packs/{name}/    workspaces/{ws}/agents/...
 ```
 
-**Effective packs**: `wiki.json#packs` (per-codebase override, replace semantics) IF array ELSE `workspace.md ## Packs`. See [agents/pipeline/workspace-resolution.md](agents/pipeline/workspace-resolution.md).
+**Effective packs**: `.contextd/config.json#packs` (per-codebase override, replace semantics; legacy adapters still accepted during migration) IF array ELSE `workspace.md ## Packs`. See [agents/pipeline/workspace-resolution.md](agents/pipeline/workspace-resolution.md).
 
 Pack catalog & opt-in mechanism → [packs/README.md](packs/README.md).
 
