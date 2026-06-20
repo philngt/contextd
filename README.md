@@ -3,6 +3,38 @@
 
 contextd compiles workspace knowledge, packs, contracts, and policies into deterministic context artifacts for Claude, Codex, Cursor, and MCP.
 
+## What contextd Does in One Task
+
+contextd turns team knowledge into a build artifact an agent can actually consume:
+
+```text
+workspace docs + packs + contracts + policies
+        ↓
+contextd context "the task" --format json
+        ↓
+.contextd/context/current-task.json
+        ↓
+Claude / Codex / Cursor / MCP adapters
+```
+
+The artifact records what was selected, what was dropped, what is missing, and which source hashes produced the result. `contextd explain` makes that build trace human-readable:
+
+```text
+$ contextd explain "prepare agent context for product requirements" --format text
+Workspace: default
+Intent: review / product
+Budget: 2/7 docs, ~2245 tokens
+
+Selected Docs
+- workspaces/default/platform/contracts/sub-agent-frontmatter-schema.md [contract]
+- workspaces/default/platform/patterns/variant-discriminated-dispatcher.md [pattern]
+
+Gaps
+- (none)
+```
+
+For the same task, `--format json` includes selected and dropped docs, warning count, budget report, and `source_hashes` for reproducibility.
+
 
 ## Onboarding
 
@@ -66,7 +98,13 @@ Use is provided under the repository license ([MIT](LICENSE)) and is offered **"
 - Windows: PowerShell + Git Bash or WSL recommended for shell installer execution.
 - Write access to `~/.contextd/` for global config. Claude Code adapters still write to `~/.claude/`.
 - Release binary installer prerequisites: `curl` or `wget` on macOS/Linux; PowerShell `Invoke-WebRequest` on Windows.
-- Source/developer installs require Python 3 and Git.
+- Source/developer installs require Python >= 3.10 and Git.
+
+**Trust and runtime model**
+- Local-first: contextd reads local workspace knowledge and writes local context artifacts.
+- No hosted service, API key, remote MCP transport, vector DB, or memory DB is required.
+- Runtime remains stdlib-only; MCP support is a local stdio adapter, not an SDK dependency.
+- Release binaries and installer scripts are published through GitHub Releases with `SHA256SUMS.txt`.
 
 ## Mental Model: Build Agent Context
 
@@ -84,8 +122,20 @@ For the deeper model, see [docs/build-system-model.md](docs/build-system-model.m
 ## Non-goals
 
 - contextd is not a vector database.
+- contextd is not a code graph indexer or AST/LSP analysis engine.
 - MCP is optional. contextd does not require an MCP SDK, remote MCP server, or orchestrator runtime.
 - contextd does not replace the coding agent; it builds scoped, auditable inputs for the agent.
+
+## Works With Code Intelligence Tools
+
+Tools such as code graph MCP servers help agents understand code structure: symbols, call paths, routes, dependencies, and blast radius. contextd solves a different layer: it makes agents use the right team knowledge, contracts, policies, workspace boundaries, and task-specific evidence.
+
+Use them together when useful:
+
+- Code intelligence answers "what does this codebase contain?"
+- contextd answers "what rules, decisions, docs, and constraints should the agent use for this task?"
+
+See [docs/comparison.md](docs/comparison.md) for positioning against MCP, code graph tools, Cursor rules, Claude memory, vector DBs, and knowledge bases.
 
 ## Repository Model
 
@@ -144,6 +194,32 @@ iwr https://github.com/philngt/contextd/releases/latest/download/install.ps1 -Us
 ```
 
 These install prebuilt `contextd` binaries from GitHub Releases. Users do not need to build the CLI locally.
+
+### Install Matrix
+
+| Platform | Release installer behavior |
+|---|---|
+| macOS arm64 | Installs `contextd-darwin-arm64`. |
+| macOS x86_64 | Installs `contextd-darwin-x86_64`. |
+| Linux x86_64 | Installs `contextd-linux-x86_64`. |
+| Linux arm64 | No prebuilt binary yet; installer exits with source-install guidance. |
+| Windows x86_64 | Installs `contextd-windows-x86_64.exe` via PowerShell. |
+| Source checkout | `pip install -e .` works anywhere Python >= 3.10 is available. |
+
+### Try the default demo in 2 minutes
+
+The release installer installs the CLI. Clone this repo as a sample `knowledge_root` to try the bundled default workspace:
+
+```bash
+git clone https://github.com/philngt/contextd.git ~/contextd
+cd ~/contextd
+contextd resolve --format json
+contextd context "prepare agent context for product requirements" --format json --no-materialize
+contextd explain "prepare agent context for product requirements" --format text
+contextd eval --golden --workspace default --format text
+```
+
+Expected signal: a `contextd_task_context.v1` artifact, focused selected docs, explicit gaps or `(none)`, a budget estimate, source hashes in JSON output, and passing bundled golden tasks.
 
 ### Secure install (verify SHA256 before run)
 
@@ -224,6 +300,7 @@ contextd contract-path citation-format
 `contextd context` emits the canonical JSON artifact. `contextd explain` shows why docs were selected or dropped, including gaps, warnings, source hashes, and the lightweight budget report.
 
 See [docs/context-quality.md](docs/context-quality.md) for budget semantics, safety guard behavior, and rollout scorecards.
+See [docs/effectiveness.md](docs/effectiveness.md) for measurable signals contextd can prove today without synthetic benchmark claims.
 
 ### Production Governance Loop
 
@@ -241,6 +318,7 @@ contextd eval --golden --workspace default --format json
 - [docs/governance.md](docs/governance.md): policy-as-code over selected context.
 - [docs/pack-validation.md](docs/pack-validation.md): pack API and retrieval-map validation.
 - [docs/evaluation.md](docs/evaluation.md): golden-task evaluation for context selection quality.
+- [docs/effectiveness.md](docs/effectiveness.md): adoption metrics and proof signals.
 - [docs/build-system-model.md](docs/build-system-model.md): deeper product and artifact model.
 
 ### MCP Adapter

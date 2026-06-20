@@ -90,6 +90,8 @@ If the selected docs are wrong, fix source knowledge first: pack keywords, retri
 ## Related
 
 - [Build system model](build-system-model.md)
+- [Comparison and positioning](comparison.md)
+- [Measuring contextd effectiveness](effectiveness.md)
 - [MCP adapter](mcp.md)
 - [Runbooks index](../workspaces/default/runbooks/README.md)
 - [Workspace resolution](../agents/pipeline/workspace-resolution.md)

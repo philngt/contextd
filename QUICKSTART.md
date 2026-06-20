@@ -1,232 +1,208 @@
-# Quickstart — Go Live in 5 Minutes
+# Quickstart — See Value in 5 Minutes
 
 **Build system for AI coding-agent context.**
 
 contextd compiles workspace knowledge, packs, contracts, and policies into deterministic context artifacts for Claude, Codex, Cursor, and MCP.
 
-For developers who just cloned `contextd`. This gets you from `git clone` to your first deterministic `contextd context` or `/use-contextd` run.
-
-> Read this right after cloning the repo. Goal: a working contextd setup for one codebase in about 5 minutes.
+This path gets you to a working contextd setup with a release binary first. You only need a source checkout if you want to edit contextd itself, use the bundled default demo workspace, or install Claude slash-command adapters from this repo.
 
 ---
 
-## Pre-flight (1 minute)
+## Pre-flight
 
 You need:
-- Python >= 3.10 for the contextd CLI.
-- Optional: [Claude Code CLI](https://claude.com/claude-code) or an installed IDE extension for slash-command adapters.
-- Python >= 3.10 for lint, trace, release, and runtime scripts.
-- Bash shell (Windows: Git Bash or WSL).
+
+- macOS/Linux: `curl` or `wget`, plus `bash`.
+- Windows: PowerShell.
+- Git if you want to clone the demo knowledge root or a team knowledge repo.
+- Python >= 3.10 only for source/developer installs.
+
+---
+
+## Step 1 — Install the CLI
+
+macOS / Linux:
 
 ```bash
-git clone https://github.com/philngt/contextd.git ~/contextd   # or any path you prefer
+curl -fsSL https://github.com/philngt/contextd/releases/latest/download/install.sh | sh
+contextd --version
+```
+
+Windows PowerShell:
+
+```powershell
+iwr https://github.com/philngt/contextd/releases/latest/download/install.ps1 -UseBasicParsing | iex
+contextd --version
+```
+
+The release installer installs the `contextd` binary only. It does not mutate your agent client configs or create a team knowledge repo.
+
+---
+
+## Step 2 — Try the Default Demo Knowledge Root
+
+Clone this repo as a sample `knowledge_root`, then run from the repo root:
+
+```bash
+git clone https://github.com/philngt/contextd.git ~/contextd
 cd ~/contextd
+contextd resolve --format json
+contextd doctor --format text
 ```
+
+Expected signal:
+
+- `resolve` shows workspace `default` and canonical `.contextd/config.json`.
+- `doctor` reports config, packs, adapter drift, and safety status before an agent works.
 
 ---
 
-## Step 1 — Install the CLI and optional Claude adapter
+## Step 3 — Build One Context Artifact
+
+Run the demo task against the bundled default workspace:
 
 ```bash
-pip install -e .
-bash scripts/install-to-claude.sh
+contextd context "prepare agent context for product requirements" --format json --no-materialize
+contextd explain "prepare agent context for product requirements" --format text
+contextd eval --golden --workspace default --format text
 ```
 
-If you keep workspaces in a separate team repo, pass it explicitly:
+What to look for:
+
+- `context` emits `artifact_type=contextd_task_context.v1`.
+- `explain` shows selected docs, dropped docs, gaps, warnings, source hashes, and a lightweight budget estimate.
+- `eval --golden` proves the bundled golden tasks still select the expected context.
+
+This is the first aha moment: team knowledge becomes an auditable agent input, not a hidden prompt blob.
+
+---
+
+## Step 4 — Use contextd In Your Codebase
+
+Inside the codebase where your agent will work, create or migrate the project config so contextd knows which workspace to use.
+
+If the project already has legacy config:
 
 ```bash
-bash scripts/install-to-claude.sh --knowledge-root ~/company-wiki --default-workspace shared
+contextd migrate-config --dry-run
+contextd migrate-config
 ```
 
-This script:
-- Syncs slash commands + subagents to `~/.claude/{commands,agents}/`.
-- Creates canonical `~/.contextd/config.json` with `knowledge_root` pointing to this repo.
-- The CLI reads canonical `.contextd/config.json` first, then legacy adapters.
-- Is idempotent — run again after `git pull` to update.
+For a new project, create `<project>/.contextd/config.json` with:
 
-> Verify: `contextd resolve` and confirm `knowledge_root` is correct. Then run `contextd doctor` to catch config, pack, adapter, or safety drift before the first task.
-
-### Migration
-
-During the migration window the installer may also write legacy `~/.claude/wiki-global.json` with `wiki_root` for Claude Code adapters. Treat it as compatibility data; canonical project and global config live under `.contextd/config.json`.
-
----
-
-## Step 2 — Enter your project codebase and pick a workspace
-
-```bash
-cd /path/to/your-project   # the codebase you are about to work on
+```json
+{
+  "workspace": "default",
+  "knowledge_root": "/absolute/path/to/contextd-or-team-knowledge-root",
+  "packs": null
+}
 ```
 
-List available workspaces:
-
-```text
-/list-workspaces
-```
-
-Switch this codebase to the workspace you want:
-
-```text
-/switch-workspace {name}
-```
-
-> Migration note: if an older slash-command adapter creates legacy config, run `contextd migrate-config` to create canonical `<your-project>/.contextd/config.json`.
-
----
-
-## Step 3 — No matching workspace yet? Create one
-
-```text
-/new-workspace {your-workspace-name}
-```
-
-The flow asks for company, role, stack, and packs. It scaffolds `workspaces/{name}/` with full folder structure and stub READMEs for empty folders.
-
-Then run:
-
-```text
-/switch-workspace {your-workspace-name}
-```
-
----
-
-## Step 4 — (Optional) Bootstrap contextd from an existing codebase
-
-If the codebase already exists and you want to extract patterns/contracts/services automatically:
-
-```text
-/code-analyze
-```
-
-It snapshots codebase metadata (without copying source), sends it through the evidence pipeline, and proposes patterns/contracts/services/ADRs for the workspace. Review via `/evidence-qa`, then apply.
-
-> Great for legacy onboarding. Skip this if you want to build workspace knowledge manually.
-
----
-
-## Step 5 — Run your first task
-
-Runtime-neutral CLI:
+Then verify:
 
 ```bash
 contextd resolve --format json
 contextd doctor --format text
-contextd pack-validate --all --format text
-contextd context "Add a Kafka consumer for surgery file processed events" --format json
-contextd explain "Add a Kafka consumer for surgery file processed events" --format text
-contextd policy-check "Add a Kafka consumer for surgery file processed events" --format text
+contextd context "your real task" --format json
+contextd explain "your real task" --format text
 ```
 
-Claude Code adapter:
-
-```text
-/use-contextd "Add a Kafka consumer for surgery file processed events"
-```
-
-The context pipeline:
-1. Planner — parse intent, verify required patterns/contracts exist.
-2. Context builder — retrieve deterministic docs, write `.contextd/context/current-task.json`.
-3. Markdown renderer — produce `.contextd/context/current-task.md` for humans/adapters.
-4. Builder/reviewer — agent uses the context and validator rules.
-
-> Output: generated code + `current-task.json`/`current-task.md` showing which knowledge was applied.
-> Debug selection: `contextd explain` shows selected docs, dropped docs, gaps, warnings, source hashes, and budget estimates.
-
-For team rollout or pack changes, run the full quality loop:
-
-```bash
-contextd doctor --format json
-contextd pack-validate --all --format json
-contextd policy-check "debug context quality" --format json
-contextd eval --golden --workspace default --format json
-```
+`current-task.json` is the canonical artifact. `current-task.md` is only the human-readable render.
 
 ---
 
-## Step 6 — Find patterns directly when you already know what you need
+## Step 5 — Connect Agents
 
-Instead of running the full pipeline:
-
-```text
-/find kafka consumer
-/find idempotency
-```
-
-Returns advisory candidates + snippets. Deterministic task context and contracts still win.
-
-CLI equivalents:
-
-```bash
-contextd find "kafka consumer" --format json
-contextd contract-path citation-format
-```
-
-## Optional MCP Setup
-
-Generate a local stdio MCP snippet for your client:
+MCP stdio snippet generation:
 
 ```bash
 contextd mcp-config --client codex --knowledge-root ~/contextd --workspace default
 contextd mcp-config --client all --knowledge-root ~/company-wiki --workspace shared
 ```
 
-See [docs/mcp.md](docs/mcp.md) for the tool list, client snippets, and security notes.
-
----
-
-## Step 7 — After code is merged
-
-Sync wiki with your code changes:
-
-```text
-/update-contextd                 # incremental sync (git diff → wiki edits)
-/rebase-contextd                 # periodic verification: wiki vs codebase
-```
-
----
-
-## Team Setup (Optional)
-
-If your team wants to share workspaces via git, see [docs/team-sync.md](docs/team-sync.md).
-
-Quick start for teams:
+Codex skill/plugin export:
 
 ```bash
-# 1. Team lead creates a private knowledge repo from template
-cp -r templates/team-knowledge-repo ~/company-wiki
-cd ~/company-wiki && git init && git add . && git commit -m "init"
+contextd export --runtime codex-plugin --install
+```
 
-# 2. Each developer clones the knowledge repo and installs with --knowledge-root
-git clone <team-repo-url> ~/company-wiki
+Claude Code adapters from a source checkout:
+
+```bash
 cd ~/contextd
-bash scripts/install-to-claude.sh --knowledge-root ~/company-wiki
+bash scripts/install-to-claude.sh --knowledge-root ~/contextd --default-workspace default
+```
 
-# 3. Daily workflow
-/contextd-team-sync pull        # before working
-# ... do work, update wiki ...
-/contextd-team-sync push        # share changes
+Cursor/plain exports:
+
+```bash
+contextd export --runtime cursor --workspace default --output ./
+contextd export --runtime plain --workspace default --output ./
+```
+
+See [docs/mcp.md](docs/mcp.md) and [README.md](README.md) for the full adapter matrix.
+
+---
+
+## Step 6 — Source/Developer Install
+
+Use this only when editing contextd or running scripts from a checkout:
+
+```bash
+git clone https://github.com/philngt/contextd.git ~/contextd
+cd ~/contextd
+pip install -e .
+python3 scripts/test_contextd_runtime.py
+```
+
+The source checkout also contains the default workspace, templates, packs, docs, and Claude adapter installer scripts.
+
+---
+
+## Step 7 — Team Knowledge Repo
+
+If your team wants workspaces separate from the engine repo:
+
+```bash
+# Team lead creates a private knowledge repo from the template.
+cp -r templates/team-knowledge-repo ~/company-wiki
+cd ~/company-wiki
+git init
+git add .
+git commit -m "init contextd knowledge root"
+
+# Each developer clones it and points contextd at that knowledge_root.
+git clone YOUR_TEAM_KNOWLEDGE_REPO_URL ~/company-wiki
+contextd mcp-config --client all --knowledge-root ~/company-wiki --workspace shared
+```
+
+Daily team flow:
+
+```text
+/contextd-team-sync pull
+# work, update knowledge, evaluate
+/contextd-team-sync push
 ```
 
 ---
 
 ## Explore Further
 
-- **Mental model**: [README.md](README.md) — engine vs workspaces vs packs.
-- **Build-system deep dive**: [docs/build-system-model.md](docs/build-system-model.md) — source inputs, build graph, artifact lifecycle, and failure modes.
-- **All commands + when to use**: [.claude/commands/README.md](.claude/commands/README.md).
-- **Pack catalog** (stack-specific bundles): [packs/README.md](packs/README.md).
-- **Cross-cutting principles** (rules spanning multiple packs): [agents/cross-cutting-principles.md](agents/cross-cutting-principles.md).
-- **Pipeline debugging/observability**: [agents/pipeline/observability.md](agents/pipeline/observability.md) — `/contextd-trace`, `/contextd-viz`, `/contextd-eval`.
+- **Mental model**: [README.md](README.md).
+- **Build-system deep dive**: [docs/build-system-model.md](docs/build-system-model.md).
+- **Positioning**: [docs/comparison.md](docs/comparison.md).
+- **Measuring effectiveness**: [docs/effectiveness.md](docs/effectiveness.md).
+- **Context quality**: [docs/context-quality.md](docs/context-quality.md).
 - **Governance loop**: [docs/governance.md](docs/governance.md), [docs/pack-validation.md](docs/pack-validation.md), [docs/evaluation.md](docs/evaluation.md).
+- **Pack catalog**: [packs/README.md](packs/README.md).
 
 ## If You Get Stuck
 
 | Symptom | Fix |
 |---|---|
-| `/use-contextd` returns "no workspace" | Run `/switch-workspace` or `/contextd-setup`. |
-| Slash commands do not appear | Re-run `bash scripts/install-to-claude.sh`. |
-| Pattern not found | Run `/find <keyword>` to confirm; workspace may not have that pattern yet. |
-| Wiki references files renamed in code | Run `/rebase-contextd` to resync. |
-| Legacy codebase onboarding with empty wiki | Run `/code-analyze` to bootstrap. |
-| Need to ingest an external changelog/incident report | Run `/evidence-ingest --source paste --label "{topic}"`. |
-| Team wants to share workspaces | See [docs/team-sync.md](docs/team-sync.md) and `/contextd-team-sync`. |
+| `contextd resolve` cannot find a workspace | Create `.contextd/config.json`, run `contextd migrate-config`, or use `/switch-workspace` from Claude adapters. |
+| `knowledge_root` points to the wrong repo | Run `contextd resolve --format json` and update `.contextd/config.json#knowledge_root`. |
+| Slash commands do not appear | Re-run `bash scripts/install-to-claude.sh` from a source checkout, then restart Claude Code. |
+| Pattern not found | Run `contextd find "keyword" --format json`; deterministic `contextd context` still wins over advisory search. |
+| Wrong docs selected | Run `contextd explain "task" --format json` and inspect selected docs, dropped docs, gaps, and source hashes. |
+| Team wants shared knowledge | See [docs/team-sync.md](docs/team-sync.md) and `/contextd-team-sync`. |
