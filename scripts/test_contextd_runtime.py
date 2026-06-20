@@ -9,6 +9,9 @@ Run:
 from __future__ import annotations
 
 import json
+import contextlib
+import io
+import importlib.util
 import os
 import shutil
 import subprocess
@@ -23,6 +26,7 @@ sys.path.insert(0, str(HERE / "lib"))
 
 import cmd_doctor  # noqa: E402
 import cmd_eval  # noqa: E402
+import cmd_migrate_config  # noqa: E402
 import contextd_version  # noqa: E402
 import generate_manifest  # noqa: E402
 import cmd_resolve  # noqa: E402
@@ -159,6 +163,7 @@ def test_context_artifact_and_materialized_pack() -> None:
         assert materialized["contextPack"]["status"] == "materialized"
         assert (root / ".contextd" / "context" / "current-task.json").is_file()
         assert (root / materialized["contextPack"]["compiledRef"]).is_file()
+        assert not list((root / ".contextd" / "context").rglob("*.tmp.*"))
         pack_text = (root / materialized["contextPack"]["compiledRef"]).read_text(encoding="utf-8")
         assert "workspaces/default/workspace.md" in pack_text
         assert "packs/pack-demo/pack.yaml" in pack_text
@@ -310,6 +315,24 @@ def test_pack_validation_catches_bad_pack_api() -> None:
         assert "retrieval-map.path" in checks, report
         assert "retrieval-map.cross-pack" in checks, report
     print("  ok pack_validation_catches_bad_pack_api")
+
+
+def test_pack_validation_warns_on_documented_rules_without_script() -> None:
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        _workspace(root)
+        _write(root / "packs" / "pack-doc-only" / "pack.yaml",
+               "name: pack-doc-only\nversion: 1.0.0\ndescription: Doc only\n"
+               "components:\n  - demo\nkeywords:\n  demo: [demo]\n")
+        _write(root / "packs" / "pack-doc-only" / "agents" / "pipeline" / "retrieval-map.md",
+               "# Retrieval Map\n\n| Component | Docs to retrieve |\n|---|---|\n| `demo` | platform/contracts/ |\n")
+        _write(root / "packs" / "pack-doc-only" / "agents" / "pipeline" / "validator-rules.md",
+               "# Validator\n\n| Rule ID | Severity | Check |\n|---|---|---|\n"
+               "| `pack-doc-only-demo-rule` | error | Must run. |\n")
+        report = pack_validation.validate_packs(root, ["pack-doc-only"])
+        assert report["status"] == "warning", report
+        assert any(issue["check"] == "pack.validator_script" for issue in report["issues"]), report
+    print("  ok pack_validation_warns_on_documented_rules_without_script")
 
 
 def test_golden_eval_passes_and_fails_deterministically() -> None:
@@ -521,6 +544,34 @@ def test_retrieval_map_safety_and_redaction() -> None:
         print("  ok retrieval_map_safety_and_redaction")
 
 
+def test_evidence_glob_excludes_raw_sources() -> None:
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        _workspace(root)
+        _pack_with_retrieval(
+            root,
+            "pack-qc-glob",
+            {"test-execution": ["test execution", "evidence"]},
+            {"test-execution": "evidence/**/*.md"},
+        )
+        _write(root / "workspaces" / "default" / "evidence" / "sources" / "e1" / "raw.md",
+               "# Interview Transcript\n\nPII and raw customer text should not be retrieved wholesale.\n")
+        _write(root / "workspaces" / "default" / "evidence" / "qa" / "e1" / "verified-facts.md",
+               "# Verified Facts\n\n## Verified Facts\n\n- Release evidence was checked.\n")
+        artifact = task_context_engine.build_context_artifact(
+            task="summarize test execution evidence",
+            wiki_root=root,
+            workspace="default",
+            packs=["pack-qc-glob"],
+            project_dir=root,
+        )
+        paths = {doc["path"] for doc in artifact["referenced_docs"]}
+        assert any(path.endswith("verified-facts.md") for path in paths), paths
+        assert not any("/evidence/sources/" in path for path in paths), paths
+        assert "PII and raw customer text" not in json.dumps(artifact, ensure_ascii=False)
+        print("  ok evidence_glob_excludes_raw_sources")
+
+
 def test_contract_index_missing_target_is_gap() -> None:
     with tempfile.TemporaryDirectory() as td:
         root = Path(td)
@@ -646,7 +697,63 @@ def test_doctor_and_adapter_drift_checks() -> None:
     assert "Look for `.contextd/config.json`" in skill, skill
     assert "Look for `.claude/wiki.json`" not in skill, skill
     assert skill.find("`.contextd/config.json`") < skill.find("`.claude/wiki.json`"), skill
+
+    clean_repo = cmd_doctor.diagnose(cwd=str(ROOT))
+    assert not any(issue["check"] == "adapter-drift" for issue in clean_repo["issues"]), clean_repo
     print("  ok doctor_and_adapter_drift_checks")
+
+
+def test_codex_agents_use_json_canonical_artifact() -> None:
+    for filename in (
+        "contextd-planner.toml",
+        "contextd-context-selector.toml",
+        "contextd-reviewer.toml",
+    ):
+        text = (ROOT / ".codex" / "agents" / filename).read_text(encoding="utf-8")
+        assert "contextd context" in text, filename
+        assert "current-task.json" in text, filename
+        assert "Pass A — Retrieval" not in text, filename
+        assert "Context File Template" not in text, filename
+        assert "Write `{project_dir}/.contextd/context/current-task.md`" not in text, filename
+        assert "source of truth" not in text.lower() or "current-task.json" in text, filename
+    print("  ok codex_agents_use_json_canonical_artifact")
+
+
+def test_pack_ui_ux_rules() -> None:
+    path = ROOT / "packs" / "pack-ui-ux" / "scripts" / "rules.py"
+    spec = importlib.util.spec_from_file_location("pack_ui_ux_rules_test", path)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    design_path = Path("/tmp/ws/workspaces/default/platform/design/design-system.md")
+    violations = []
+    for rule in module.RULES:
+        violations.extend(rule(design_path, [
+            "# Design System",
+            "Use color.primary token for the primary action.",
+            "Hardcoded fallback #ff00aa.",
+        ], {}))
+    rules = {v["rule"] for v in violations}
+    assert "pack-ui-ux-hardcoded-color" in rules, violations
+    assert "pack-ui-ux-missing-a11y-note" in rules, violations
+    assert "pack-ui-ux-contrast-unchecked" in rules, violations
+
+    flow_path = Path("/tmp/ws/workspaces/default/domains/checkout/flows/payment.md")
+    flow_violations = []
+    for rule in module.RULES:
+        flow_violations.extend(rule(flow_path, ["# Payment Flow", "## Happy Path"], {}))
+    assert any(v["rule"] == "pack-ui-ux-flow-no-error-path" for v in flow_violations), flow_violations
+
+    clean = []
+    for rule in module.RULES:
+        clean.extend(rule(design_path, [
+            "# Design System",
+            "> A11y: keyboard focus and ARIA labels are documented.",
+            "Use color.primary token with contrast 4.5:1.",
+        ], {}))
+    assert not clean, clean
+    print("  ok pack_ui_ux_rules")
 
 
 def test_cli_smoke() -> None:
@@ -663,13 +770,26 @@ def test_cli_smoke() -> None:
         [sys.executable, "-m", "scripts.cli", "mcp-config", "--client", "codex",
          "--knowledge-root", str(ROOT), "--workspace", "default"],
     ]
+    expected_exports = {
+        "plain": ["contextd-bundle.md"],
+        "codex-plugin": [".codex-plugin/plugin.json", "skills/contextd/SKILL.md"],
+        "codex-instructions": [".codex/instructions.md"],
+        "cursor": [".cursorrules", ".cursor/context.md"],
+    }
     with tempfile.TemporaryDirectory() as td:
-        commands.append([
-            sys.executable, "-m", "scripts.cli", "export", "--runtime", "cursor", "--output", td,
-        ])
+        export_root = Path(td)
+        for runtime, expected in expected_exports.items():
+            out_dir = export_root / runtime
+            commands.append([
+                sys.executable, "-m", "scripts.cli", "export",
+                "--runtime", runtime, "--output", str(out_dir),
+            ])
         for cmd in commands:
             proc = subprocess.run(cmd, cwd=str(ROOT), text=True, capture_output=True)
             assert proc.returncode == 0, (cmd, proc.stdout, proc.stderr)
+        for runtime, expected in expected_exports.items():
+            for rel in expected:
+                assert (export_root / runtime / rel).is_file(), (runtime, rel)
     print("  ok cli_smoke")
 
 
@@ -909,6 +1029,49 @@ def test_installer_dry_run_knowledge_root() -> None:
     print("  ok installer_dry_run_knowledge_root")
 
 
+def test_migrate_config_roundtrip_and_no_clobber() -> None:
+    def _run_migrate(**kwargs):
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+        with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+            code = cmd_migrate_config.run(**kwargs)
+        return code, stdout.getvalue(), stderr.getvalue()
+
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        _workspace(root, "legacy")
+        _write(root / ".claude" / "wiki.json", json.dumps({
+            "project": "legacy-app",
+            "workspace": "legacy",
+            "wiki_root": ".",
+            "packs": ["pack-demo"],
+            "domain": "checkout",
+        }))
+        code, out, err = _run_migrate(cwd=str(root), dry_run=True)
+        assert code == 0, (out, err)
+        assert "knowledge_root" in out, out
+        assert not (root / ".contextd" / "config.json").exists()
+
+        code, out, err = _run_migrate(cwd=str(root))
+        assert code == 0, (out, err)
+        config_path = root / ".contextd" / "config.json"
+        migrated = json.loads(config_path.read_text(encoding="utf-8"))
+        assert migrated["project"] == "legacy-app", migrated
+        assert migrated["workspace"] == "legacy", migrated
+        assert migrated["knowledge_root"] == ".", migrated
+        assert migrated["packs"] == ["pack-demo"], migrated
+        assert migrated["domain"] == "checkout", migrated
+        assert migrated["compat"]["legacy_field_alias"] == "wiki_root", migrated
+        assert migrated["compat"]["generated_from"].endswith(".claude/wiki.json"), migrated
+
+        code, out, err = _run_migrate(cwd=str(root))
+        assert code == 1, (out, err)
+        assert "already exists" in err, err
+        code, out, err = _run_migrate(cwd=str(root), force=True)
+        assert code == 0, (out, err)
+    print("  ok migrate_config_roundtrip_and_no_clobber")
+
+
 def test_trace_uses_contextd_runs_and_renderer_fallback() -> None:
     with tempfile.TemporaryDirectory() as td:
         root = Path(td)
@@ -1040,20 +1203,25 @@ def run() -> int:
         test_budget_report_and_explain_trace,
         test_policy_check_pass_and_failures,
         test_pack_validation_catches_bad_pack_api,
+        test_pack_validation_warns_on_documented_rules_without_script,
         test_golden_eval_passes_and_fails_deterministically,
         test_non_code_product_pack_retrieval,
         test_ba_unknown_domain_becomes_gap,
         test_ux_pack_retrieves_design_sections,
         test_qc_evidence_retrieval_excludes_raw_sources,
         test_retrieval_map_safety_and_redaction,
+        test_evidence_glob_excludes_raw_sources,
         test_contract_index_missing_target_is_gap,
         test_contract_path_index_and_fallback,
         test_thesis_hardening_docs_and_release_mapping,
         test_default_contract_index_and_demo_golden_fixture,
         test_doctor_and_adapter_drift_checks,
+        test_codex_agents_use_json_canonical_artifact,
+        test_pack_ui_ux_rules,
         test_cli_smoke,
         test_mcp_server_smoke,
         test_installer_dry_run_knowledge_root,
+        test_migrate_config_roundtrip_and_no_clobber,
         test_trace_uses_contextd_runs_and_renderer_fallback,
         test_package_release_dry_run_shape,
     ]

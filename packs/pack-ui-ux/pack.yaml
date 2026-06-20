@@ -18,6 +18,7 @@ files:
   constraints: agents/constraints.md
   coding_rules: agents/coding-rules.md
   validator_rules: agents/pipeline/validator-rules.md
+  validator_script: scripts/rules.py
   retrieval_map: agents/pipeline/retrieval-map.md
   prompt_overrides: agents/pipeline/prompt-overrides.md
   common_pitfalls: agents/common-pitfalls.md

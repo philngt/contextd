@@ -176,6 +176,52 @@ def _validate_generated_adapters(root: Path, workspace: str, packs: List[str],
         ))
 
 
+def _validate_checked_in_codex_agents(issues: List[Issue]) -> None:
+    agents_dir = REPO_ROOT / ".codex" / "agents"
+    if not agents_dir.is_dir():
+        return
+    targets = [
+        "contextd-planner.toml",
+        "contextd-context-selector.toml",
+        "contextd-reviewer.toml",
+    ]
+    stale_markers = [
+        "Pass A — Retrieval",
+        "Context File Template",
+        "Write `{project_dir}/.contextd/context/current-task.md`",
+        "ghi `.contextd/context/current-task.md`",
+        "`context_file` | Đường dẫn `.contextd/context/current-task.md`",
+        "Lấy từ `current-task.md`",
+    ]
+    for filename in targets:
+        path = agents_dir / filename
+        if not path.is_file():
+            issues.append(_issue(
+                "warning",
+                "adapter-drift",
+                f"Checked-in Codex agent missing: {filename}",
+                f".codex/agents/{filename}",
+            ))
+            continue
+        text = path.read_text(encoding="utf-8")
+        rel = f".codex/agents/{filename}"
+        if "contextd context" not in text or "current-task.json" not in text:
+            issues.append(_issue(
+                "error",
+                "adapter-drift",
+                "Checked-in Codex agent must delegate to `contextd context` and consume current-task.json.",
+                rel,
+            ))
+        for marker in stale_markers:
+            if marker in text:
+                issues.append(_issue(
+                    "error",
+                    "adapter-drift",
+                    f"Checked-in Codex agent still contains legacy retrieval/markdown-canonical marker: {marker}",
+                    rel,
+                ))
+
+
 def diagnose(cwd: str | None = None) -> Dict:
     start = Path(cwd).resolve() if cwd else None
     resolved = cmd_resolve.resolve(cwd=start, require_workspace=True)
@@ -211,6 +257,7 @@ def diagnose(cwd: str | None = None) -> Dict:
         _append_pack_validation(root, packs, issues, infos)
         _scan_blocked_paths(root, workspace, packs, issues)
         _validate_generated_adapters(root, workspace, packs, issues)
+        _validate_checked_in_codex_agents(issues)
 
     _validate_schema_files(issues)
 

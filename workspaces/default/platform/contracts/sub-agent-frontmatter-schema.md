@@ -23,25 +23,24 @@ Convention non-binding cho phép agents simple-scope dùng single sentence descr
 
 ### Tools allowlist principle (DEFERRED — see G-009)
 
-Observation từ 5 sample agents:
-- Read-only roles (planner, plan-reviewer, reviewer): `Read, Grep, Glob`
+Observation từ 4 sample agents:
+- Read-only roles (planner, reviewer): `Read, Grep, Glob`
 - Read-only + write context-task (context-selector): `Read, Glob, Grep, Write`
 - Write roles (curator): `Read, Edit, Write, Glob, Grep`
 
-Sample size (5) chưa đủ để formalize tools allowlist principle thành contract C-008a. Defer until ≥ 8 sub-agents (G-009).
+Sample size (4) chưa đủ để formalize tools allowlist principle thành contract C-008a. Defer until ≥ 8 sub-agents (G-009).
 
 ## Observed evidence
 
-5/5 sub-agents conform required fields:
+4/4 sub-agents conform required fields:
 - ✅ `contextd-planner`: name, description (DÙNG KHI/KHÔNG DÙNG), tools=`Read, Glob, Grep`, model=sonnet `(.claude/agents/contextd-planner.md:L2-L5)`
-- ✅ `contextd-context-selector`: tools=`Read, Glob, Grep, Write` (write privilege cho current-task.md) `(.claude/agents/contextd-context-selector.md:L2-L5)`
-- ✅ `contextd-plan-reviewer`: `(.claude/agents/contextd-plan-reviewer.md:L2-L5)`
+- ✅ `contextd-context-selector`: tools=`Read, Glob, Grep, Write` (write privilege cho current-task.json artifact adapter) `(.claude/agents/contextd-context-selector.md:L2-L5)`
 - ✅ `contextd-curator`: tools=`Read, Edit, Write, Glob, Grep` (write role) `(.claude/agents/contextd-curator.md:L2-L5)`
 - ✅ `contextd-reviewer`: `(.claude/agents/contextd-reviewer.md:L2-L5)`
 
 ## Counter-examples
 
-_(none — 5/5 conform)_
+_(none — 4/4 conform)_
 
 ## Validator behavior
 

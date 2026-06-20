@@ -60,6 +60,24 @@ def _as_list(value: object) -> List[str]:
     return []
 
 
+def _documented_validator_rule_ids(path: Path) -> List[str]:
+    if not path.is_file():
+        return []
+    try:
+        text = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return []
+    ids = re.findall(r"`(pack-[a-z0-9-]+-[a-z0-9][a-z0-9-]*)`", text)
+    seen = set()
+    out = []
+    for rule_id in ids:
+        if rule_id in seen:
+            continue
+        seen.add(rule_id)
+        out.append(rule_id)
+    return out
+
+
 def _validate_pack_dir(wiki_root: Path, pack_dir: Path,
                        all_pack_names: Iterable[str]) -> List[Dict]:
     issues: List[Dict] = []
@@ -128,6 +146,18 @@ def _validate_pack_dir(wiki_root: Path, pack_dir: Path,
         if not (pack_dir / rel_path).is_file():
             issues.append(_issue("warning", "pack.files", f"Declared file missing for `{key}`: {rel_path}",
                                  _rel(manifest_path, wiki_root)))
+
+    validator_rules_path = pack_dir / "agents" / "pipeline" / "validator-rules.md"
+    if _documented_validator_rule_ids(validator_rules_path) and not files.get("validator_script"):
+        issues.append(_issue(
+            "warning",
+            "pack.validator_script",
+            (
+                "validator-rules.md documents layer-1 rule IDs but "
+                "pack.yaml does not declare files.validator_script"
+            ),
+            _rel(manifest_path, wiki_root),
+        ))
 
     all_pack_names = set(all_pack_names)
     for conflict in _as_list(manifest.get("conflicts_with")):

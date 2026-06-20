@@ -124,7 +124,7 @@ Existing `## Source` lines in remaining patterns/contracts still cite the remove
 
 ### Changed — Pipeline 5 → 4 stages (merge `contextd-plan-reviewer` into `contextd-context-selector`)
 
-`contextd-plan-reviewer` subagent and its trace stage `03-plan-review` have been removed. The five plan-review checks (planner verify carry-over, pattern/contract in Referenced Docs, component coverage, conflict, gap severity) now run inside `contextd-context-selector`, which already retrieves the docs and writes `current-task.md`. Selector emits `verdict: APPROVED|BLOCK` (plus `issues[]` + `checks_summary`) in the same `02-context.json` trace block.
+`contextd-plan-reviewer` subagent and its trace stage `03-plan-review` have been removed. The five plan-review checks (planner verify carry-over, pattern/contract in Referenced Docs, component coverage, conflict, gap severity) now run inside `contextd-context-selector`, which now delegates to the canonical `current-task.json` artifact. Selector emits `verdict: APPROVED|BLOCK` (plus `issues[]` + `checks_summary`) in the same `02-context.json` trace block.
 
 Rationale: planner + plan-reviewer were both verifying pattern existence (duplicate work); selector already knew what it had retrieved and what was missing. Merging saves one LLM call per `/use-contextd` task and removes ~150 lines of overlapping spec.
 

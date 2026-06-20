@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Tuple
 
 import context_policy
+from atomic_write import atomic_write_text
 from context_security import block_reason, is_relative_to, redact_text, reject_unsafe_entry
 
 
@@ -545,6 +546,10 @@ def _expand_map_entry(
             p for p in wiki_root.glob(_rel(base_path, wiki_root))
             if p.is_file() and is_relative_to(p, allowed_root)
         )
+        paths = [
+            p for p in paths
+            if "evidence" not in p.parts or _is_safe_evidence_doc(p)
+        ]
     elif "/evidence/" in base_path.as_posix() or base_path.name == "evidence":
         paths = [p for p in _safe_evidence_files(base_path) if is_relative_to(p, allowed_root)]
     elif base_path.is_dir():
@@ -1284,7 +1289,7 @@ def materialize_context(artifact: Dict, project_dir: Path) -> Dict:
     packs_dir = context_dir / "packs"
     packs_dir.mkdir(parents=True, exist_ok=True)
     pack_path = packs_dir / f"{artifact['contextPack']['packKey']}.md"
-    pack_path.write_text(_pack_markdown(artifact), encoding="utf-8")
+    atomic_write_text(pack_path, _pack_markdown(artifact))
 
     artifact = json.loads(json.dumps(artifact, ensure_ascii=False))
     rel_pack = pack_path.relative_to(project_dir).as_posix()
@@ -1294,11 +1299,8 @@ def materialize_context(artifact: Dict, project_dir: Path) -> Dict:
 
     json_path = context_dir / "current-task.json"
     md_path = context_dir / "current-task.md"
-    json_path.write_text(
-        json.dumps(artifact, indent=2, ensure_ascii=False) + "\n",
-        encoding="utf-8",
-    )
-    md_path.write_text(render_markdown(artifact), encoding="utf-8")
+    atomic_write_text(json_path, json.dumps(artifact, indent=2, ensure_ascii=False) + "\n")
+    atomic_write_text(md_path, render_markdown(artifact))
     artifact["materialized"] = {
         "json": json_path.relative_to(project_dir).as_posix(),
         "markdown": md_path.relative_to(project_dir).as_posix(),
