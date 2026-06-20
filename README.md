@@ -8,14 +8,17 @@ contextd compiles workspace knowledge, packs, contracts, and policies into deter
 contextd turns team knowledge into a build artifact an agent can actually consume:
 
 ```mermaid
-flowchart TD
-  A["Workspace knowledge<br/>docs / packs / contracts / policies"] --> B["contextd context<br/>&quot;the task&quot; --format json"]
-  B --> C["Canonical artifact<br/>.contextd/context/current-task.json"]
-  C --> D["Claude Code"]
-  C --> E["Codex"]
-  C --> F["Cursor"]
-  C --> G["MCP"]
-  B --> H["contextd explain<br/>selected docs / dropped docs / gaps / budget / source hashes"]
+flowchart LR
+  Config["Project config<br/>.contextd/config.json"]
+  Knowledge["Team knowledge<br/>workspace docs, packs, policies"]
+  Build["Build<br/>contextd context &quot;task&quot;"]
+  Artifact["Artifact<br/>current-task.json"]
+  Agents["Agents<br/>Claude, Codex, Cursor, MCP"]
+
+  Config --> Build
+  Knowledge --> Build
+  Build --> Artifact
+  Artifact --> Agents
 ```
 
 The artifact records what was selected, what was dropped, what is missing, and which source hashes produced the result. `contextd explain` makes that build trace human-readable:
