@@ -1,0 +1,17 @@
+{
+  "id": "operator-vietnamese-drift-remediation",
+  "task": "đánh giá context drift và đề xuất remediation cho agent-context-demo",
+  "workspace": "default",
+  "packs": ["pack-operator-steering"],
+  "expected_docs": [
+    "packs/pack-operator-steering/templates/drift-report.md",
+    "packs/pack-operator-steering/templates/remediation-plan.md",
+    "packs/pack-operator-steering/agents/common-pitfalls.md"
+  ],
+  "expected_categories": [
+    "pitfalls"
+  ],
+  "forbidden_docs": [],
+  "expected_gaps": [],
+  "policy_expectation": "ok"
+}

@@ -40,7 +40,8 @@ INTENT_KEYWORDS = {
     ],
     "review": [
         "review", "pr", "pull request", "audit", "check", "verify", "assess",
-        "code review", "walkthrough", "sign-off",
+        "code review", "walkthrough", "sign-off", "drift", "remediation",
+        "đánh giá", "danh gia", "kiểm tra", "kiem tra", "nghiệm thu", "nghiem thu",
     ],
 }
 
@@ -56,6 +57,8 @@ WORKSTREAM_KEYWORDS = {
     "quality": [
         "test case", "test plan", "qa", "qc", "quality", "defect", "bug triage",
         "regression", "release gate", "performance", "benchmark", "profiling",
+        "audit", "drift", "remediation", "acceptance criteria", "verification method",
+        "đánh giá", "danh gia", "nghiệm thu", "nghiem thu",
     ],
     "security": [
         "security", "threat", "vulnerability", "pentest", "attack surface",
@@ -83,6 +86,7 @@ PACK_WORKSTREAMS = {
     "pack-ui-ux": "design",
     "pack-dba": "ops",
     "pack-solo-builder": "domain_research",
+    "pack-operator-steering": "quality",
 }
 
 AUDIENCE_BY_WORKSTREAM = {
@@ -117,6 +121,7 @@ SECTION_POLICY = {
     "engine-guidance": ["all"],
     "engine-rule": ["all"],
     "pack-rule": ["all"],
+    "operator": ["all"],
 }
 
 CATEGORY_BUDGETS = {
@@ -140,6 +145,7 @@ CATEGORY_BUDGETS = {
     "engine-guidance": 1,
     "engine-rule": 2,
     "pack-rule": 3,
+    "operator": 3,
 }
 
 PRIORITY = {
@@ -163,6 +169,7 @@ PRIORITY = {
     "engine-guidance": 2,
     "engine-rule": 1,
     "pack-rule": 1,
+    "operator": 1,
 }
 
 WORKSTREAM_BUDGETS = {
@@ -437,6 +444,8 @@ def _parse_retrieval_map(path: Path) -> Dict[str, List[str]]:
 def _category_from_path(path: Path, rel: str, fallback: str = "project") -> str:
     parts = rel.split("/")
     path_text = rel.lower()
+    if path_text.startswith("packs/") and "/templates/" in path_text:
+        return "operator"
     if "/platform/contracts/" in path_text or "/contracts/" in path_text:
         return "contract"
     if "/platform/patterns/" in path_text or "/patterns/" in path_text:

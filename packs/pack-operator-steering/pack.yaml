@@ -1,0 +1,30 @@
+name: pack-operator-steering
+version: 0.1.0
+description: Agent-operator steering pack — context audit, drift checks, remediation planning, decision logs, handoff quality, and workflow mental models.
+
+components:
+  - context-audit
+  - drift-check
+  - remediation-planning
+  - decision-ledger
+  - handoff-quality
+  - workflow-mental-model
+
+keywords:
+  context-audit: ["context audit", "context quality", "context gap", "assumption leak", "skill stack", "skill mismatch", audit, "đánh giá context quality", "danh gia context quality", "kiểm tra context quality", "kiem tra context quality"]
+  drift-check: ["drift check", drift, "context drift", "goal drift", "scope drift", "operator drift", "lệch hướng", "lech huong", "trôi context", "troi context"]
+  remediation-planning: [remediation, "remediation plan", "root cause", "acceptance criteria", "verification method", "kế hoạch", "ke hoach", "khắc phục", "khac phuc", "nghiệm thu", "nghiem thu"]
+  decision-ledger: ["decision log", "decision ledger", ADR, "accepted decision", "revisit trigger", "quyết định", "quyet dinh", "cam kết", "cam ket"]
+  handoff-quality: [handoff, "session brief", "next agent", "transfer context", "bàn giao", "ban giao", "tiếp quản", "tiep quan"]
+  workflow-mental-model: ["mental model", "workflow model", "stage map", "quality gate", "failure mode", "mô hình", "mo hinh", "quy trình", "quy trinh"]
+
+files:
+  constraints: agents/constraints.md
+  coding_rules: agents/coding-rules.md
+  validator_rules: agents/pipeline/validator-rules.md
+  validator_script: scripts/rules.py
+  retrieval_map: agents/pipeline/retrieval-map.md
+  prompt_overrides: agents/pipeline/prompt-overrides.md
+  common_pitfalls: agents/common-pitfalls.md
+
+conflicts_with: []

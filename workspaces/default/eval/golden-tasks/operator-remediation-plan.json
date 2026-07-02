@@ -1,0 +1,18 @@
+{
+  "id": "operator-remediation-plan",
+  "task": "create remediation plan for weak agent output and missing verification method",
+  "workspace": "default",
+  "packs": ["pack-operator-steering"],
+  "expected_docs": [
+    "packs/pack-operator-steering/templates/remediation-plan.md",
+    "packs/pack-operator-steering/agents/common-pitfalls.md"
+  ],
+  "expected_categories": [
+    "pitfalls"
+  ],
+  "forbidden_docs": [],
+  "expected_gaps": [
+    "project not detected"
+  ],
+  "policy_expectation": "ok"
+}

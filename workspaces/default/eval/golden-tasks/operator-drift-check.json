@@ -1,0 +1,17 @@
+{
+  "id": "operator-drift-check",
+  "task": "drift-check accepted decisions for agent-context-demo before continuing implementation",
+  "workspace": "default",
+  "packs": ["pack-operator-steering"],
+  "expected_docs": [
+    "packs/pack-operator-steering/templates/drift-report.md",
+    "workspaces/default/decisions/*.md"
+  ],
+  "expected_categories": [
+    "decision",
+    "pitfalls"
+  ],
+  "forbidden_docs": [],
+  "expected_gaps": [],
+  "policy_expectation": "ok"
+}
