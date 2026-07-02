@@ -488,13 +488,16 @@
       <table class="cmd-table">
         <thead><tr><th>Lệnh</th><th>Mục đích</th><th>Khi nào</th></tr></thead>
         <tbody>
+          <tr><td class="cmd-name">contextd init</td><td>Tạo hoặc xác nhận <code>.contextd/config.json</code></td><td>Lần đầu dùng CLI trong một codebase</td></tr>
+          <tr><td class="cmd-name">contextd check</td><td>Kiểm tra config, packs, adapter drift, và safety bằng output dễ đọc</td><td>Trước khi agent bắt đầu task</td></tr>
           <tr><td class="cmd-name">contextd context</td><td>Tạo JSON canonical <code>contextd_task_context.v1</code></td><td>Khi agent hoặc script cần context task deterministic</td></tr>
-          <tr><td class="cmd-name">contextd mcp-config</td><td>In snippet MCP cho Claude, Cursor, hoặc Codex</td><td>Khi kết nối contextd với client hỗ trợ MCP</td></tr>
-          <tr><td class="cmd-name">contextd mcp-server</td><td>Chạy local stdio MCP tools server trên contextd</td><td>Khi client cần gọi trực tiếp contextd tools</td></tr>
+          <tr><td class="cmd-name">contextd explain</td><td>Giải thích vì sao docs được chọn/bỏ qua/gap</td><td>Khi context sai hoặc cần debug retrieval</td></tr>
+          <tr><td class="cmd-name">contextd connect</td><td>In snippet MCP cho Claude, Cursor, hoặc Codex</td><td>Khi kết nối contextd với client hỗ trợ MCP</td></tr>
+          <tr><td class="cmd-name">contextd recipes</td><td>Hiện các workflow ngắn: first run, daily task, debug, connect, maintain</td><td>Khi không nhớ nên chạy lệnh nào tiếp theo</td></tr>
         </tbody>
       </table>
       <div class="callout info">
-        <strong>MCP là tuỳ chọn.</strong> Dùng <code>--knowledge-root</code> để trỏ server tới folder có <code>workspaces/</code>. Xem <a href="../docs/mcp.md">docs/mcp.md</a>.
+        <strong>MCP là tuỳ chọn.</strong> <code>contextd connect</code> là wrapper dễ dùng cho <code>mcp-config</code>; các lệnh raw như <code>mcp-server</code>, <code>pack-validate</code>, <code>eval</code> nằm trong <code>contextd help --all</code>.
       </div>
     </div>
 
@@ -738,7 +741,7 @@ implement spec at workspaces/{ws}/tools/{slug}-spec.md
     <details>
       <summary>Có dùng contextd qua MCP được không?</summary>
       <div class="faq-body">
-        <p>Có. Chạy <code>contextd mcp-config --client codex --knowledge-root /path/to/root --workspace default</code> để sinh snippet, rồi cấu hình MCP client launch <code>contextd mcp-server</code>.</p>
+        <p>Có. Chạy <code>contextd connect --client codex --knowledge-root /path/to/root --workspace default</code> để sinh snippet, rồi cấu hình MCP client launch <code>contextd mcp-server</code>.</p>
         <p>MCP là local stdio adapter. Nó expose tools trên cùng deterministic context engine, không thay thế slash commands hoặc project config.</p>
       </div>
     </details>

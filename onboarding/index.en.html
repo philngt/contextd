@@ -487,13 +487,16 @@
       <table class="cmd-table">
         <thead><tr><th>Command</th><th>Purpose</th><th>When to use</th></tr></thead>
         <tbody>
+          <tr><td class="cmd-name">contextd init</td><td>Create or confirm <code>.contextd/config.json</code></td><td>First time using the CLI in a codebase</td></tr>
+          <tr><td class="cmd-name">contextd check</td><td>Check config, packs, adapter drift, and safety with readable output</td><td>Before an agent starts a task</td></tr>
           <tr><td class="cmd-name">contextd context</td><td>Build canonical <code>contextd_task_context.v1</code> JSON</td><td>When an agent or script needs deterministic task context</td></tr>
-          <tr><td class="cmd-name">contextd mcp-config</td><td>Print Claude, Cursor, or Codex MCP snippets</td><td>When connecting contextd to an MCP-capable client</td></tr>
-          <tr><td class="cmd-name">contextd mcp-server</td><td>Run a local stdio MCP tools server over contextd</td><td>When a client should call contextd tools directly</td></tr>
+          <tr><td class="cmd-name">contextd explain</td><td>Explain why docs were selected, skipped, or marked as gaps</td><td>When context looks wrong or retrieval needs debugging</td></tr>
+          <tr><td class="cmd-name">contextd connect</td><td>Print Claude, Cursor, or Codex MCP snippets</td><td>When connecting contextd to an MCP-capable client</td></tr>
+          <tr><td class="cmd-name">contextd recipes</td><td>Show short workflows: first run, daily task, debug, connect, maintain</td><td>When you do not remember the next command</td></tr>
         </tbody>
       </table>
       <div class="callout info">
-        <strong>MCP is optional.</strong> Use <code>--knowledge-root</code> to point the server at a directory containing <code>workspaces/</code>. See <a href="../docs/mcp.md">docs/mcp.md</a>.
+        <strong>MCP is optional.</strong> <code>contextd connect</code> is the friendly wrapper for <code>mcp-config</code>; raw commands such as <code>mcp-server</code>, <code>pack-validate</code>, and <code>eval</code> live in <code>contextd help --all</code>.
       </div>
     </div>
 
@@ -737,7 +740,7 @@ implement spec at workspaces/{ws}/tools/{slug}-spec.md
     <details>
       <summary>Can I use contextd through MCP?</summary>
       <div class="faq-body">
-        <p>Yes. Run <code>contextd mcp-config --client codex --knowledge-root /path/to/root --workspace default</code> to generate a client snippet, then configure your MCP client to launch <code>contextd mcp-server</code>.</p>
+        <p>Yes. Run <code>contextd connect --client codex --knowledge-root /path/to/root --workspace default</code> to generate a client snippet, then configure your MCP client to launch <code>contextd mcp-server</code>.</p>
         <p>MCP is a local stdio adapter. It exposes tools over the same deterministic context engine and does not replace slash commands or project config.</p>
       </div>
     </details>

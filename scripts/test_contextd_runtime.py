@@ -756,11 +756,68 @@ def test_pack_ui_ux_rules() -> None:
     print("  ok pack_ui_ux_rules")
 
 
+def test_cli_ux_help_and_aliases() -> None:
+    def run_cli(args: list[str]) -> subprocess.CompletedProcess:
+        return subprocess.run(
+            [sys.executable, "-m", "scripts.cli", *args],
+            cwd=str(ROOT),
+            text=True,
+            capture_output=True,
+        )
+
+    starter = run_cli(["--help"])
+    assert starter.returncode == 0, (starter.stdout, starter.stderr)
+    assert "Start here:" in starter.stdout, starter.stdout
+    for name in ["init", "check", "context", "explain", "find", "recipes"]:
+        assert f"  {name}" in starter.stdout, starter.stdout
+    for hidden in ["pack-validate", "mcp-server", "task-context", "policy-check"]:
+        assert hidden not in starter.stdout, starter.stdout
+
+    full = run_cli(["help", "--all"])
+    assert full.returncode == 0, (full.stdout, full.stderr)
+    for name in ["pack-validate", "mcp-server", "task-context", "policy-check", "eval"]:
+        assert name in full.stdout, full.stdout
+
+    doctor = run_cli(["doctor", "--format", "text"])
+    check = run_cli(["check"])
+    assert check.returncode == doctor.returncode, (check.stdout, check.stderr, doctor.stdout, doctor.stderr)
+    assert check.stdout == doctor.stdout, (check.stdout, doctor.stdout)
+
+    no_materialize = run_cli(["context", "design context", "--format", "json", "--no-materialize"])
+    preview = run_cli(["context", "design context", "--format", "json", "--preview"])
+    assert no_materialize.returncode == 0, (no_materialize.stdout, no_materialize.stderr)
+    assert preview.returncode == 0, (preview.stdout, preview.stderr)
+    no_materialize_json = json.loads(no_materialize.stdout)
+    preview_json = json.loads(preview.stdout)
+    no_materialize_json.pop("generated_at", None)
+    preview_json.pop("generated_at", None)
+    assert preview_json == no_materialize_json
+
+    legacy = run_cli(["task-context", "design context", "--format", "json"])
+    assert legacy.returncode == 0, (legacy.stdout, legacy.stderr)
+    assert json.loads(legacy.stdout)["artifact_type"] == "contextd_task_context.v1"
+
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        _workspace(root)
+        _pack(root)
+        init = run_cli(["init", "--cwd", str(root)])
+        assert init.returncode == 0, (init.stdout, init.stderr)
+        config = json.loads((root / ".contextd" / "config.json").read_text(encoding="utf-8"))
+        assert config["workspace"] == "default", config
+        assert config["knowledge_root"] == ".", config
+        check = run_cli(["check", "--cwd", str(root)])
+        assert check.returncode == 0, (check.stdout, check.stderr)
+    print("  ok cli_ux_help_and_aliases")
+
+
 def test_cli_smoke() -> None:
     commands = [
         [sys.executable, "-m", "scripts.cli", "resolve", "--format", "json"],
         [sys.executable, "-m", "scripts.cli", "find", "citation", "--limit", "1", "--format", "json"],
         [sys.executable, "-m", "scripts.cli", "context", "design context", "--format", "json", "--no-materialize"],
+        [sys.executable, "-m", "scripts.cli", "connect", "--client", "codex",
+         "--knowledge-root", str(ROOT), "--workspace", "default"],
         [sys.executable, "-m", "scripts.cli", "doctor", "--format", "json"],
         [sys.executable, "-m", "scripts.cli", "explain", "design context", "--format", "json"],
         [sys.executable, "-m", "scripts.cli", "pack-validate", "--all", "--format", "json"],
@@ -1218,6 +1275,7 @@ def run() -> int:
         test_doctor_and_adapter_drift_checks,
         test_codex_agents_use_json_canonical_artifact,
         test_pack_ui_ux_rules,
+        test_cli_ux_help_and_aliases,
         test_cli_smoke,
         test_mcp_server_smoke,
         test_installer_dry_run_knowledge_root,

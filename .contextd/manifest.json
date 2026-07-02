@@ -296,6 +296,20 @@
       "template_file": "packs/pack-frontend-react/pack.yaml"
     },
     {
+      "name": "pack-operator-steering",
+      "description": "Agent-operator steering pack — context audit, drift checks, remediation planning, decision logs, handoff quality, and workflow mental models.",
+      "version": "0.1.0",
+      "components": [
+        "context-audit",
+        "drift-check",
+        "remediation-planning",
+        "decision-ledger",
+        "handoff-quality",
+        "workflow-mental-model"
+      ],
+      "template_file": "packs/pack-operator-steering/pack.yaml"
+    },
+    {
       "name": "pack-product",
       "description": "Product/business knowledge pack — product briefs, OKR, roadmap, personas, customer journey, success metrics. For non-tech contributors (PM, business, stakeholder).",
       "version": "0.1.0",

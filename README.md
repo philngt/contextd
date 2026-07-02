@@ -24,7 +24,7 @@ flowchart LR
 The artifact records what was selected, what was dropped, what is missing, and which source hashes produced the result. `contextd explain` makes that build trace human-readable:
 
 ```text
-$ contextd explain "prepare agent context for product requirements" --format text
+$ contextd explain "prepare agent context for product requirements" --text
 Workspace: default
 Intent: review / product
 Budget: 2/7 docs, ~2245 tokens
@@ -88,7 +88,8 @@ Use is provided under the repository license ([MIT](LICENSE)) and is offered **"
 | Claude Code slash commands | Stable |
 | Claude Code subagents | Stable |
 | Workspace/packs markdown engine | Stable |
-| CLI: resolve/find/bundle | Available from GitHub Releases or source checkout |
+| CLI: starter UX | Available (`contextd init`, `contextd check`, `contextd context`, `contextd explain`, `contextd find`) |
+| CLI: advanced utilities | Available (`contextd resolve`, `contextd bundle`, `contextd export`) |
 | CLI: deterministic task context | Available (`contextd context`) |
 | CLI: diagnostics and selection explain | Available (`contextd doctor`, `contextd explain`) |
 | CLI: governance and evaluation | Available (`contextd policy-check`, `contextd pack-validate`, `contextd eval --golden`) |
@@ -114,10 +115,10 @@ Use is provided under the repository license ([MIT](LICENSE)) and is offered **"
 
 contextd is a local build system for agent inputs:
 
-1. **CLI core**: `contextd resolve`, `contextd doctor`, `contextd find`, `contextd bundle`
-2. **Task context artifact**: `contextd context "task" --format json`, with `contextd explain "task"` for selection trace
+1. **Start/check**: `contextd init`, `contextd check`
+2. **Daily task artifact**: `contextd context "task" --preview`, with `contextd explain "task" --text` for selection trace
 3. **Manifest index**: `.contextd/manifest.json`
-4. **Runtime export/adapters**: plain markdown, Codex skill/plugin, Cursor rules, Claude Code artifacts, MCP stdio tools
+4. **Runtime export/adapters**: `contextd connect`, plain markdown, Codex skill/plugin, Cursor rules, Claude Code artifacts, MCP stdio tools
 
 Existing `.claude/commands` and `.claude/agents` remain supported adapters during the migration window, but `.contextd/config.json` is the canonical project config.
 
@@ -217,13 +218,13 @@ The release installer installs the CLI. Clone this repo as a sample `knowledge_r
 ```bash
 git clone https://github.com/philngt/contextd.git ~/contextd
 cd ~/contextd
-contextd resolve --format json
-contextd context "prepare agent context for product requirements" --format json --no-materialize
-contextd explain "prepare agent context for product requirements" --format text
-contextd eval --golden --workspace default --format text
+contextd init
+contextd check
+contextd context "prepare agent context for product requirements" --preview
+contextd explain "prepare agent context for product requirements" --text
 ```
 
-Expected signal: a `contextd_task_context.v1` artifact, focused selected docs, explicit gaps or `(none)`, a budget estimate, source hashes in JSON output, and passing bundled golden tasks.
+Expected signal: a clean check report, a `contextd_task_context.v1` artifact, focused selected docs, explicit gaps or `(none)`, a budget estimate, and source hashes in JSON output. Maintainers can run `contextd eval --golden --workspace default --text` when validating retrieval quality.
 
 ### Secure install (verify SHA256 before run)
 
@@ -264,14 +265,14 @@ If your workspaces live in a separate team repo:
 bash scripts/install-to-claude.sh --knowledge-root ~/company-wiki --default-workspace shared
 ```
 
-### Migrate an existing codebase config
+### Set up a codebase config
 
 ```bash
-contextd migrate-config --dry-run
-contextd migrate-config
+contextd init
+contextd check
 ```
 
-This creates `<project>/.contextd/config.json` from an existing `.claude/wiki.json` or `.Codex/wiki.json`. The legacy file may remain in place for compatibility.
+`contextd init` confirms an existing canonical config, migrates a local legacy `.claude/wiki.json` or `.Codex/wiki.json`, or creates a minimal config when the current directory already contains a `workspaces/` tree. For separate team knowledge repos, pass `--knowledge-root /path/to/contextd-or-team-knowledge-root --workspace {name}`.
 
 ### Start a session (inside a codebase)
 
@@ -283,8 +284,7 @@ This creates `<project>/.contextd/config.json` from an existing `.claude/wiki.js
 Verify the runtime before asking an agent to work:
 
 ```bash
-contextd resolve --format json
-contextd doctor --format text
+contextd check
 ```
 
 ### When you receive a task
@@ -296,8 +296,8 @@ contextd doctor --format text
 Or with the runtime-neutral CLI:
 
 ```bash
-contextd context "Add Kafka consumer..." --format json
-contextd explain "Add Kafka consumer..." --format text
+contextd context "Add Kafka consumer..." --preview
+contextd explain "Add Kafka consumer..." --text
 contextd contract-path citation-format
 ```
 
@@ -311,12 +311,12 @@ See [docs/effectiveness.md](docs/effectiveness.md) for measurable signals contex
 Use this loop before rolling contextd into a team workflow or after changing packs/workspace knowledge:
 
 ```bash
-contextd doctor --format json
-contextd pack-validate --all --format json
-contextd context "debug context quality" --format json --no-materialize
-contextd explain "debug context quality" --format json
-contextd policy-check "debug context quality" --format json
-contextd eval --golden --workspace default --format json
+contextd doctor --json
+contextd pack-validate --all --json
+contextd context "debug context quality" --json --preview
+contextd explain "debug context quality" --json
+contextd policy-check "debug context quality" --json
+contextd eval --golden --workspace default --json
 ```
 
 - [docs/governance.md](docs/governance.md): policy-as-code over selected context.
@@ -330,8 +330,8 @@ contextd eval --golden --workspace default --format json
 Run contextd as a local stdio MCP tools server:
 
 ```bash
-contextd mcp-server --knowledge-root ~/contextd --workspace default
-contextd mcp-config --client codex --knowledge-root ~/contextd --workspace default
+contextd connect --client codex --knowledge-root ~/contextd --workspace default
+contextd connect --client all --knowledge-root ~/company-wiki --workspace shared
 ```
 
 See [docs/mcp.md](docs/mcp.md) for Claude, Cursor, Codex snippets, security notes, tools, resources, and prompts.
@@ -394,7 +394,7 @@ Workflow: [release.yml](.github/workflows/release.yml)
 ## Troubleshooting
 
 - Slash commands not visible: re-run `bash scripts/install-to-claude.sh` and restart Claude Code.
-- Missing `.contextd/config.json`: run `contextd migrate-config`, `/contextd-setup`, or `/switch-workspace`.
+- Missing `.contextd/config.json`: run `contextd init`; for legacy-only projects it delegates to `contextd migrate-config`.
 - Wrong workspace context: verify `workspace` in `<cwd>/.contextd/config.json`; legacy adapters are lower priority during migration.
 
 ## Contributing

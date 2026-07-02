@@ -46,14 +46,14 @@ Clone this repo as a sample `knowledge_root`, then run from the repo root:
 ```bash
 git clone https://github.com/philngt/contextd.git ~/contextd
 cd ~/contextd
-contextd resolve --format json
-contextd doctor --format text
+contextd init
+contextd check
 ```
 
 Expected signal:
 
-- `resolve` shows workspace `default` and canonical `.contextd/config.json`.
-- `doctor` reports config, packs, adapter drift, and safety status before an agent works.
+- `init` confirms or creates canonical `.contextd/config.json`.
+- `check` reports config, packs, adapter drift, and safety status before an agent works.
 
 ---
 
@@ -62,16 +62,14 @@ Expected signal:
 Run the demo task against the bundled default workspace:
 
 ```bash
-contextd context "prepare agent context for product requirements" --format json --no-materialize
-contextd explain "prepare agent context for product requirements" --format text
-contextd eval --golden --workspace default --format text
+contextd context "prepare agent context for product requirements" --preview
+contextd explain "prepare agent context for product requirements" --text
 ```
 
 What to look for:
 
 - `context` emits `artifact_type=contextd_task_context.v1`.
 - `explain` shows selected docs, dropped docs, gaps, warnings, source hashes, and a lightweight budget estimate.
-- `eval --golden` proves the bundled golden tasks still select the expected context.
 
 This is the first aha moment: team knowledge becomes an auditable agent input, not a hidden prompt blob.
 
@@ -81,30 +79,24 @@ This is the first aha moment: team knowledge becomes an auditable agent input, n
 
 Inside the codebase where your agent will work, create or migrate the project config so contextd knows which workspace to use.
 
-If the project already has legacy config:
+Recommended path:
 
 ```bash
-contextd migrate-config --dry-run
-contextd migrate-config
+contextd init --knowledge-root /absolute/path/to/contextd-or-team-knowledge-root --workspace default
+contextd check
 ```
 
-For a new project, create `<project>/.contextd/config.json` with:
-
-```json
-{
-  "workspace": "default",
-  "knowledge_root": "/absolute/path/to/contextd-or-team-knowledge-root",
-  "packs": null
-}
-```
-
-Then verify:
+If the project already has a local legacy config, `contextd init` delegates to the migration path. To preview the generated canonical config:
 
 ```bash
-contextd resolve --format json
-contextd doctor --format text
-contextd context "your real task" --format json
-contextd explain "your real task" --format text
+contextd init --dry-run
+```
+
+Then build real task context:
+
+```bash
+contextd context "your real task"
+contextd explain "your real task" --text
 ```
 
 `current-task.json` is the canonical artifact. `current-task.md` is only the human-readable render.
@@ -116,8 +108,8 @@ contextd explain "your real task" --format text
 MCP stdio snippet generation:
 
 ```bash
-contextd mcp-config --client codex --knowledge-root ~/contextd --workspace default
-contextd mcp-config --client all --knowledge-root ~/company-wiki --workspace shared
+contextd connect --client codex --knowledge-root ~/contextd --workspace default
+contextd connect --client all --knowledge-root ~/company-wiki --workspace shared
 ```
 
 Codex skill/plugin export:
@@ -173,7 +165,8 @@ git commit -m "init contextd knowledge root"
 
 # Each developer clones it and points contextd at that knowledge_root.
 git clone YOUR_TEAM_KNOWLEDGE_REPO_URL ~/company-wiki
-contextd mcp-config --client all --knowledge-root ~/company-wiki --workspace shared
+contextd init --knowledge-root ~/company-wiki --workspace shared
+contextd connect --client all --knowledge-root ~/company-wiki --workspace shared
 ```
 
 Daily team flow:
@@ -188,6 +181,7 @@ Daily team flow:
 
 ## Explore Further
 
+- **CLI recipes**: `contextd recipes`.
 - **Mental model**: [README.md](README.md).
 - **Build-system deep dive**: [docs/build-system-model.md](docs/build-system-model.md).
 - **Positioning**: [docs/comparison.md](docs/comparison.md).
@@ -200,9 +194,9 @@ Daily team flow:
 
 | Symptom | Fix |
 |---|---|
-| `contextd resolve` cannot find a workspace | Create `.contextd/config.json`, run `contextd migrate-config`, or use `/switch-workspace` from Claude adapters. |
-| `knowledge_root` points to the wrong repo | Run `contextd resolve --format json` and update `.contextd/config.json#knowledge_root`. |
+| `contextd check` cannot find a workspace | Run `contextd init --knowledge-root /path/to/contextd-or-team-knowledge-root --workspace {name}`. |
+| `knowledge_root` points to the wrong repo | Run `contextd resolve --json` and update `.contextd/config.json#knowledge_root`. |
 | Slash commands do not appear | Re-run `bash scripts/install-to-claude.sh` from a source checkout, then restart Claude Code. |
-| Pattern not found | Run `contextd find "keyword" --format json`; deterministic `contextd context` still wins over advisory search. |
-| Wrong docs selected | Run `contextd explain "task" --format json` and inspect selected docs, dropped docs, gaps, and source hashes. |
+| Pattern not found | Run `contextd find "keyword" --json`; deterministic `contextd context` still wins over advisory search. |
+| Wrong docs selected | Run `contextd explain "task" --json` and inspect selected docs, dropped docs, gaps, and source hashes. |
 | Team wants shared knowledge | See [docs/team-sync.md](docs/team-sync.md) and `/contextd-team-sync`. |

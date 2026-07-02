@@ -25,6 +25,15 @@ contextd mcp-server --knowledge-root ~/company-wiki --workspace shared
 
 ## Generate Client Snippets
 
+For most users, prefer the friendly wrapper:
+
+```bash
+contextd connect --client codex --knowledge-root ~/contextd --workspace default
+contextd connect --client all --knowledge-root ~/contextd --workspace default
+```
+
+The lower-level command remains available for scripts:
+
 ```bash
 contextd mcp-config --client codex --knowledge-root ~/contextd --workspace default
 contextd mcp-config --client claude --knowledge-root ~/contextd --workspace default
