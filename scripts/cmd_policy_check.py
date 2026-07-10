@@ -13,6 +13,7 @@ sys.path.insert(0, str(SCRIPT_DIR))
 sys.path.insert(0, str(SCRIPT_DIR / "lib"))
 
 import cmd_resolve  # noqa: E402
+import context_security  # noqa: E402
 import task_context_engine  # noqa: E402
 
 
@@ -62,8 +63,14 @@ def _resolve_task(task: str, workspace: str | None, cwd: str | None) -> tuple[di
     ws = workspace or resolved.get("workspace")
     if not ws:
         raise RuntimeError("No workspace resolved.")
+    try:
+        ws_dir = context_security.workspace_dir(wiki_root, ws)
+    except ValueError as exc:
+        raise RuntimeError(f"Invalid workspace: {exc}") from exc
+    if not ws_dir.is_dir() or not (ws_dir / "workspace.md").is_file():
+        raise RuntimeError(f"Workspace not available: {ws}")
     if workspace:
-        packs, _ = cmd_resolve.get_effective_packs({}, wiki_root / "workspaces" / ws / "workspace.md")
+        packs, _ = cmd_resolve.get_effective_packs({}, ws_dir / "workspace.md")
     else:
         packs = resolved.get("packs") or []
     artifact = task_context_engine.build_context_artifact(

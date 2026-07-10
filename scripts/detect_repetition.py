@@ -30,7 +30,7 @@ from lib.atomic_write import (  # noqa: E402
     atomic_write_json,
     with_advisory_lock,
 )
-from lib import contextd_resolver  # noqa: E402
+from lib import context_security, contextd_resolver  # noqa: E402
 from lib.repetition import (  # noqa: E402
     MIN_PROMPT_TOKENS,
     Cluster,
@@ -86,7 +86,7 @@ def resolve_workspace(cwd: Path) -> tuple[Path, str] | None:
 # ---------------------------------------------------------------------------
 
 def obs_dir(wiki_root: Path, workspace: str) -> Path:
-    return wiki_root / "workspaces" / workspace / ".observations"
+    return context_security.workspace_dir(wiki_root, workspace) / ".observations"
 
 
 def load_clusters(path: Path) -> list[Cluster]:

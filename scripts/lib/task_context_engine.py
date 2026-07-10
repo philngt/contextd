@@ -15,9 +15,28 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Tuple
 
-import context_policy
-from atomic_write import atomic_write_text
-from context_security import block_reason, is_relative_to, redact_text, reject_unsafe_entry
+try:
+    from . import context_policy
+    from .atomic_write import atomic_write_text
+    from .context_security import (
+        block_reason,
+        is_relative_to,
+        pack_dir,
+        redact_text,
+        reject_unsafe_entry,
+        workspace_dir,
+    )
+except ImportError:  # pragma: no cover - top-level script import path
+    import context_policy  # type: ignore
+    from atomic_write import atomic_write_text  # type: ignore
+    from context_security import (  # type: ignore
+        block_reason,
+        is_relative_to,
+        pack_dir,
+        redact_text,
+        reject_unsafe_entry,
+        workspace_dir,
+    )
 
 
 INTENT_KEYWORDS = {
@@ -354,7 +373,11 @@ def detect_components(task: str, wiki_root: Path, packs: List[str]) -> List[str]
     task_lower = task.lower()
     components: set[str] = set()
     for pack_name in packs:
-        keywords = _parse_pack_keywords(wiki_root / "packs" / pack_name / "pack.yaml")
+        try:
+            pack_root = pack_dir(wiki_root, pack_name)
+        except ValueError:
+            continue
+        keywords = _parse_pack_keywords(pack_root / "pack.yaml")
         for component, words in keywords.items():
             if any(word.lower() in task_lower for word in words):
                 components.add(component)
@@ -364,12 +387,18 @@ def detect_components(task: str, wiki_root: Path, packs: List[str]) -> List[str]
 def detect_scope(task: str, wiki_root: Path, workspace: str) -> Tuple[Optional[str], Optional[str]]:
     """Detect domain + project by matching directory names in task text."""
     task_lower = task.lower()
-    ws_dir = wiki_root / "workspaces" / workspace
+    try:
+        ws_dir = workspace_dir(wiki_root, workspace)
+    except ValueError:
+        return None, None
 
     def match_dir(parent: Path) -> Optional[str]:
         if not parent.is_dir():
             return None
-        for path in sorted(p for p in parent.iterdir() if p.is_dir()):
+        for path in sorted(
+            p for p in parent.iterdir()
+            if p.is_dir() and is_relative_to(p, parent)
+        ):
             name = path.name.lower()
             variants = {name, name.replace("-", " "), name.replace("_", " ")}
             if any(v and v in task_lower for v in variants):
@@ -586,11 +615,27 @@ def _collect_pack_retrieval_candidates(
     project: Optional[str],
     warnings: Optional[List[str]] = None,
 ) -> Tuple[List[Dict], List[Dict]]:
-    ws_dir = wiki_root / "workspaces" / workspace
     candidates: List[Dict] = []
     gaps: List[Dict] = []
+    try:
+        ws_dir = workspace_dir(wiki_root, workspace)
+    except ValueError as exc:
+        gaps.append({
+            "category": "workspace-isolation",
+            "missing": f"Invalid workspace {workspace!r}: {exc}",
+            "blocking_hint": True,
+        })
+        return candidates, gaps
     for pack_name in packs:
-        map_path = wiki_root / "packs" / pack_name / "agents" / "pipeline" / "retrieval-map.md"
+        try:
+            map_path = pack_dir(wiki_root, pack_name) / "agents" / "pipeline" / "retrieval-map.md"
+        except ValueError:
+            gaps.append({
+                "category": "pack",
+                "missing": f"Invalid pack name: {pack_name}",
+                "blocking_hint": False,
+            })
+            continue
         rows = _parse_retrieval_map(map_path)
         if not rows:
             continue
@@ -614,9 +659,15 @@ def _collect_pack_retrieval_candidates(
 def _iter_files(base: Path, patterns: Iterable[str]) -> List[Path]:
     if not base.exists():
         return []
+    allowed_root = base.resolve()
     out: List[Path] = []
     for pattern in patterns:
-        out.extend(sorted(p for p in base.glob(pattern) if p.is_file()))
+        out.extend(
+            sorted(
+                p for p in base.glob(pattern)
+                if p.is_file() and is_relative_to(p, allowed_root)
+            )
+        )
     return out
 
 
@@ -665,6 +716,25 @@ def _dedupe_paths(paths: Iterable[Path]) -> List[Path]:
     return sorted(out)
 
 
+def _safe_contract_index_target(
+    directory: Path,
+    contract_id: str,
+    rel_path: object,
+) -> Tuple[Optional[Path], Optional[str]]:
+    if not isinstance(rel_path, str):
+        return None, f"contract-index maps {contract_id} to non-string path"
+    raw = rel_path.strip()
+    unsafe = reject_unsafe_entry(raw)
+    if unsafe:
+        return None, f"contract-index maps {contract_id} to unsafe path {raw!r}: {unsafe}"
+    target = (directory / raw).resolve()
+    if not is_relative_to(target, directory):
+        return None, f"contract-index maps {contract_id} outside contract directory: {raw}"
+    if target.suffix not in {".md", ".json"}:
+        return None, f"contract-index maps {contract_id} to unsupported file type: {raw}"
+    return target, None
+
+
 def _contract_files(directory: Path, wiki_root: Path) -> Tuple[List[Path], List[Dict]]:
     """Return contract files plus blocking gaps from contract-index.json."""
     if not directory.is_dir():
@@ -674,7 +744,14 @@ def _contract_files(directory: Path, wiki_root: Path) -> Tuple[List[Path], List[
     index_path = directory / "contract-index.json"
     index = _load_index(index_path)
     for contract_id, rel_path in sorted(index.items()):
-        target = directory / rel_path
+        target, target_error = _safe_contract_index_target(directory, contract_id, rel_path)
+        if target_error:
+            gaps.append({
+                "category": "contract-index",
+                "missing": f"{_rel(index_path, wiki_root)} has invalid target: {target_error}",
+                "blocking_hint": True,
+            })
+            continue
         if target.is_file():
             paths.append(target)
         else:
@@ -704,10 +781,18 @@ def _collect_candidates(
     project: Optional[str] = None,
     warnings: Optional[List[str]] = None,
 ) -> Tuple[List[Dict], List[Dict]]:
-    ws_dir = wiki_root / "workspaces" / workspace
     candidates: List[Dict] = []
     gaps: List[Dict] = []
     components = components or []
+    try:
+        ws_dir = workspace_dir(wiki_root, workspace)
+    except ValueError as exc:
+        gaps.append({
+            "category": "workspace-isolation",
+            "missing": f"Invalid workspace {workspace!r}: {exc}",
+            "blocking_hint": True,
+        })
+        return candidates, gaps
 
     def add_many(paths: List[Path], category: str) -> None:
         for path in paths:
@@ -755,15 +840,23 @@ def _collect_candidates(
     gaps.extend(pack_gaps)
 
     for pack_name in packs:
-        pack_dir = wiki_root / "packs" / pack_name
-        if not pack_dir.is_dir():
+        try:
+            pack_root = pack_dir(wiki_root, pack_name)
+        except ValueError:
+            gaps.append({
+                "category": "pack",
+                "missing": f"Invalid pack name: {pack_name}",
+                "blocking_hint": False,
+            })
+            continue
+        if not pack_root.is_dir():
             gaps.append({
                 "category": "pack",
                 "missing": f"packs/{pack_name}",
                 "blocking_hint": False,
             })
             continue
-        add_many(_iter_files(pack_dir, ["agents/common-pitfalls.md"]), "pitfalls")
+        add_many(_iter_files(pack_root, ["agents/common-pitfalls.md"]), "pitfalls")
 
     if not candidates:
         gaps.append({
@@ -961,15 +1054,27 @@ def _load_index(index_path: Path) -> Dict[str, str]:
 
 
 def _contract_dirs(wiki_root: Path, workspace: str, packs: List[str]) -> List[Path]:
-    ws_dir = wiki_root / "workspaces" / workspace
+    try:
+        ws_dir = workspace_dir(wiki_root, workspace)
+    except ValueError:
+        return []
     dirs = [
         ws_dir / "platform" / "contracts",
         ws_dir / "contracts",
     ]
     domains = ws_dir / "domains"
     if domains.is_dir():
-        dirs.extend(sorted(p / "contracts" for p in domains.iterdir() if p.is_dir()))
-    dirs.extend(wiki_root / "packs" / p / "contracts" for p in packs)
+        dirs.extend(
+            sorted(
+                p / "contracts" for p in domains.iterdir()
+                if p.is_dir() and is_relative_to(p, domains)
+            )
+        )
+    for pack_name in packs:
+        try:
+            dirs.append(pack_dir(wiki_root, pack_name) / "contracts")
+        except ValueError:
+            continue
     return dirs
 
 
@@ -999,8 +1104,11 @@ def resolve_contract_path(contract_id: str, wiki_root: Path, workspace: str,
             continue
         index = _load_index(directory / "contract-index.json")
         if contract_id in index:
-            path = directory / index[contract_id]
-            if path.is_file():
+            path, path_error = _safe_contract_index_target(directory, contract_id, index[contract_id])
+            if path_error:
+                warnings.append(path_error)
+                return None, warnings
+            if path and path.is_file():
                 return path, warnings
             warnings.append(f"contract-index maps {contract_id} to missing file: {path}")
             return None, warnings
@@ -1009,10 +1117,14 @@ def resolve_contract_path(contract_id: str, wiki_root: Path, workspace: str,
                 directory / f"{contract_id}{ext}",
                 directory / f"{contract_id}.contract{ext}",
             ):
-                if candidate.is_file():
+                if candidate.is_file() and is_relative_to(candidate, directory):
                     return candidate, warnings
         for candidate in directory.glob("*"):
-            if candidate.is_file() and candidate.stem == contract_id:
+            if (
+                candidate.is_file()
+                and candidate.stem == contract_id
+                and is_relative_to(candidate, directory)
+            ):
                 return candidate, warnings
     return None, warnings
 
@@ -1031,19 +1143,26 @@ def _contracts_touched(docs: List[Dict]) -> List[str]:
 
 def _collect_static_context(wiki_root: Path, workspace: str, packs: List[str]) -> List[Dict]:
     """Collect deterministic non-volatile sources for materialized packs."""
+    try:
+        ws_dir = workspace_dir(wiki_root, workspace)
+    except ValueError:
+        ws_dir = wiki_root / "workspaces" / "__invalid__"
     sources: List[Tuple[Path, str]] = [
-        (wiki_root / "workspaces" / workspace / "workspace.md", "workspace-profile"),
+        (ws_dir / "workspace.md", "workspace-profile"),
         (wiki_root / "agents" / "system-prompt.md", "engine-guidance"),
         (wiki_root / "agents" / "constraints.md", "engine-rule"),
         (wiki_root / "agents" / "pipeline" / "validator-rules.md", "engine-rule"),
     ]
     for pack_name in packs:
-        pack_dir = wiki_root / "packs" / pack_name
+        try:
+            pack_root = pack_dir(wiki_root, pack_name)
+        except ValueError:
+            continue
         sources.extend([
-            (pack_dir / "pack.yaml", "pack-rule"),
-            (pack_dir / "agents" / "constraints.md", "pack-rule"),
-            (pack_dir / "agents" / "coding-rules.md", "pack-rule"),
-            (pack_dir / "agents" / "common-pitfalls.md", "pack-rule"),
+            (pack_root / "pack.yaml", "pack-rule"),
+            (pack_root / "agents" / "constraints.md", "pack-rule"),
+            (pack_root / "agents" / "coding-rules.md", "pack-rule"),
+            (pack_root / "agents" / "common-pitfalls.md", "pack-rule"),
         ])
 
     docs: List[Dict] = []

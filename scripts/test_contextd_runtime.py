@@ -25,11 +25,13 @@ sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE / "lib"))
 
 import cmd_doctor  # noqa: E402
+import cmd_bundle  # noqa: E402
 import cmd_eval  # noqa: E402
 import cmd_migrate_config  # noqa: E402
 import contextd_version  # noqa: E402
 import generate_manifest  # noqa: E402
 import cmd_resolve  # noqa: E402
+import mcp_server  # noqa: E402
 import render_runtime  # noqa: E402
 from lib import contextd_resolver, pack_validation, task_context_engine  # noqa: E402
 
@@ -133,6 +135,40 @@ def test_missing_workspace_lists_available() -> None:
         assert resolved["error"] == "missing-workspace-dir", resolved
         assert any("Available workspaces: available" in w for w in resolved["warnings"])
         print("  ok missing_workspace_lists_available")
+
+
+def test_workspace_name_traversal_rejected() -> None:
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        _workspace(root, "default")
+        _write(root / "docs" / "workspace.md", "# Outside docs\n")
+        _write(root / "docs" / "secret.md", "# Must not be listed\n")
+        _write(root / ".contextd" / "config.json",
+               json.dumps({"workspace": "../docs", "knowledge_root": "."}))
+
+        resolved = contextd_resolver.resolve(root, require_workspace=True)
+        assert resolved["error"] == "invalid-workspace", resolved
+        assert resolved["workspace_dir"] is None, resolved
+        assert any("Invalid workspace name" in w for w in resolved["warnings"]), resolved
+
+        try:
+            cmd_bundle.bundle(workspace="../docs", knowledge_root=root)
+            raise AssertionError("bundle accepted traversal workspace")
+        except RuntimeError as exc:
+            assert "Invalid workspace" in str(exc), exc
+
+        options = mcp_server.ServerOptions(
+            knowledge_root=root,
+            workspace="../docs",
+            cwd=root,
+        )
+        try:
+            mcp_server.list_resources(options, {})
+            raise AssertionError("MCP listed resources for traversal workspace")
+        except mcp_server.ToolExecutionError as exc:
+            assert "Invalid workspace name" in str(exc), exc
+
+        print("  ok workspace_name_traversal_rejected")
 
 
 def test_context_artifact_and_materialized_pack() -> None:
@@ -588,6 +624,64 @@ def test_contract_index_missing_target_is_gap() -> None:
         assert any(g["category"] == "contract-index" and g["blocking_hint"]
                    for g in artifact["gaps"]), artifact["gaps"]
         print("  ok contract_index_missing_target_is_gap")
+
+
+def test_contract_index_traversal_is_blocking_gap() -> None:
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        _workspace(root)
+        _write(root / "outside.contract.json", '{"title":"outside"}\n')
+        _write(root / "workspaces" / "default" / "platform" / "contracts" / "contract-index.json",
+               json.dumps({"contracts": {"outside.v1": "../../../../outside.contract.json"}}))
+
+        artifact = task_context_engine.build_context_artifact(
+            task="Implement demo feature",
+            wiki_root=root,
+            workspace="default",
+            packs=[],
+            project_dir=root,
+        )
+        assert any(
+            g["category"] == "contract-index"
+            and g["blocking_hint"]
+            and "unsafe path" in g["missing"]
+            for g in artifact["gaps"]
+        ), artifact["gaps"]
+        assert not any(
+            doc["path"].endswith("outside.contract.json")
+            for doc in artifact["referenced_docs"]
+        ), artifact["referenced_docs"]
+
+        path, warnings = task_context_engine.resolve_contract_path("outside.v1", root, "default", [])
+        assert path is None, (path, warnings)
+        assert any("unsafe path" in warning for warning in warnings), warnings
+        print("  ok contract_index_traversal_is_blocking_gap")
+
+
+def test_workspace_symlink_file_outside_is_not_read() -> None:
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        _workspace(root)
+        outside = root / "outside-contract.md"
+        _write(outside, "# Outside Contract\n\nDo not read.\n")
+        link = root / "workspaces" / "default" / "platform" / "contracts" / "outside-link.md"
+        try:
+            link.symlink_to(outside)
+        except OSError:
+            print("  skip workspace_symlink_file_outside_is_not_read")
+            return
+
+        artifact = task_context_engine.build_context_artifact(
+            task="Implement outside contract feature",
+            wiki_root=root,
+            workspace="default",
+            packs=[],
+            project_dir=root,
+        )
+        payload = json.dumps(artifact, ensure_ascii=False)
+        assert "Outside Contract" not in payload, payload
+        assert not any(doc["path"].endswith("outside-link.md") for doc in artifact["referenced_docs"])
+        print("  ok workspace_symlink_file_outside_is_not_read")
 
 
 def test_contract_path_index_and_fallback() -> None:
@@ -1256,6 +1350,7 @@ def run() -> int:
         test_legacy_claude_still_resolves,
         test_pack_override_replace_semantics,
         test_missing_workspace_lists_available,
+        test_workspace_name_traversal_rejected,
         test_context_artifact_and_materialized_pack,
         test_budget_report_and_explain_trace,
         test_policy_check_pass_and_failures,
@@ -1269,6 +1364,8 @@ def run() -> int:
         test_retrieval_map_safety_and_redaction,
         test_evidence_glob_excludes_raw_sources,
         test_contract_index_missing_target_is_gap,
+        test_contract_index_traversal_is_blocking_gap,
+        test_workspace_symlink_file_outside_is_not_read,
         test_contract_path_index_and_fallback,
         test_thesis_hardening_docs_and_release_mapping,
         test_default_contract_index_and_demo_golden_fixture,

@@ -142,7 +142,7 @@ def _workspace_packs(root: Path, workspace: str, resolved: Dict[str, Any],
                      workspace_overridden: bool) -> Tuple[List[str], str]:
     if not workspace_overridden:
         return list(resolved.get("packs") or []), str(resolved.get("pack_source") or "resolved")
-    workspace_md = root / "workspaces" / workspace / "workspace.md"
+    workspace_md = context_security.workspace_dir(root, workspace) / "workspace.md"
     packs, source = cmd_resolve.get_effective_packs({}, workspace_md)
     return packs, source
 
@@ -166,14 +166,45 @@ def resolve_state(options: ServerOptions, cwd: Optional[str] = None,
     selected_workspace = workspace or options.workspace or resolved.get("workspace")
     workspace_overridden = bool(workspace or options.workspace)
     if selected_workspace:
-        resolved["workspace"] = selected_workspace
+        safe_workspace, workspace_error = context_security.validate_context_name(
+            selected_workspace, "workspace"
+        )
+        if workspace_error or safe_workspace is None:
+            message = f"Invalid workspace name: {selected_workspace!r} ({workspace_error})"
+            warnings.append(message)
+            resolved["workspace"] = None
+            resolved["workspace_dir"] = None
+            resolved["error"] = "invalid-workspace"
+            if require_workspace:
+                raise ToolExecutionError(message, {
+                    "workspace": selected_workspace,
+                    "available_workspaces": _available_workspaces(root),
+                    "warnings": warnings,
+                })
+            selected_workspace = None
+        else:
+            selected_workspace = safe_workspace
+            resolved["workspace"] = selected_workspace
 
     project_dir_raw = resolved.get("project_dir")
     project_dir = Path(str(project_dir_raw)).expanduser().resolve() if project_dir_raw else start_dir
 
     if root is not None and selected_workspace:
-        ws_dir = root / "workspaces" / selected_workspace
-        resolved["workspace_dir"] = str(ws_dir) if ws_dir.is_dir() else None
+        try:
+            ws_dir = context_security.workspace_dir(root, selected_workspace)
+        except ValueError as exc:
+            warnings.append(str(exc))
+            resolved["workspace_dir"] = None
+            resolved["error"] = "invalid-workspace"
+            if require_workspace:
+                raise ToolExecutionError(str(exc), {
+                    "workspace": selected_workspace,
+                    "available_workspaces": _available_workspaces(root),
+                })
+        else:
+            resolved["workspace_dir"] = (
+                str(ws_dir) if ws_dir.is_dir() and (ws_dir / "workspace.md").is_file() else None
+            )
 
     if require_workspace:
         if root is None:
@@ -193,9 +224,14 @@ def resolve_state(options: ServerOptions, cwd: Optional[str] = None,
                 "available_workspaces": _available_workspaces(root),
                 "warnings": warnings,
             })
-        ws_dir = root / "workspaces" / selected_workspace
+        ws_dir = context_security.workspace_dir(root, selected_workspace)
         if not ws_dir.is_dir():
             raise ToolExecutionError(f"Workspace directory not found: {ws_dir}", {
+                "workspace": selected_workspace,
+                "available_workspaces": _available_workspaces(root),
+            })
+        if not (ws_dir / "workspace.md").is_file():
+            raise ToolExecutionError(f"workspace.md missing: {ws_dir / 'workspace.md'}", {
                 "workspace": selected_workspace,
                 "available_workspaces": _available_workspaces(root),
             })
@@ -206,8 +242,16 @@ def resolve_state(options: ServerOptions, cwd: Optional[str] = None,
         resolved["packs"] = packs
         resolved["pack_source"] = pack_source
         if root:
-            missing = [p for p in packs if not (root / "packs" / p / "pack.yaml").is_file()]
-            for pack_name in missing:
+            for pack_name in packs:
+                try:
+                    pack_root = context_security.pack_dir(root, pack_name)
+                except ValueError as exc:
+                    msg = f"Invalid pack path for {pack_name}: {exc}"
+                    if msg not in warnings:
+                        warnings.append(msg)
+                    continue
+                if (pack_root / "pack.yaml").is_file():
+                    continue
                 msg = f"Active pack not found: {pack_name}"
                 if msg not in warnings:
                     warnings.append(msg)
@@ -359,8 +403,10 @@ def _resource_map(options: ServerOptions, cwd: Optional[str] = None) -> Dict[str
     assert state.knowledge_root is not None and state.workspace is not None
     resources: Dict[str, Dict[str, Any]] = {}
 
-    ws_dir = state.knowledge_root / "workspaces" / state.workspace
+    ws_dir = context_security.workspace_dir(state.knowledge_root, state.workspace)
     for path in sorted(ws_dir.rglob("*")):
+        if not context_security.is_relative_to(path, ws_dir):
+            continue
         if not _resource_allowed(path):
             continue
         rel = path.relative_to(ws_dir).as_posix()
@@ -373,10 +419,15 @@ def _resource_map(options: ServerOptions, cwd: Optional[str] = None) -> Dict[str
         )
 
     for pack in state.packs:
-        pack_dir = state.knowledge_root / "packs" / pack
+        try:
+            pack_dir = context_security.pack_dir(state.knowledge_root, pack)
+        except ValueError:
+            continue
         if not pack_dir.is_dir():
             continue
         for path in sorted(pack_dir.rglob("*")):
+            if not context_security.is_relative_to(path, pack_dir):
+                continue
             if not _resource_allowed(path):
                 continue
             rel = path.relative_to(pack_dir).as_posix()

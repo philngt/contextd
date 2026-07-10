@@ -13,6 +13,7 @@ sys.path.insert(0, str(SCRIPT_DIR))
 sys.path.insert(0, str(SCRIPT_DIR / "lib"))
 
 import cmd_resolve  # noqa: E402
+import context_security  # noqa: E402
 import task_context_engine  # noqa: E402
 
 
@@ -30,6 +31,17 @@ def run(contract_id: str, workspace: str | None = None,
         return 1
 
     wiki_root = Path(root_raw).resolve()
+    try:
+        ws_dir = context_security.workspace_dir(wiki_root, ws)
+    except ValueError as exc:
+        print(f"Error: Invalid workspace: {exc}", file=sys.stderr)
+        return 1
+    if not ws_dir.is_dir():
+        print(f"Error: Workspace directory not found: {ws_dir}", file=sys.stderr)
+        return 1
+    if not (ws_dir / "workspace.md").is_file():
+        print(f"Error: workspace.md missing: {ws_dir / 'workspace.md'}", file=sys.stderr)
+        return 1
     packs = resolved.get("packs") or []
     path, warnings = task_context_engine.resolve_contract_path(
         contract_id, wiki_root, ws, packs,

@@ -30,6 +30,7 @@ import cmd_pack_validate  # noqa: E402
 import cmd_policy_check  # noqa: E402
 import cmd_eval  # noqa: E402
 import cmd_mcp_config  # noqa: E402
+import context_security  # noqa: E402
 import contextd_resolver  # noqa: E402
 import mcp_server  # noqa: E402
 import render_runtime  # noqa: E402
@@ -425,15 +426,24 @@ def _init_cmd(args) -> int:
         )
 
     workspace = args.workspace or "default"
+    safe_workspace, workspace_error = context_security.validate_context_name(workspace, "workspace")
+    if workspace_error or safe_workspace is None:
+        print(f"Error: invalid workspace: {workspace_error}", file=sys.stderr)
+        return 1
+    workspace = safe_workspace
     raw_root = args.knowledge_root
     project_dir = start
+    try:
+        inferred_workspace_md = context_security.workspace_dir(project_dir, workspace) / "workspace.md"
+    except ValueError:
+        inferred_workspace_md = None
 
     if raw_root:
         root_path = Path(raw_root).expanduser()
         root = root_path if root_path.is_absolute() else project_dir / root_path
         root = root.resolve()
         stored_root = str(root)
-    elif (project_dir / "workspaces" / workspace / "workspace.md").is_file():
+    elif inferred_workspace_md and inferred_workspace_md.is_file():
         root = project_dir
         stored_root = "."
     elif selected and "global" in selected.kind:
@@ -457,7 +467,11 @@ def _init_cmd(args) -> int:
         )
         return 1
 
-    workspace_md = root / "workspaces" / workspace / "workspace.md"
+    try:
+        workspace_md = context_security.workspace_dir(root, workspace) / "workspace.md"
+    except ValueError as exc:
+        print(f"Error: invalid workspace path: {exc}", file=sys.stderr)
+        return 1
     if not workspace_md.is_file():
         print(f"Error: workspace not found: {workspace_md}", file=sys.stderr)
         available = contextd_resolver.available_workspaces(root)

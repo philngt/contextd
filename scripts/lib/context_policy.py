@@ -9,6 +9,11 @@ import json
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional
 
+try:
+    from . import context_security
+except ImportError:  # pragma: no cover - top-level script import path
+    import context_security  # type: ignore
+
 
 VALID_SEVERITIES = {"error", "warning", "info"}
 
@@ -31,13 +36,24 @@ def _rules_from_payload(payload: object) -> List[Dict]:
 
 def load_policy_sources(wiki_root: Path, workspace: str, packs: Iterable[str]) -> List[Dict]:
     sources: List[Dict] = []
-    candidates = [
-        wiki_root / "workspaces" / workspace / "policy" / "context-policy.json",
-    ]
-    candidates.extend(
-        wiki_root / "packs" / pack / "policy" / "context-policy.json"
-        for pack in packs
-    )
+    candidates: List[Path] = []
+    try:
+        candidates.append(
+            context_security.workspace_dir(wiki_root, workspace)
+            / "policy"
+            / "context-policy.json"
+        )
+    except ValueError:
+        pass
+    for pack in packs:
+        try:
+            candidates.append(
+                context_security.pack_dir(wiki_root, pack)
+                / "policy"
+                / "context-policy.json"
+            )
+        except ValueError:
+            continue
     for path in candidates:
         if not path.is_file():
             continue

@@ -21,6 +21,7 @@ sys.path.insert(0, str(SCRIPT_DIR / "lib"))
 
 import cmd_resolve  # noqa: E402
 import cmd_bundle  # noqa: E402
+import context_security  # noqa: E402
 
 REPO_ROOT = SCRIPT_DIR.parent
 
@@ -45,7 +46,10 @@ def _load_manifest() -> Optional[Dict]:
 
 def _collect_workspace_files(wiki_root: Path, workspace: str) -> Dict[str, str]:
     """Load all markdown content from a workspace."""
-    ws_dir = wiki_root / "workspaces" / workspace
+    try:
+        ws_dir = context_security.workspace_dir(wiki_root, workspace)
+    except ValueError:
+        return {}
     if not ws_dir.is_dir():
         return {}
 
@@ -59,6 +63,8 @@ def _collect_workspace_files(wiki_root: Path, workspace: str) -> Dict[str, str]:
         "decisions/**/*.md",
     ]:
         for p in ws_dir.glob(pattern):
+            if not context_security.is_relative_to(p, ws_dir):
+                continue
             try:
                 files[str(p.relative_to(wiki_root))] = p.read_text(encoding="utf-8")
             except (OSError, UnicodeDecodeError):
@@ -83,7 +89,10 @@ def _collect_engine_files(wiki_root: Path) -> Dict[str, str]:
 
 def _collect_pack_files(wiki_root: Path, pack_name: str) -> Dict[str, str]:
     """Load key pack markdown files."""
-    pack_dir = wiki_root / "packs" / pack_name
+    try:
+        pack_dir = context_security.pack_dir(wiki_root, pack_name)
+    except ValueError:
+        return {}
     if not pack_dir.is_dir():
         return {}
     files: Dict[str, str] = {}
@@ -94,7 +103,7 @@ def _collect_pack_files(wiki_root: Path, pack_name: str) -> Dict[str, str]:
         "README.md",
     ]:
         p = pack_dir / rel
-        if p.is_file():
+        if p.is_file() and context_security.is_relative_to(p, pack_dir):
             files[str(p.relative_to(wiki_root))] = p.read_text(encoding="utf-8")
     return files
 
@@ -382,11 +391,16 @@ def render_codex_instructions(manifest: Dict, workspace: str, wiki_root: Path,
     lines.append("")
 
     # Key workspace contracts
-    ws_dir = wiki_root / "workspaces" / workspace
+    try:
+        ws_dir = context_security.workspace_dir(wiki_root, workspace)
+    except ValueError:
+        ws_dir = wiki_root / "workspaces" / "__invalid__"
     contracts_dir = ws_dir / "platform" / "contracts"
     if contracts_dir.is_dir():
         lines.append("## Key Contracts")
         for p in sorted(contracts_dir.glob("*.md"))[:5]:
+            if not context_security.is_relative_to(p, contracts_dir):
+                continue
             content = p.read_text(encoding="utf-8")[:800]
             lines.append(f"### {p.stem}")
             lines.append(content)
@@ -397,6 +411,8 @@ def render_codex_instructions(manifest: Dict, workspace: str, wiki_root: Path,
     if patterns_dir.is_dir():
         lines.append("## Key Patterns")
         for p in sorted(patterns_dir.glob("*.md"))[:5]:
+            if not context_security.is_relative_to(p, patterns_dir):
+                continue
             content = p.read_text(encoding="utf-8")[:800]
             lines.append(f"### {p.stem}")
             lines.append(content)
@@ -454,10 +470,18 @@ def render(runtime: str, workspace: Optional[str] = None,
 
     if not ws:
         raise RuntimeError("No workspace resolved. Specify --workspace.")
+    try:
+        ws_dir = context_security.workspace_dir(wiki_root, ws)
+    except ValueError as exc:
+        raise RuntimeError(f"Invalid workspace: {exc}") from exc
+    if not ws_dir.is_dir():
+        raise RuntimeError(f"Workspace directory not found: {ws_dir}")
+    if not (ws_dir / "workspace.md").is_file():
+        raise RuntimeError(f"workspace.md missing: {ws_dir / 'workspace.md'}")
 
     # If workspace is overridden, read packs from that workspace's workspace.md
     if workspace and workspace != resolved_ws:
-        ws_md = wiki_root / "workspaces" / workspace / "workspace.md"
+        ws_md = ws_dir / "workspace.md"
         if ws_md.is_file():
             packs, _ = cmd_resolve.get_effective_packs({}, ws_md)
         else:

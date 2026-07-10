@@ -58,6 +58,7 @@ from typing import Dict, List, Optional, Tuple
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent / "lib"))
 import pack_loader  # noqa: E402
+import context_security  # noqa: E402
 import contextd_resolver  # noqa: E402
 
 
@@ -309,8 +310,11 @@ def run(file_path: Path, ws_root: Optional[Path], domain: Optional[str],
     pack_rules = []
     active_pack_names: List[str] = []
     if ws_root and ws_root.is_dir() and ws_name:
-        ws_dir = ws_root / "workspaces" / ws_name
-        if ws_dir.is_dir():
+        try:
+            ws_dir = context_security.workspace_dir(ws_root, ws_name)
+        except ValueError:
+            ws_dir = None
+        if ws_dir and ws_dir.is_dir() and (ws_dir / "workspace.md").is_file():
             ctx["mqtt_types"] = load_mqtt_registered_types(ws_dir)
             ctx["workflow_states"] = load_workflow_states(ws_dir, domain)
             ctx["workspace_rules_file"] = load_workspace_rules(ws_dir)

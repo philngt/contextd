@@ -33,6 +33,11 @@ from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Iterable
 
+try:
+    from . import context_security
+except ImportError:  # pragma: no cover - top-level script import path
+    import context_security  # type: ignore
+
 # ---------------------------------------------------------------------------
 # Stopwords — Vietnamese + English, intentionally small. Curated for the wiki
 # domain (verbs/connectives that don't carry intent signal).
@@ -360,21 +365,26 @@ def load_artifact_keywords(
     packs_dir = wiki_root / "packs"
     if packs_dir.is_dir():
         for pack in packs_dir.iterdir():
-            if not pack.is_dir():
+            if not pack.is_dir() or not context_security.is_relative_to(pack, packs_dir):
                 continue
             locations.append(("pack-agent", pack / "agents", "*.md"))
             locations.append(("pack-command", pack / ".claude" / "commands", "*.md"))
             locations.append(("pack-skill", pack / "skills", "*.md"))
     # Workspace-level overrides.
     if workspace:
-        ws_dir = wiki_root / "workspaces" / workspace
-        locations.append(("ws-agent", ws_dir / "agents", "*.md"))
-        locations.append(("ws-command", ws_dir / ".claude" / "commands", "*.md"))
+        try:
+            ws_dir = context_security.workspace_dir(wiki_root, workspace)
+            locations.append(("ws-agent", ws_dir / "agents", "*.md"))
+            locations.append(("ws-command", ws_dir / ".claude" / "commands", "*.md"))
+        except ValueError:
+            pass
 
     for kind, root, glob in locations:
         if not root.is_dir():
             continue
         for path in root.glob(glob):
+            if not context_security.is_relative_to(path, root):
+                continue
             try:
                 text = path.read_text(encoding="utf-8", errors="replace")
             except OSError:

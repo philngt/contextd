@@ -16,6 +16,7 @@ sys.path.insert(0, str(SCRIPT_DIR))
 sys.path.insert(0, str(SCRIPT_DIR / "lib"))
 
 import cmd_resolve  # noqa: E402
+import context_security  # noqa: E402
 import task_context_engine  # noqa: E402
 
 
@@ -71,10 +72,16 @@ def _score_fixture(fixture: Dict, artifact: Dict) -> Dict:
 
 
 def _fixture_paths(wiki_root: Path, workspace: str) -> List[Path]:
-    base = wiki_root / "workspaces" / workspace / "eval" / "golden-tasks"
+    try:
+        base = context_security.workspace_dir(wiki_root, workspace) / "eval" / "golden-tasks"
+    except ValueError:
+        return []
     if not base.is_dir():
         return []
-    return sorted(p for p in base.glob("*.json") if p.is_file())
+    return sorted(
+        p for p in base.glob("*.json")
+        if p.is_file() and context_security.is_relative_to(p, base)
+    )
 
 
 def _render_text(report: Dict) -> str:
@@ -118,6 +125,14 @@ def run(golden: bool = False, workspace: str | None = None, fmt: str = "json",
     ws = workspace or resolved.get("workspace")
     if not ws:
         print("Error: No workspace resolved.", file=sys.stderr)
+        return 1
+    try:
+        ws_dir = context_security.workspace_dir(wiki_root, ws)
+    except ValueError as exc:
+        print(f"Error: Invalid workspace: {exc}", file=sys.stderr)
+        return 1
+    if not ws_dir.is_dir() or not (ws_dir / "workspace.md").is_file():
+        print(f"Error: Workspace not available: {ws}", file=sys.stderr)
         return 1
     default_packs = resolved.get("packs") or []
     results: List[Dict] = []

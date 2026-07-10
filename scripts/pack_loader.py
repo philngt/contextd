@@ -35,6 +35,11 @@ import sys
 from pathlib import Path
 from typing import Callable, Dict, List, Optional
 
+try:
+    from lib import context_security
+except ImportError:  # pragma: no cover - package import path
+    from .lib import context_security  # type: ignore
+
 
 # ---------------------------------------------------------------------------
 # Minimal YAML parser (sufficient for pack.yaml — flat mappings, lists, nested
@@ -230,7 +235,10 @@ class Pack:
 
 
 def discover_pack(wiki_root: Path, pack_name: str) -> Optional[Pack]:
-    pack_dir = wiki_root / "packs" / pack_name
+    try:
+        pack_dir = context_security.pack_dir(wiki_root, pack_name)
+    except ValueError:
+        return None
     manifest_path = pack_dir / "pack.yaml"
     if not manifest_path.is_file():
         return None
@@ -244,7 +252,10 @@ def discover_pack(wiki_root: Path, pack_name: str) -> Optional[Pack]:
 
 def load_packs_for_workspace(wiki_root: Path, ws_name: str) -> List[Pack]:
     """Resolve packs for a given workspace. Returns sorted-alphabetical list."""
-    ws_md = wiki_root / "workspaces" / ws_name / "workspace.md"
+    try:
+        ws_md = context_security.workspace_dir(wiki_root, ws_name) / "workspace.md"
+    except ValueError:
+        return []
     pack_names = sorted(set(parse_workspace_packs(ws_md)))
     packs: List[Pack] = []
     for name in pack_names:

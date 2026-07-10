@@ -10,10 +10,29 @@
     },
     "workspace": {
       "type": "string",
-      "minLength": 1
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9_][A-Za-z0-9._-]*$",
+      "not": {
+        "anyOf": [
+          { "pattern": "\\.\\." },
+          { "pattern": "[/\\\\:]" }
+        ]
+      }
     },
     "default_workspace": {
-      "type": ["string", "null"]
+      "oneOf": [
+        {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_][A-Za-z0-9._-]*$",
+          "not": {
+            "anyOf": [
+              { "pattern": "\\.\\." },
+              { "pattern": "[/\\\\:]" }
+            ]
+          }
+        },
+        { "type": "null" }
+      ]
     },
     "knowledge_root": {
       "type": ["string", "null"]
@@ -31,7 +50,14 @@
     "packs": {
       "type": ["array", "null"],
       "items": {
-        "type": "string"
+        "type": "string",
+        "pattern": "^[A-Za-z0-9_][A-Za-z0-9._-]*$",
+        "not": {
+          "anyOf": [
+            { "pattern": "\\.\\." },
+            { "pattern": "[/\\\\:]" }
+          ]
+        }
       },
       "description": "Local pack override. null means follow workspace.md; array means replace semantics."
     },

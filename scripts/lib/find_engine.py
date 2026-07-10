@@ -18,6 +18,11 @@ import re
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+try:
+    from . import context_security
+except ImportError:  # pragma: no cover - top-level script import path
+    import context_security  # type: ignore
+
 SKIP_SIZE_BYTES = 100 * 1024  # 100KB
 
 H1_RE = re.compile(r"^#\s+(.+)$", re.MULTILINE)
@@ -115,8 +120,10 @@ def build_corpus(
     """
     corpus: List[Dict] = []
 
-    def _add(paths, kind_override=None):
+    def _add(paths, kind_override=None, allowed_root: Optional[Path] = None):
         for p in paths:
+            if allowed_root is not None and not context_security.is_relative_to(p, allowed_root):
+                continue
             if p.stat().st_size > SKIP_SIZE_BYTES:
                 continue
             content = _load_file(p)
@@ -137,7 +144,7 @@ def build_corpus(
             wiki_root / "agents" / "coding-rules.md",
             wiki_root / "agents" / "system-prompt.md",
         ]
-        _add([p for p in engine_files if p.is_file()], "engine")
+        _add([p for p in engine_files if p.is_file()], "engine", wiki_root)
 
     # Packs
     if packs is None:
@@ -145,7 +152,7 @@ def build_corpus(
         packs_dir = wiki_root / "packs"
         if packs_dir.is_dir():
             for pack_dir in packs_dir.iterdir():
-                if not pack_dir.is_dir():
+                if not pack_dir.is_dir() or not context_security.is_relative_to(pack_dir, packs_dir):
                     continue
                 pack_files = [
                     pack_dir / "agents" / "constraints.md",
@@ -153,10 +160,13 @@ def build_corpus(
                     pack_dir / "agents" / "common-pitfalls.md",
                     pack_dir / "README.md",
                 ]
-                _add([p for p in pack_files if p.is_file()], "pack")
+                _add([p for p in pack_files if p.is_file()], "pack", pack_dir)
     else:
         for pack_name in packs:
-            pack_dir = wiki_root / "packs" / pack_name
+            try:
+                pack_dir = context_security.pack_dir(wiki_root, pack_name)
+            except ValueError:
+                continue
             if not pack_dir.is_dir():
                 continue
             pack_files = [
@@ -165,31 +175,36 @@ def build_corpus(
                 pack_dir / "agents" / "common-pitfalls.md",
                 pack_dir / "README.md",
             ]
-            _add([p for p in pack_files if p.is_file()], "pack")
+            _add([p for p in pack_files if p.is_file()], "pack", pack_dir)
 
     # Workspace
     if workspace:
-        ws_dir = wiki_root / "workspaces" / workspace
+        try:
+            ws_dir = context_security.workspace_dir(wiki_root, workspace)
+        except ValueError:
+            return corpus
         if ws_dir.is_dir():
             # contracts
             contracts_dir = ws_dir / "platform" / "contracts"
             if contracts_dir.is_dir():
-                _add(list(contracts_dir.glob("*.md")), "contract")
+                _add(list(contracts_dir.glob("*.md")), "contract", contracts_dir)
             # patterns
             patterns_dir = ws_dir / "platform" / "patterns"
             if patterns_dir.is_dir():
-                _add(list(patterns_dir.glob("*.md")), "pattern")
+                _add(list(patterns_dir.glob("*.md")), "pattern", patterns_dir)
             # services
             services_dir = ws_dir / "projects"
             if services_dir.is_dir():
                 for proj_dir in services_dir.iterdir():
+                    if not context_security.is_relative_to(proj_dir, services_dir):
+                        continue
                     svc_dir = proj_dir / "services"
                     if svc_dir.is_dir():
-                        _add(list(svc_dir.glob("*.md")), "service")
+                        _add(list(svc_dir.glob("*.md")), "service", svc_dir)
             # runbooks
             runbooks_dir = ws_dir / "runbooks"
             if runbooks_dir.is_dir():
-                _add(list(runbooks_dir.glob("*.md")), "runbook")
+                _add(list(runbooks_dir.glob("*.md")), "runbook", runbooks_dir)
 
     return corpus
 

@@ -41,6 +41,8 @@ SECRET_CONFIG_PATTERNS = [
     "*truststore*",
 ]
 
+SAFE_CONTEXT_NAME_RE = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9._-]*$")
+
 REDACTION_PATTERNS = [
     (
         "url_credentials",
@@ -64,6 +66,60 @@ def is_relative_to(path: Path, root: Path) -> bool:
         return True
     except ValueError:
         return False
+
+
+def validate_context_name(value: object, label: str = "name") -> Tuple[str | None, str | None]:
+    """Validate workspace/pack identifiers before using them as path segments."""
+    if not isinstance(value, str):
+        return None, f"{label} must be a string"
+    name = value.strip()
+    if not name:
+        return None, f"{label} must not be empty"
+    if "\x00" in name:
+        return None, f"{label} must not contain NUL bytes"
+    if name in {".", ".."} or ".." in name:
+        return None, f"{label} must not contain parent traversal"
+    if "/" in name or "\\" in name:
+        return None, f"{label} must not contain path separators"
+    if ":" in name:
+        return None, f"{label} must not contain drive or URI separators"
+    if not SAFE_CONTEXT_NAME_RE.fullmatch(name):
+        return None, (
+            f"{label} must start with a letter, digit, or '_' and contain only "
+            "letters, digits, '.', '_', and '-'"
+        )
+    return name, None
+
+
+def safe_child_path(root: Path, *parts: object) -> Path:
+    """Resolve a child path and require it to stay under root after symlinks."""
+    root_resolved = root.resolve()
+    candidate = root_resolved
+    for part in parts:
+        candidate = candidate / str(part)
+    candidate_resolved = candidate.resolve()
+    if not is_relative_to(candidate_resolved, root_resolved):
+        raise ValueError(
+            f"path escapes allowed root: {candidate} is outside {root_resolved}"
+        )
+    return candidate_resolved
+
+
+def safe_named_child(root: Path, name: object, label: str = "name") -> Path:
+    safe_name, error = validate_context_name(name, label)
+    if error or safe_name is None:
+        raise ValueError(error or f"invalid {label}")
+    return safe_child_path(root, safe_name)
+
+
+def workspace_dir(knowledge_root: Path, workspace: object) -> Path:
+    workspaces_root = safe_child_path(knowledge_root, "workspaces")
+    return safe_named_child(workspaces_root, workspace, "workspace")
+
+
+def pack_dir(knowledge_root: Path, pack_name: object) -> Path:
+    packs_root = safe_child_path(knowledge_root, "packs")
+    return safe_named_child(packs_root, pack_name, "pack")
 
 
 def block_reason(path: Path) -> str | None:

@@ -16,6 +16,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+try:
+    from . import context_security
+except ImportError:  # pragma: no cover - top-level script import path
+    import context_security  # type: ignore
+
 
 PROJECT_CONFIGS = [
     (".contextd/config.json", "contextd"),
@@ -139,6 +144,18 @@ def get_effective_packs(config: Dict, workspace_md_path: Path) -> Tuple[List[str
     return parse_workspace_packs(workspace_md_path), "workspace.md"
 
 
+def _valid_pack_names(raw_packs: List[str], source: str,
+                      warnings: List[str]) -> List[str]:
+    packs: List[str] = []
+    for raw_pack in raw_packs:
+        pack_name, error = context_security.validate_context_name(raw_pack, "pack")
+        if error or pack_name is None:
+            warnings.append(f"Invalid pack name from {source}: {raw_pack!r} ({error})")
+            continue
+        packs.append(pack_name)
+    return packs
+
+
 def resolve(cwd: Optional[Path] = None, require_workspace: bool = False) -> Dict:
     """Resolve contextd workspace state.
 
@@ -188,11 +205,15 @@ def resolve(cwd: Optional[Path] = None, require_workspace: bool = False) -> Dict
             warnings.append(f"Ignoring lower-priority config: {hit.path}")
 
     cfg = selected.data
-    workspace = _raw_workspace(cfg)
-    if not workspace:
-        warnings.append("Config has no workspace/default_workspace field.")
+    raw_workspace = _raw_workspace(cfg)
+    workspace, workspace_error = context_security.validate_context_name(raw_workspace, "workspace")
+    if workspace_error or workspace is None:
+        if raw_workspace:
+            warnings.append(f"Invalid workspace name: {raw_workspace!r} ({workspace_error})")
+        else:
+            warnings.append("Config has no workspace/default_workspace field.")
         if require_workspace:
-            result["error"] = "missing-workspace"
+            result["error"] = "invalid-workspace" if raw_workspace else "missing-workspace"
         return result
     result["workspace"] = workspace
 
@@ -213,32 +234,58 @@ def resolve(cwd: Optional[Path] = None, require_workspace: bool = False) -> Dict
     result["knowledge_root"] = str(root)
     result["wiki_root"] = str(root)
 
-    ws_dir = root / "workspaces" / workspace
-    if ws_dir.is_dir():
+    try:
+        ws_dir = context_security.workspace_dir(root, workspace)
+    except ValueError as exc:
+        warnings.append(str(exc))
+        if require_workspace:
+            result["error"] = "invalid-workspace"
+        return result
+
+    if ws_dir.is_dir() and (ws_dir / "workspace.md").is_file():
         result["workspace_dir"] = str(ws_dir)
     else:
         result["workspace_dir"] = None
-        warnings.append(f"Workspace directory not found: {ws_dir}")
+        if not ws_dir.is_dir():
+            warnings.append(f"Workspace directory not found: {ws_dir}")
+        else:
+            warnings.append(f"workspace.md missing: {ws_dir / 'workspace.md'}")
         available = available_workspaces(root)
         if available:
             warnings.append("Available workspaces: " + ", ".join(available))
         if require_workspace:
-            result["error"] = "missing-workspace-dir"
+            result["error"] = "missing-workspace-dir" if not ws_dir.is_dir() else "missing-workspace-md"
 
     workspace_md = ws_dir / "workspace.md"
-    packs, source = get_effective_packs(cfg, workspace_md)
+    raw_packs, source = get_effective_packs(cfg, workspace_md)
+    packs = _valid_pack_names(raw_packs, source, warnings)
     result["packs"] = packs
     result["pack_source"] = source
 
-    missing_packs = [p for p in packs if not (root / "packs" / p / "pack.yaml").is_file()]
-    for pack_name in missing_packs:
-        warnings.append(f"Active pack not found: {pack_name}")
+    for pack_name in packs:
+        try:
+            pack_root = context_security.pack_dir(root, pack_name)
+        except ValueError as exc:
+            warnings.append(f"Invalid pack path for {pack_name}: {exc}")
+            continue
+        if not (pack_root / "pack.yaml").is_file():
+            warnings.append(f"Active pack not found: {pack_name}")
 
     return result
 
 
 def available_workspaces(knowledge_root: Path) -> List[str]:
-    root = knowledge_root / "workspaces"
+    try:
+        root = context_security.safe_child_path(knowledge_root, "workspaces")
+    except ValueError:
+        return []
     if not root.is_dir():
         return []
-    return sorted(p.name for p in root.iterdir() if p.is_dir())
+    names: List[str] = []
+    for path in root.iterdir():
+        name, error = context_security.validate_context_name(path.name, "workspace")
+        if error or name is None:
+            continue
+        if path.is_dir() and context_security.is_relative_to(path, root):
+            names.append(name)
+    return sorted(names)

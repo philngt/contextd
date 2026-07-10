@@ -17,6 +17,7 @@ sys.path.insert(0, str(SCRIPT_DIR))
 sys.path.insert(0, str(SCRIPT_DIR / "lib"))
 
 import cmd_resolve  # noqa: E402
+import context_security  # noqa: E402
 import find_engine  # noqa: E402
 
 
@@ -41,6 +42,23 @@ def run(query: str, workspace: str | None = None, limit: int = 5, fmt: str = "te
     wiki_root = Path(wiki_root_str).resolve()
     ws = workspace or resolved.get("workspace")
     packs = resolved.get("packs") or []
+    if ws:
+        try:
+            ws_dir = context_security.workspace_dir(wiki_root, ws)
+        except ValueError as exc:
+            message = f"Invalid workspace: {exc}"
+            if fmt == "json":
+                print(json.dumps({"error": message}, ensure_ascii=False))
+            else:
+                print(f"Error: {message}", file=sys.stderr)
+            return 1
+        if not ws_dir.is_dir() or not (ws_dir / "workspace.md").is_file():
+            message = f"Workspace not available: {ws}"
+            if fmt == "json":
+                print(json.dumps({"error": message}, ensure_ascii=False))
+            else:
+                print(f"Error: {message}", file=sys.stderr)
+            return 1
 
     results = find_engine.find(query, wiki_root, workspace=ws, packs=packs, limit=limit)
 

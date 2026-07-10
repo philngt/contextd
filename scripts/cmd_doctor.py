@@ -18,7 +18,13 @@ import cmd_resolve  # noqa: E402
 import pack_validation  # noqa: E402
 import render_runtime  # noqa: E402
 import task_context_engine  # noqa: E402
-from context_security import block_reason, reject_unsafe_entry  # noqa: E402
+from context_security import (  # noqa: E402
+    block_reason,
+    is_relative_to,
+    pack_dir,
+    reject_unsafe_entry,
+    workspace_dir,
+)
 
 
 Issue = Dict[str, str]
@@ -57,12 +63,16 @@ def _validate_pack_retrieval_maps(root: Path, workspace: str, packs: List[str],
                                   issues: List[Issue]) -> None:
     _ = workspace  # Kept for future workspace-specific policy checks.
     for pack_name in packs:
-        pack_dir = root / "packs" / pack_name
-        if not (pack_dir / "pack.yaml").is_file():
+        try:
+            pack_root = pack_dir(root, pack_name)
+        except ValueError as exc:
+            issues.append(_issue("warning", "active-packs", f"Invalid active pack: {pack_name} ({exc})"))
+            continue
+        if not (pack_root / "pack.yaml").is_file():
             issues.append(_issue("warning", "active-packs", f"Active pack not found: {pack_name}",
                                  f"packs/{pack_name}"))
             continue
-        map_path = pack_dir / "agents" / "pipeline" / "retrieval-map.md"
+        map_path = pack_root / "agents" / "pipeline" / "retrieval-map.md"
         if not map_path.is_file():
             continue
         rows = task_context_engine._parse_retrieval_map(map_path)  # noqa: SLF001
@@ -91,12 +101,21 @@ def _validate_pack_retrieval_maps(root: Path, workspace: str, packs: List[str],
 
 def _scan_blocked_paths(root: Path, workspace: str, packs: List[str],
                         issues: List[Issue]) -> None:
-    roots = [root / "workspaces" / workspace]
-    roots.extend(root / "packs" / pack for pack in packs)
+    try:
+        roots = [workspace_dir(root, workspace)]
+    except ValueError:
+        roots = []
+    for pack in packs:
+        try:
+            roots.append(pack_dir(root, pack))
+        except ValueError:
+            continue
     for base in roots:
         if not base.is_dir():
             continue
         for path in base.rglob("*"):
+            if not is_relative_to(path, base):
+                continue
             if not path.is_file():
                 continue
             reason = block_reason(path)
@@ -246,18 +265,25 @@ def diagnose(cwd: str | None = None) -> Dict:
 
     if root_raw and workspace:
         root = Path(root_raw).resolve()
-        ws_dir = root / "workspaces" / workspace
-        if not ws_dir.is_dir():
+        try:
+            ws_dir = workspace_dir(root, workspace)
+        except ValueError as exc:
+            issues.append(_issue("error", "workspace-isolation", f"Invalid workspace: {exc}"))
+            ws_dir = None
+        if ws_dir is None:
+            pass
+        elif not ws_dir.is_dir():
             issues.append(_issue("error", "workspace-isolation", f"Workspace directory missing: {ws_dir}"))
         elif not (ws_dir / "workspace.md").is_file():
             issues.append(_issue("error", "workspace-isolation", "workspace.md missing.",
                                  str((ws_dir / "workspace.md").relative_to(root))))
-        packs = resolved.get("packs") or []
-        _validate_pack_retrieval_maps(root, workspace, packs, issues)
-        _append_pack_validation(root, packs, issues, infos)
-        _scan_blocked_paths(root, workspace, packs, issues)
-        _validate_generated_adapters(root, workspace, packs, issues)
-        _validate_checked_in_codex_agents(issues)
+        if ws_dir is not None:
+            packs = resolved.get("packs") or []
+            _validate_pack_retrieval_maps(root, workspace, packs, issues)
+            _append_pack_validation(root, packs, issues, infos)
+            _scan_blocked_paths(root, workspace, packs, issues)
+            _validate_generated_adapters(root, workspace, packs, issues)
+            _validate_checked_in_codex_agents(issues)
 
     _validate_schema_files(issues)
 

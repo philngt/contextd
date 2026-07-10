@@ -16,8 +16,10 @@ from typing import List, Optional
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
+sys.path.insert(0, str(SCRIPT_DIR / "lib"))
 
 import cmd_resolve  # noqa: E402
+import context_security  # noqa: E402
 
 
 def _collect_workspace_files(ws_dir: Path) -> List[Path]:
@@ -34,13 +36,21 @@ def _collect_workspace_files(ws_dir: Path) -> List[Path]:
         "patterns-index.md",
         "workspace.md",
     ]:
-        files.extend(sorted(ws_dir.glob(pattern)))
+        files.extend(
+            sorted(
+                p for p in ws_dir.glob(pattern)
+                if p.is_file() and context_security.is_relative_to(p, ws_dir)
+            )
+        )
     return files
 
 
 def _collect_pack_files(wiki_root: Path, pack_name: str) -> List[Path]:
     """Collect key markdown files from a pack."""
-    pack_dir = wiki_root / "packs" / pack_name
+    try:
+        pack_dir = context_security.pack_dir(wiki_root, pack_name)
+    except ValueError:
+        return []
     if not pack_dir.is_dir():
         return []
     files: List[Path] = []
@@ -100,20 +110,26 @@ def bundle(
 
     wiki_root = Path(wiki_root_str).resolve()
     ws = workspace or resolved.get("workspace")
+    if not ws:
+        raise RuntimeError("No workspace resolved. Specify --workspace or run `contextd resolve`.")
+
+    try:
+        ws_dir = context_security.workspace_dir(wiki_root, ws)
+    except ValueError as exc:
+        raise RuntimeError(f"Invalid workspace: {exc}") from exc
+
     if packs_override is not None:
         packs = packs_override
     elif workspace:
-        ws_md = wiki_root / "workspaces" / workspace / "workspace.md"
+        ws_md = ws_dir / "workspace.md"
         packs, _ = cmd_resolve.get_effective_packs({}, ws_md)
     else:
         packs = resolved.get("packs") or []
 
-    if not ws:
-        raise RuntimeError("No workspace resolved. Specify --workspace or run `contextd resolve`.")
-
-    ws_dir = wiki_root / "workspaces" / ws
     if not ws_dir.is_dir():
         raise RuntimeError(f"Workspace directory not found: {ws_dir}")
+    if not (ws_dir / "workspace.md").is_file():
+        raise RuntimeError(f"workspace.md missing: {ws_dir / 'workspace.md'}")
 
     parts: List[str] = []
     parts.append(f"# contextd Bundle — workspace: {ws}")
