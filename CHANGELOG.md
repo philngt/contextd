@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Changed — Workspace and pack path confinement
+
+- Workspace, default-workspace, and pack identifiers now fail closed before path construction across CLI and MCP surfaces.
+- Filesystem containment uses canonical paths, rejects aliased workspace/pack roots and descendant escapes, and still allows the configured `knowledge_root` itself to be a symlink or platform alias.
+- Task-context source provenance remains normalized and knowledge-root-relative; explicitly absolute diagnostic fields such as `project_dir` and `knowledge_root` remain absolute.
+- Config and task-context schemas now describe safe identifiers and relative provenance paths.
+- Init, migration, installer, MCP-config, materialization, pack-validator imports, and repetition-state writes now reject aliased or invalid path boundaries before writing or executing.
+- CI and the pull-request checklist now include runtime/path coverage across Ubuntu, macOS, and Windows.
+- Release binaries now run resolver and task-context smoke checks before artifacts are staged.
+
 ### Added — Production context diagnostics
 
 Added P0 production-readiness diagnostics and context quality tooling:

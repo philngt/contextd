@@ -78,6 +78,48 @@ Dùng bởi: `contextd-trace`, `contextd-viz`. Mục tiêu chỉ là tìm `.cont
 
 Ví dụ: file `D:/myrepo/.contextd/config.json` có `"knowledge_root": "."` → `project_root = D:/myrepo`, `effective_knowledge_root = D:/myrepo`. Agent chạy lệnh từ `D:/myrepo/src/utils/` vẫn resolve đúng vì gốc là project root, không phải cwd.
 
+## Logical paths, canonical containment, and provenance
+
+Contextd uses four related path forms. They are intentionally not interchangeable:
+
+| Form | Meaning | Used for |
+|---|---|---|
+| Logical path | The spelling supplied by config, CLI, MCP, or a retrieval map, such as `.` or a symlink alias. | User intent, diagnostics, and resolving a path relative to the correct config/project root. |
+| Canonical path | The absolute, symlink-resolved filesystem target. | Existence checks and containment decisions only. |
+| Named root | A canonical trust boundary with a role: `knowledge_root`, `workspaces/`, the active workspace, `packs/`, or one active pack. | Deciding which descendants a resolver is allowed to read. |
+| Source provenance path | A normalized POSIX path relative to `knowledge_root`, such as `workspaces/default/workspace.md`. | `referenced_docs`, static/context-pack sources, policy sources, and source-hash keys. |
+| Generated artifact reference | A normalized POSIX path relative to `project_dir`, such as `.contextd/context/current-task.json`. | Context-pack refs and materialized JSON/Markdown/pack locations. |
+
+`project_dir` and `knowledge_root` in runtime JSON are explicitly absolute diagnostic fields. Their absolute values do not relax the rule that source provenance and generated artifact references use their respective relative roots.
+
+### Named-root symlink policy
+
+The configured `knowledge_root` itself may be a symlink or platform alias. Contextd resolves that logical name once; its canonical target becomes the trusted `knowledge_root`.
+
+After that boundary is established:
+
+1. Resolve `workspaces/`, `workspaces/{workspace}`, `packs/`, and `packs/{pack}` as named children.
+2. Compare canonical paths for containment, including symlink targets.
+3. Reject `workspaces/`, `packs/`, and each named workspace/pack root when that named root is itself a symlink or junction alias. This preserves workspace/pack identity even when an alias points to a sibling under the same parent.
+4. A descendant read symlink may be accepted only when its canonical target remains inside the exact named workspace/pack root and both logical and canonical paths pass secret/raw-evidence policy. Write and dynamic-import targets reject aliases.
+5. Reject any directory, glob result, or file symlink that escapes its named root. Do not fall back to the raw path and do not read it before the check.
+6. Convert an accepted canonical path back to knowledge-root-relative POSIX provenance. A failed relative conversion is a boundary failure, not permission to emit an absolute source path.
+
+This makes `/var/...` and `/private/var/...`, or a checked-out root and its symlink alias, equivalent for security checks without leaking machine-specific canonical paths into deterministic provenance.
+
+### Fail-closed workspace and pack identifiers
+
+Workspace and pack identifiers are path segments, not free-form paths. A valid identifier:
+
+- is a string matching `^[A-Za-z0-9_][A-Za-z0-9._-]*$`;
+- is not empty, `.` or `..`, and does not contain `..`;
+- contains no `/`, `\\`, `:`, drive prefix, URI prefix, or NUL byte;
+- does not end with `.` or use a Windows reserved device basename such as `CON`, `NUL`, `COM1`, or `LPT1`.
+
+An invalid active workspace stops resolution because no safe workspace scope exists. Any invalid or unknown active pack stops effective-state resolution before retrieval; it is not silently dropped, because continuing without its constraints would be a fail-open behavior. No adapter may silently reinterpret either value as a filesystem path.
+
+CLI commands and MCP tools use the same resolver and validation semantics. Transport-specific error formatting may differ, but the selected workspace, effective packs, canonical containment decision, and provenance paths must agree.
+
 ---
 
 ## Effective Packs Resolution
@@ -93,6 +135,8 @@ effective_packs = local_packs   IF local_packs is array (kể cả empty array [
 ```
 
 **Replace semantics, KHÔNG additive**: nếu `config.json#packs` là array → dùng đúng list đó, ignore `workspace.md` cho codebase này. Nếu null/undefined → fallback workspace.md.
+
+**Validation before use**: resolve the raw list first, then validate every pack identifier before joining it under `packs/`. Any invalid or missing selected pack makes the effective state invalid; it never becomes a partial path, fallback name, or silently reduced pack list.
 
 **Empty array `[]` ≠ null**:
 - `null` (hoặc field không tồn tại) = "follow workspace default"
@@ -111,12 +155,10 @@ effective_packs = local_packs   IF local_packs is array (kể cả empty array [
 **Implementation cho commands cần check pack**:
 
 ```python
-def get_effective_packs(config: dict, workspace_md_path: Path) -> list[str]:
-    local = config.get("packs")
-    if isinstance(local, list):
-        return local
-    # fallback to workspace.md ## Packs
-    return parse_packs_section(workspace_md_path)
+# Pseudocode: selection and validation are separate steps.
+raw_packs = config["packs"] if isinstance(config.get("packs"), list) \
+    else parse_packs_section(workspace_md_path)
+effective_packs = validate_pack_identifiers(raw_packs)  # raise if any value is invalid
 ```
 
 Commands cần dùng effective_packs (không đọc workspace.md trực tiếp): `/evidence-analyze`, `/evidence-qa`, `/use-contextd` planner, mọi pipeline retrieval-map resolution.

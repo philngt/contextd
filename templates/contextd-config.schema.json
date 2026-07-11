@@ -9,37 +9,25 @@
       "type": "string"
     },
     "workspace": {
-      "type": "string",
-      "minLength": 1,
-      "pattern": "^[A-Za-z0-9_][A-Za-z0-9._-]*$",
-      "not": {
-        "anyOf": [
-          { "pattern": "\\.\\." },
-          { "pattern": "[/\\\\:]" }
-        ]
-      }
+      "description": "Active workspace identifier. This is a safe path segment, not a filesystem path.",
+      "allOf": [
+        { "$ref": "#/definitions/contextIdentifier" }
+      ]
     },
     "default_workspace": {
+      "description": "Optional global default workspace identifier. null means no global default is selected.",
       "oneOf": [
-        {
-          "type": "string",
-          "pattern": "^[A-Za-z0-9_][A-Za-z0-9._-]*$",
-          "not": {
-            "anyOf": [
-              { "pattern": "\\.\\." },
-              { "pattern": "[/\\\\:]" }
-            ]
-          }
-        },
+        { "$ref": "#/definitions/contextIdentifier" },
         { "type": "null" }
       ]
     },
     "knowledge_root": {
-      "type": ["string", "null"]
+      "type": ["string", "null"],
+      "description": "Logical knowledge root from config. It may be relative, absolute, or a symlink alias; the resolver emits and checks its canonical absolute target."
     },
     "wiki_root": {
       "type": ["string", "null"],
-      "description": "Legacy alias for knowledge_root."
+      "description": "Legacy alias for knowledge_root. It intentionally accepts the same relative or absolute path forms."
     },
     "knowledge_map": {
       "type": ["string", "null"]
@@ -50,16 +38,9 @@
     "packs": {
       "type": ["array", "null"],
       "items": {
-        "type": "string",
-        "pattern": "^[A-Za-z0-9_][A-Za-z0-9._-]*$",
-        "not": {
-          "anyOf": [
-            { "pattern": "\\.\\." },
-            { "pattern": "[/\\\\:]" }
-          ]
-        }
+        "$ref": "#/definitions/contextIdentifier"
       },
-      "description": "Local pack override. null means follow workspace.md; array means replace semantics."
+      "description": "Local pack identifier override. null means follow workspace.md; an array has replace semantics. Invalid identifiers fail closed before path construction."
     },
     "compat": {
       "type": "object",
@@ -78,5 +59,22 @@
       ]
     }
   ],
-  "additionalProperties": true
+  "additionalProperties": true,
+  "definitions": {
+    "contextIdentifier": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Portable workspace/pack identifier that is safe to use as one named path segment.",
+      "pattern": "^[A-Za-z0-9_][A-Za-z0-9._-]*$",
+      "not": {
+        "anyOf": [
+          { "enum": [".", ".."] },
+          { "pattern": "\\.\\." },
+          { "pattern": "[/\\\\:]" },
+          { "pattern": "\\.$" },
+          { "pattern": "^(?:[Cc][Oo][Nn]|[Pp][Rr][Nn]|[Aa][Uu][Xx]|[Nn][Uu][Ll]|[Cc][Oo][Mm][1-9]|[Ll][Pp][Tt][1-9])(?:\\..*)?$" }
+        ]
+      }
+    }
+  }
 }

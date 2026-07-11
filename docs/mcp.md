@@ -23,6 +23,8 @@ contextd mcp-server --knowledge-root ~/company-wiki --workspace shared
 
 `--knowledge-root` must point to a directory containing `workspaces/`. `--workspace` is optional if the MCP client runs inside a project that already resolves via `.contextd/config.json`.
 
+The logical `--knowledge-root` may be a symlink or platform alias. Its canonical target becomes the named trust root. Structural workspace/pack roots must be real non-aliased directories; descendant resource symlinks are accepted only when their canonical targets remain within the named workspace or pack root. Every escape fails closed.
+
 ## Generate Client Snippets
 
 For most users, prefer the friendly wrapper:
@@ -88,6 +90,20 @@ Add the generated JSON to the client MCP config location used by your client:
 | `contextd.contract_path` | `contract_id`, `workspace?`, `cwd?` | Resolved contract path via `contract-index.json` and fallback filename lookup. |
 | `contextd.bundle` | `workspace?`, `include_packs?`, `include_engine?`, `max_chars?` | Capped markdown bundle, default `max_chars=20000`. |
 
+## CLI / MCP Parity
+
+MCP is a transport adapter over the same resolver and context engine used by the CLI:
+
+| CLI | MCP | Shared semantic contract |
+|---|---|---|
+| `contextd resolve` | `contextd.resolve` | Config priority, canonical `knowledge_root`, active workspace, effective packs, warnings, and invalid-identifier rejection. |
+| `contextd find` | `contextd.find` | Advisory search scoped to the same active workspace. |
+| `contextd context` | `contextd.context` | `contextd_task_context.v1`, relative source provenance, gaps, warnings, hashes, and selection policy. |
+| `contextd contract-path` | `contextd.contract_path` | Contract-index confinement and filename fallback within allowed contract roots. |
+| `contextd bundle` | `contextd.bundle` | Workspace/pack confinement and the same source-selection rules. |
+
+An explicit invalid MCP workspace override is an error; the server does not silently fall back to the configured workspace. One invalid or missing effective pack fails the request instead of producing a partial pack set. CLI exit codes and MCP error envelopes differ by transport, but successful results and security decisions must agree.
+
 ## Resources
 
 The MCP server exposes read-only resources with fixed `contextd://` URIs:
@@ -98,6 +114,8 @@ The MCP server exposes read-only resources with fixed `contextd://` URIs:
 - Materialized current task, when present: `contextd://context/current-task.json` and `contextd://context/current-task.md`
 
 `resources/read` accepts only URIs returned by `resources/list`; it does not map arbitrary paths. Secret-like paths and raw evidence source folders are not exposed as MCP resources.
+
+Resource URIs are logical adapter identifiers. File-backed provenance inside task-context results remains normalized and relative to `knowledge_root`; it never exposes the canonical absolute path used for containment checks.
 
 ## Prompts
 
@@ -112,13 +130,15 @@ They describe which local `contextd` command to run for the given task. They do 
 ## Error Semantics
 
 - Malformed JSON-RPC, unsupported methods, invalid request shapes, and unknown tool names return JSON-RPC error objects.
+- Invalid workspace or pack identifiers fail before path construction and return an error/diagnostic consistent with the CLI resolver.
 - Valid `tools/call` requests whose execution fails return MCP tool results with `isError: true`.
 - Server logs and diagnostics go to stderr. Stdout is reserved for valid newline-delimited JSON-RPC messages.
 
 ## Security Notes
 
 - MCP v1 is local stdio only. There is no Streamable HTTP server, remote auth surface, or network listener.
-- The server reads knowledge files under the resolved `knowledge_root` and active workspace. Keep sensitive workspaces in private repos.
+- The server validates workspace and pack identifiers before path construction, requires non-aliased named workspace/pack roots, then compares descendant canonical paths against those roots.
+- The server reads knowledge files only under the resolved active workspace and active packs. Descendant symlinks that leave those named roots are not listed or read. Keep sensitive workspaces in private repos.
 - `contextd.context` defaults to `materialize=false` so MCP calls do not write `.contextd/context/` unless the client explicitly asks.
 - `contextd.bundle` is capped by `max_chars`; clients should request only the context they need.
 

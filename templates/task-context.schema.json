@@ -34,13 +34,18 @@
       "type": "string"
     },
     "workspace": {
-      "type": "string"
+      "description": "Validated active workspace identifier, never a path.",
+      "allOf": [
+        { "$ref": "#/definitions/contextIdentifier" }
+      ]
     },
     "project_dir": {
-      "type": ["string", "null"]
+      "type": ["string", "null"],
+      "description": "Explicit absolute runtime diagnostic. Relative-provenance constraints do not apply to this field."
     },
     "knowledge_root": {
-      "type": "string"
+      "type": "string",
+      "description": "Canonical absolute runtime diagnostic for the resolved knowledge root. Source provenance remains relative to this root."
     },
     "intent": {
       "type": "object",
@@ -98,7 +103,7 @@
             "type": "string"
           },
           "path": {
-            "type": "string"
+            "$ref": "#/definitions/relativeProvenancePath"
           },
           "sections": {
             "type": "array",
@@ -123,7 +128,7 @@
         "required": ["category", "path", "sections", "content", "source_hash"],
         "properties": {
           "category": { "type": "string" },
-          "path": { "type": "string" },
+          "path": { "$ref": "#/definitions/relativeProvenancePath" },
           "sections": {
             "type": "array",
             "items": { "type": "string" }
@@ -162,15 +167,25 @@
         "version": { "type": "string" },
         "kind": { "type": "string" },
         "packKey": { "type": "string" },
-        "ref": { "type": ["string", "null"] },
-        "compiledRef": { "type": ["string", "null"] },
+        "ref": {
+          "oneOf": [
+            { "$ref": "#/definitions/relativeProvenancePath" },
+            { "type": "null" }
+          ]
+        },
+        "compiledRef": {
+          "oneOf": [
+            { "$ref": "#/definitions/relativeProvenancePath" },
+            { "type": "null" }
+          ]
+        },
         "sources": {
           "type": "array",
           "items": {
             "type": "object",
             "required": ["path", "category", "source_hash"],
             "properties": {
-              "path": { "type": "string" },
+              "path": { "$ref": "#/definitions/relativeProvenancePath" },
               "category": { "type": "string" },
               "source_hash": {
                 "type": "string",
@@ -243,7 +258,7 @@
           "items": {
             "type": "object",
             "properties": {
-              "path": { "type": "string" },
+              "path": { "$ref": "#/definitions/relativeProvenancePath" },
               "rule_count": { "type": "integer" }
             },
             "additionalProperties": true
@@ -266,6 +281,10 @@
     },
     "source_hashes": {
       "type": "object",
+      "description": "Map from normalized knowledge-root-relative provenance paths to source hashes.",
+      "propertyNames": {
+        "$ref": "#/definitions/relativeProvenancePath"
+      },
       "additionalProperties": {
         "type": "string",
         "pattern": "^[a-f0-9]{64}$"
@@ -273,8 +292,46 @@
     },
     "materialized": {
       "type": "object",
+      "required": ["json", "markdown", "pack"],
+      "properties": {
+        "json": { "$ref": "#/definitions/relativeProvenancePath" },
+        "markdown": { "$ref": "#/definitions/relativeProvenancePath" },
+        "pack": { "$ref": "#/definitions/relativeProvenancePath" }
+      },
       "additionalProperties": true
     }
   },
-  "additionalProperties": true
+  "additionalProperties": true,
+  "definitions": {
+    "contextIdentifier": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Portable workspace identifier that is safe to use as one named path segment.",
+      "pattern": "^[A-Za-z0-9_][A-Za-z0-9._-]*$",
+      "not": {
+        "anyOf": [
+          { "enum": [".", ".."] },
+          { "pattern": "\\.\\." },
+          { "pattern": "[/\\\\:]" },
+          { "pattern": "\\.$" },
+          { "pattern": "^(?:[Cc][Oo][Nn]|[Pp][Rr][Nn]|[Aa][Uu][Xx]|[Nn][Uu][Ll]|[Cc][Oo][Mm][1-9]|[Ll][Pp][Tt][1-9])(?:\\..*)?$" }
+        ]
+      }
+    },
+    "relativeProvenancePath": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Normalized POSIX relative path. Knowledge-source provenance is relative to knowledge_root; generated context refs are relative to project_dir. Absolute paths, URIs/drives, backslashes, duplicate separators, and dot traversal segments are forbidden.",
+      "pattern": "^(?!/)(?![A-Za-z][A-Za-z0-9+.-]*:)(?!\\.\\.?/)[^\\\\]+$",
+      "not": {
+        "anyOf": [
+          { "enum": [".", ".."] },
+          { "pattern": "(^|/)\\.\\.(/|$)" },
+          { "pattern": "(^|/)\\.(/|$)" },
+          { "pattern": "//" },
+          { "pattern": "/$" }
+        ]
+      }
+    }
+  }
 }
