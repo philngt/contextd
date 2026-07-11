@@ -18,9 +18,18 @@ except ImportError:  # pragma: no cover - top-level script import path
 VALID_SEVERITIES = {"error", "warning", "info"}
 
 
-def _read_json(path: Path) -> Optional[Dict]:
+def _read_json(path: Path, allowed_root: Path) -> Optional[Dict]:
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
+        relative = path.relative_to(allowed_root)
+        safe = context_security.confined_child(
+            allowed_root, relative, "context policy", allow_symlink=False
+        )
+    except ValueError:
+        return None
+    if context_security.path_policy_reason(safe, logical_path=path):
+        return None
+    try:
+        return json.loads(safe.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError):
         return None
 
@@ -36,28 +45,37 @@ def _rules_from_payload(payload: object) -> List[Dict]:
 
 def load_policy_sources(wiki_root: Path, workspace: str, packs: Iterable[str]) -> List[Dict]:
     sources: List[Dict] = []
-    candidates: List[Path] = []
+    candidates: List[tuple[Path, Path]] = []
     try:
-        candidates.append(
-            context_security.workspace_dir(wiki_root, workspace)
-            / "policy"
-            / "context-policy.json"
-        )
-    except ValueError:
-        pass
+        workspace_root = context_security.workspace_dir(wiki_root, workspace)
+        candidates.append((
+            workspace_root / "policy" / "context-policy.json",
+            workspace_root,
+        ))
+    except ValueError as exc:
+        sources.append({
+            "path": "<workspace-policy>",
+            "error": f"invalid-workspace: {exc}",
+            "rules": [],
+        })
     for pack in packs:
         try:
-            candidates.append(
-                context_security.pack_dir(wiki_root, pack)
-                / "policy"
-                / "context-policy.json"
-            )
-        except ValueError:
+            pack_root = context_security.pack_dir(wiki_root, pack)
+            candidates.append((
+                pack_root / "policy" / "context-policy.json",
+                pack_root,
+            ))
+        except ValueError as exc:
+            sources.append({
+                "path": "<pack-policy>",
+                "error": f"invalid-pack: {exc}",
+                "rules": [],
+            })
             continue
-    for path in candidates:
+    for path, allowed_root in candidates:
         if not path.is_file():
             continue
-        payload = _read_json(path)
+        payload = _read_json(path, allowed_root)
         if payload is None:
             sources.append({
                 "path": _rel(path, wiki_root),
@@ -74,9 +92,9 @@ def load_policy_sources(wiki_root: Path, workspace: str, packs: Iterable[str]) -
 
 def _rel(path: Path, root: Path) -> str:
     try:
-        return path.relative_to(root).as_posix()
+        return context_security.root_relative_posix(path, root)
     except ValueError:
-        return path.as_posix()
+        return "<invalid-relative-path>"
 
 
 def _as_list(value: object) -> List[str]:

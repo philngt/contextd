@@ -38,7 +38,9 @@ PACKS_SECTION_RE = re.compile(
     r"^\s*##\s+Packs\s*$(.+?)(?=^\s*##\s|\Z)",
     re.MULTILINE | re.DOTALL | re.IGNORECASE,
 )
-PACK_LIST_ITEM_RE = re.compile(r"^\s*[-*]\s+([a-z0-9][\w\-]*)\s*$", re.MULTILINE)
+# Capture every declared list item. Validation happens separately so malformed
+# identifiers are blocking errors instead of disappearing from the selection.
+PACK_LIST_ITEM_RE = re.compile(r"^\s*[-*]\s+(.+?)\s*$", re.MULTILINE)
 
 
 @dataclass
@@ -47,6 +49,17 @@ class ConfigHit:
     kind: str
     project_dir: Path
     data: Dict
+
+
+class PackResolutionError(ValueError):
+    """Blocking active-pack resolution error with diagnostic selection data."""
+
+    def __init__(self, message: str, *, packs: Optional[List[str]] = None,
+                 source: Optional[str] = None, code: str = "invalid-pack"):
+        super().__init__(message)
+        self.packs = list(packs or [])
+        self.source = source
+        self.code = code
 
 
 def _read_json(path: Path) -> Dict:
@@ -106,19 +119,21 @@ def find_config(start_dir: Optional[Path] = None) -> Tuple[Optional[ConfigHit], 
     return selected, others
 
 
-def _raw_knowledge_root(data: Dict) -> Optional[str]:
+def _raw_knowledge_root(data: Dict) -> object:
     value = data.get("knowledge_root")
     if value:
         return value
     return data.get("wiki_root")
 
 
-def _raw_workspace(data: Dict) -> Optional[str]:
+def _raw_workspace(data: Dict) -> object:
     return data.get("workspace") or data.get("default_workspace")
 
 
-def _resolve_root(raw_value: Optional[str], base_dir: Path) -> Optional[Path]:
+def _resolve_root(raw_value: object, base_dir: Path) -> Optional[Path]:
     if not raw_value:
+        return None
+    if not isinstance(raw_value, str):
         return None
     p = Path(raw_value).expanduser()
     if p.is_absolute():
@@ -130,30 +145,157 @@ def parse_workspace_packs(workspace_md_path: Path) -> List[str]:
     """Read `## Packs` section from workspace.md and return pack names."""
     if not workspace_md_path.is_file():
         return []
-    text = workspace_md_path.read_text(encoding="utf-8")
+    if workspace_md_path.is_symlink():
+        raise ValueError(f"workspace.md must not be a symlink: {workspace_md_path}")
+    try:
+        text = workspace_md_path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as exc:
+        raise ValueError(f"Could not read workspace.md: {workspace_md_path}: {exc}") from exc
     m = PACKS_SECTION_RE.search(text)
     if not m:
         return []
     return PACK_LIST_ITEM_RE.findall(m.group(1))
 
 
-def get_effective_packs(config: Dict, workspace_md_path: Path) -> Tuple[List[str], str]:
+def get_effective_packs(config: Dict, workspace_md_path: Path) -> Tuple[List[object], str]:
     local = config.get("packs")
     if isinstance(local, list):
-        return [str(p) for p in local], "config"
+        # Preserve value types so a non-string entry cannot become a valid pack
+        # name through implicit coercion (for example, `123` -> `"123"`).
+        return list(local), "config"
     return parse_workspace_packs(workspace_md_path), "workspace.md"
 
 
-def _valid_pack_names(raw_packs: List[str], source: str,
-                      warnings: List[str]) -> List[str]:
+def _valid_pack_names(raw_packs: List[object], source: str) -> List[str]:
     packs: List[str] = []
+    errors: List[str] = []
     for raw_pack in raw_packs:
         pack_name, error = context_security.validate_context_name(raw_pack, "pack")
         if error or pack_name is None:
-            warnings.append(f"Invalid pack name from {source}: {raw_pack!r} ({error})")
+            errors.append(f"{raw_pack!r} ({error})")
             continue
         packs.append(pack_name)
+    if errors:
+        raise PackResolutionError(
+            f"Invalid pack name from {source}: " + "; ".join(errors),
+            source=source,
+        )
     return packs
+
+
+def _validated_workspace_md(ws_dir: Path) -> Path:
+    """Return a regular, non-aliased workspace.md for a named workspace."""
+    workspace_md = ws_dir / "workspace.md"
+    if not workspace_md.is_file():
+        raise ValueError(f"workspace.md missing: {workspace_md}")
+    if workspace_md.is_symlink():
+        raise ValueError(f"workspace.md must not be a symlink: {workspace_md}")
+    try:
+        return context_security.confined_child(
+            ws_dir, "workspace.md", "workspace.md", allow_symlink=False
+        )
+    except ValueError as exc:
+        raise ValueError(f"Invalid workspace.md: {exc}") from exc
+
+
+def resolve_workspace_packs(
+    knowledge_root: Path,
+    workspace: object,
+    *,
+    resolved: Optional[Dict] = None,
+    config: Optional[Dict] = None,
+) -> Tuple[List[str], str]:
+    """Resolve and validate effective packs for one exact workspace.
+
+    A caller-provided workspace equal to the already resolved workspace keeps
+    the codebase-level `config.packs` replacement semantics. Switching to a
+    different workspace uses that workspace's defaults from `workspace.md`.
+    Every selected pack must be a valid, non-aliased named root containing a
+    regular `pack.yaml`; otherwise the whole resolution fails closed.
+    """
+    root = knowledge_root.resolve()
+    ws_name, workspace_error = context_security.validate_context_name(
+        workspace, "workspace"
+    )
+    if workspace_error or ws_name is None:
+        raise ValueError(workspace_error or "invalid workspace")
+    ws_dir = context_security.workspace_dir(root, ws_name)
+    workspace_md = _validated_workspace_md(ws_dir)
+
+    if resolved is not None and ws_name == resolved.get("workspace"):
+        if resolved.get("error") in {"invalid-pack", "missing-pack"}:
+            raise ValueError("Resolved configuration contains an invalid active pack")
+        raw_packs: List[object] = list(resolved.get("packs") or [])
+        source = str(resolved.get("pack_source") or "resolved")
+    else:
+        raw_packs, source = get_effective_packs(config or {}, workspace_md)
+
+    packs = _valid_pack_names(raw_packs, source)
+    for pack_name in packs:
+        try:
+            pack_root = context_security.pack_dir(root, pack_name)
+            pack_manifest = context_security.confined_child(
+                pack_root, "pack.yaml", "pack manifest", allow_symlink=False
+            )
+        except ValueError as exc:
+            raise PackResolutionError(
+                f"Invalid active pack {pack_name!r}: {exc}",
+                packs=packs,
+                source=source,
+            ) from exc
+        if not pack_manifest.is_file():
+            raise PackResolutionError(
+                f"Active pack not found: {pack_name}",
+                packs=packs,
+                source=source,
+                code="missing-pack",
+            )
+    return packs, source
+
+
+def select_workspace_state(
+    resolved: Dict,
+    workspace: object = None,
+    *,
+    knowledge_root: Optional[Path] = None,
+) -> Tuple[Path, str, Path, List[str], str]:
+    """Select one workspace and its effective packs from a resolver result.
+
+    This is the common adapter boundary for CLI, renderers, and MCP. It keeps
+    local pack replacement semantics only when the target root/workspace are
+    the same state that produced ``resolved``. An explicit switch to another
+    workspace or root uses that target workspace's defaults.
+    """
+    root_raw = knowledge_root or resolved.get("knowledge_root") or resolved.get("wiki_root")
+    if not root_raw:
+        raise ValueError("Could not resolve knowledge_root")
+    root = Path(root_raw).expanduser().resolve()
+
+    target = workspace if workspace is not None else resolved.get("workspace")
+    ws_name, workspace_error = context_security.validate_context_name(target, "workspace")
+    if workspace_error or ws_name is None:
+        raise ValueError(workspace_error or "No workspace resolved")
+
+    ws_dir = context_security.workspace_dir(root, ws_name)
+    _validated_workspace_md(ws_dir)
+
+    resolved_root_raw = resolved.get("knowledge_root") or resolved.get("wiki_root")
+    same_root = False
+    if resolved_root_raw:
+        try:
+            same_root = Path(str(resolved_root_raw)).expanduser().resolve() == root
+        except (OSError, RuntimeError):
+            same_root = False
+    reuse_resolved = (
+        same_root
+        and ws_name == resolved.get("workspace")
+    )
+    packs, source = resolve_workspace_packs(
+        root,
+        ws_name,
+        resolved=resolved if reuse_resolved else None,
+    )
+    return root, ws_name, ws_dir, packs, source
 
 
 def resolve(cwd: Optional[Path] = None, require_workspace: bool = False) -> Dict:
@@ -205,19 +347,11 @@ def resolve(cwd: Optional[Path] = None, require_workspace: bool = False) -> Dict
             warnings.append(f"Ignoring lower-priority config: {hit.path}")
 
     cfg = selected.data
-    raw_workspace = _raw_workspace(cfg)
-    workspace, workspace_error = context_security.validate_context_name(raw_workspace, "workspace")
-    if workspace_error or workspace is None:
-        if raw_workspace:
-            warnings.append(f"Invalid workspace name: {raw_workspace!r} ({workspace_error})")
-        else:
-            warnings.append("Config has no workspace/default_workspace field.")
-        if require_workspace:
-            result["error"] = "invalid-workspace" if raw_workspace else "missing-workspace"
-        return result
-    result["workspace"] = workspace
-
     raw_root = _raw_knowledge_root(cfg)
+    if raw_root is not None and not isinstance(raw_root, str):
+        warnings.append("knowledge_root/wiki_root must be a string.")
+        result["error"] = "invalid-knowledge-root"
+        return result
     root = _resolve_root(raw_root, selected.project_dir)
     if root is None:
         for hit in _candidate_global_configs():
@@ -234,6 +368,23 @@ def resolve(cwd: Optional[Path] = None, require_workspace: bool = False) -> Dict
     result["knowledge_root"] = str(root)
     result["wiki_root"] = str(root)
 
+    # Resolve root diagnostics independently from workspace identity. A bad
+    # workspace must still block all workspace reads, but callers such as
+    # doctor/init need the valid root to explain available workspaces.
+    raw_workspace = _raw_workspace(cfg)
+    workspace, workspace_error = context_security.validate_context_name(
+        raw_workspace, "workspace"
+    )
+    if workspace_error or workspace is None:
+        if raw_workspace:
+            warnings.append(f"Invalid workspace name: {raw_workspace!r} ({workspace_error})")
+        else:
+            warnings.append("Config has no workspace/default_workspace field.")
+        if require_workspace:
+            result["error"] = "invalid-workspace" if raw_workspace else "missing-workspace"
+        return result
+    result["workspace"] = workspace
+
     try:
         ws_dir = context_security.workspace_dir(root, workspace)
     except ValueError as exc:
@@ -242,41 +393,54 @@ def resolve(cwd: Optional[Path] = None, require_workspace: bool = False) -> Dict
             result["error"] = "invalid-workspace"
         return result
 
-    if ws_dir.is_dir() and (ws_dir / "workspace.md").is_file():
+    workspace_md: Optional[Path] = None
+    if ws_dir.is_dir():
+        try:
+            workspace_md = _validated_workspace_md(ws_dir)
+        except ValueError as exc:
+            warnings.append(str(exc))
+    if workspace_md is not None:
         result["workspace_dir"] = str(ws_dir)
     else:
         result["workspace_dir"] = None
         if not ws_dir.is_dir():
             warnings.append(f"Workspace directory not found: {ws_dir}")
-        else:
-            warnings.append(f"workspace.md missing: {ws_dir / 'workspace.md'}")
         available = available_workspaces(root)
         if available:
             warnings.append("Available workspaces: " + ", ".join(available))
         if require_workspace:
             result["error"] = "missing-workspace-dir" if not ws_dir.is_dir() else "missing-workspace-md"
+        return result
 
-    workspace_md = ws_dir / "workspace.md"
-    raw_packs, source = get_effective_packs(cfg, workspace_md)
-    packs = _valid_pack_names(raw_packs, source, warnings)
+    try:
+        packs, source = resolve_workspace_packs(
+            root,
+            workspace,
+            config=cfg,
+        )
+    except ValueError as exc:
+        message = str(exc)
+        warnings.append(message)
+        result["packs"] = list(getattr(exc, "packs", []))
+        result["pack_source"] = getattr(exc, "source", None) or (
+            "config" if isinstance(cfg.get("packs"), list) else "workspace.md"
+        )
+        result["error"] = getattr(exc, "code", "invalid-pack")
+        return result
     result["packs"] = packs
     result["pack_source"] = source
-
-    for pack_name in packs:
-        try:
-            pack_root = context_security.pack_dir(root, pack_name)
-        except ValueError as exc:
-            warnings.append(f"Invalid pack path for {pack_name}: {exc}")
-            continue
-        if not (pack_root / "pack.yaml").is_file():
-            warnings.append(f"Active pack not found: {pack_name}")
 
     return result
 
 
 def available_workspaces(knowledge_root: Path) -> List[str]:
     try:
-        root = context_security.safe_child_path(knowledge_root, "workspaces")
+        root = context_security.confined_child(
+            knowledge_root,
+            "workspaces",
+            "workspaces root",
+            allow_symlink=False,
+        )
     except ValueError:
         return []
     if not root.is_dir():
@@ -286,6 +450,12 @@ def available_workspaces(knowledge_root: Path) -> List[str]:
         name, error = context_security.validate_context_name(path.name, "workspace")
         if error or name is None:
             continue
-        if path.is_dir() and context_security.is_relative_to(path, root):
-            names.append(name)
+        if not path.is_dir() or path.is_symlink():
+            continue
+        try:
+            ws_dir = context_security.workspace_dir(knowledge_root, name)
+            _validated_workspace_md(ws_dir)
+        except ValueError:
+            continue
+        names.append(name)
     return sorted(names)

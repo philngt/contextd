@@ -70,7 +70,7 @@ def resolve_workspace_context(
     file_path: Path,
     cli_workspace: Optional[str],
     cli_wiki_root: Optional[str],
-) -> Tuple[Optional[str], Optional[Path], Optional[str]]:
+) -> Tuple[Optional[str], Optional[Path], Optional[str], List[str], Optional[str]]:
     workspace = cli_workspace
     wiki_root = Path(cli_wiki_root).expanduser().resolve() if cli_wiki_root else None
     domain: Optional[str] = None
@@ -92,12 +92,42 @@ def resolve_workspace_context(
         if not workspace:
             workspace = cfg.get("workspace")
         domain = cfg.get("domain")
-    return workspace, wiki_root, domain
+    selected_packs: List[str] = []
+    state_error: Optional[str] = None
+    if workspace and wiki_root:
+        try:
+            wiki_root, workspace, _ws_dir, selected_packs, _source = (
+                contextd_resolver.select_workspace_state(
+                    resolved,
+                    workspace,
+                    knowledge_root=wiki_root,
+                )
+            )
+        except ValueError as exc:
+            state_error = str(exc)
+    return workspace, wiki_root, domain, selected_packs, state_error
 
 
 # ---------------------------------------------------------------------------
 # Knowledge loaders (best-effort)
 # ---------------------------------------------------------------------------
+
+def _workspace_text(ws_root: Path, relative: str, label: str) -> Optional[str]:
+    logical = ws_root / relative
+    try:
+        path = context_security.confined_child(
+            ws_root, relative, label, allow_symlink=False
+        )
+    except ValueError:
+        return None
+    if not path.is_file() or context_security.path_policy_reason(
+        path, logical_path=logical
+    ):
+        return None
+    try:
+        return path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return None
 
 TABLE_ROW_TYPE = re.compile(r"^\|\s*`?([a-zA-Z0-9_\-]+)`?\s*\|")
 WORKFLOW_STATE_TOKEN = re.compile(r"`([A-Z][A-Z0-9_]{2,})`")
@@ -110,10 +140,13 @@ def load_mqtt_registered_types(ws_root: Path) -> List[str]:
     pack rules consume it via ctx['mqtt_types']. It's a no-op for workspaces
     without the contract file.
     """
-    p = ws_root / "platform" / "contracts" / "mqtt-topic-contract.md"
-    if not p.is_file():
+    text = _workspace_text(
+        ws_root,
+        "platform/contracts/mqtt-topic-contract.md",
+        "MQTT contract",
+    )
+    if text is None:
         return []
-    text = p.read_text(encoding="utf-8")
     m = re.search(r"##\s*Registered Types\s*\n(.+?)(?:\n##|\Z)",
                   text, re.DOTALL | re.IGNORECASE)
     if not m:
@@ -138,15 +171,35 @@ def load_workflow_states(ws_root: Path, domain: Optional[str]) -> List[str]:
     if not domain:
         ddir = ws_root / "domains"
         if ddir.is_dir():
-            subs = [p for p in ddir.iterdir() if p.is_dir()]
+            subs = []
+            for candidate in ddir.iterdir():
+                name, error = context_security.validate_context_name(
+                    candidate.name, "domain"
+                )
+                if error or name is None or candidate.is_symlink():
+                    continue
+                try:
+                    safe = context_security.confined_child(
+                        ws_root,
+                        f"domains/{name}",
+                        "domain directory",
+                        allow_symlink=False,
+                    )
+                except ValueError:
+                    continue
+                if safe.is_dir():
+                    subs.append(safe)
             if len(subs) == 1:
                 domain = subs[0].name
     if not domain:
         return []
-    p = ws_root / "domains" / domain / "workflow.md"
-    if not p.is_file():
+    text = _workspace_text(
+        ws_root,
+        f"domains/{domain}/workflow.md",
+        "domain workflow",
+    )
+    if text is None:
         return []
-    text = p.read_text(encoding="utf-8")
     states = WORKFLOW_STATE_TOKEN.findall(text)
     seen = set()
     out = []
@@ -158,8 +211,9 @@ def load_workflow_states(ws_root: Path, domain: Optional[str]) -> List[str]:
 
 
 def load_workspace_rules(ws_root: Path) -> List[str]:
-    p = ws_root / "agents" / "pipeline" / "validator-rules.md"
-    return [str(p)] if p.is_file() else []
+    relative = "agents/pipeline/validator-rules.md"
+    text = _workspace_text(ws_root, relative, "workspace validator rules")
+    return [relative] if text is not None else []
 
 
 # ---------------------------------------------------------------------------
@@ -283,7 +337,8 @@ LINTABLE_EXT = {".java", ".kt", ".kts", ".scala", ".groovy",
 
 
 def run(file_path: Path, ws_root: Optional[Path], domain: Optional[str],
-        ws_name: Optional[str]) -> Tuple[List[Dict], Dict]:
+        ws_name: Optional[str], selected_pack_names: Optional[List[str]] = None,
+        context_error: Optional[str] = None) -> Tuple[List[Dict], Dict]:
     violations: List[Dict] = []
 
     if file_path.suffix.lower() not in LINTABLE_EXT:
@@ -306,6 +361,11 @@ def run(file_path: Path, ws_root: Optional[Path], domain: Optional[str],
         "active_packs": [],
     }
 
+    if context_error:
+        return [
+            _vio("context-resolution", "error", file_path, 0, "", context_error)
+        ], ctx
+
     # Resolve packs for the active workspace
     pack_rules = []
     active_pack_names: List[str] = []
@@ -314,14 +374,48 @@ def run(file_path: Path, ws_root: Optional[Path], domain: Optional[str],
             ws_dir = context_security.workspace_dir(ws_root, ws_name)
         except ValueError:
             ws_dir = None
-        if ws_dir and ws_dir.is_dir() and (ws_dir / "workspace.md").is_file():
+        workspace_md = None
+        if ws_dir and ws_dir.is_dir():
+            try:
+                workspace_md = context_security.confined_child(
+                    ws_dir, "workspace.md", "workspace.md", allow_symlink=False
+                )
+            except ValueError:
+                workspace_md = None
+        if workspace_md and workspace_md.is_file():
             ctx["mqtt_types"] = load_mqtt_registered_types(ws_dir)
             ctx["workflow_states"] = load_workflow_states(ws_dir, domain)
             ctx["workspace_rules_file"] = load_workspace_rules(ws_dir)
-        try:
-            packs = pack_loader.load_packs_for_workspace(ws_root, ws_name)
-        except RuntimeError as e:
-            return [_vio("pack-conflict", "error", file_path, 0, "", str(e))], ctx
+        if selected_pack_names is None:
+            try:
+                packs = pack_loader.load_packs_for_workspace(ws_root, ws_name)
+            except RuntimeError as e:
+                return [_vio("pack-conflict", "error", file_path, 0, "", str(e))], ctx
+        else:
+            packs = []
+            for pack_name in selected_pack_names:
+                pack = pack_loader.discover_pack(ws_root, pack_name)
+                if pack is None:
+                    return [
+                        _vio(
+                            "active-pack", "error", file_path, 0, "",
+                            f"Active pack not found or unsafe: {pack_name}",
+                        )
+                    ], ctx
+                packs.append(pack)
+            enabled = {pack.name for pack in packs}
+            for pack in packs:
+                conflict = next(
+                    (other for other in pack.conflicts_with if other in enabled),
+                    None,
+                )
+                if conflict:
+                    return [
+                        _vio(
+                            "pack-conflict", "error", file_path, 0, "",
+                            f"Pack conflict: {pack.name} conflicts with {conflict}",
+                        )
+                    ], ctx
         active_pack_names = [p.name for p in packs]
         ctx["active_packs"] = active_pack_names
         pack_rules = pack_loader.load_pack_validator_rules(packs)
@@ -363,11 +457,18 @@ def main(argv: List[str]) -> int:
         }), file=sys.stdout)
         return 2
 
-    ws_name, wiki_root, domain = resolve_workspace_context(
+    ws_name, wiki_root, domain, selected_packs, context_error = resolve_workspace_context(
         file_path, args.workspace, args.wiki_root
     )
 
-    violations, ctx = run(file_path, wiki_root, domain, ws_name)
+    violations, ctx = run(
+        file_path,
+        wiki_root,
+        domain,
+        ws_name,
+        selected_pack_names=selected_packs,
+        context_error=context_error,
+    )
 
     errors = sum(1 for v in violations if v["severity"] == "error")
     warnings = sum(1 for v in violations if v["severity"] == "warn")

@@ -13,7 +13,7 @@ sys.path.insert(0, str(SCRIPT_DIR))
 sys.path.insert(0, str(SCRIPT_DIR / "lib"))
 
 import cmd_resolve  # noqa: E402
-import context_security  # noqa: E402
+import contextd_resolver  # noqa: E402
 import task_context_engine  # noqa: E402
 
 
@@ -88,39 +88,15 @@ def run(
 
     start = Path(cwd).resolve() if cwd else None
     resolved = cmd_resolve.resolve(cwd=start, require_workspace=True)
-    if resolved.get("error"):
-        print(f"Error: {resolved['error']}", file=sys.stderr)
+    try:
+        wiki_root, ws, _ws_dir, packs, _pack_source = (
+            contextd_resolver.select_workspace_state(resolved, workspace)
+        )
+    except ValueError as exc:
+        print(f"Error: Could not resolve workspace state: {exc}", file=sys.stderr)
         for warning in resolved.get("warnings") or []:
             print(f"  - {warning}", file=sys.stderr)
         return 1
-
-    wiki_root_str = resolved.get("knowledge_root") or resolved.get("wiki_root")
-    if not wiki_root_str:
-        print("Error: Could not resolve knowledge_root.", file=sys.stderr)
-        return 1
-
-    wiki_root = Path(wiki_root_str).resolve()
-    ws = workspace or resolved.get("workspace")
-    if not ws:
-        print("Error: No workspace resolved. Specify --workspace.", file=sys.stderr)
-        return 1
-    try:
-        ws_dir = context_security.workspace_dir(wiki_root, ws)
-    except ValueError as exc:
-        print(f"Error: Invalid workspace: {exc}", file=sys.stderr)
-        return 1
-    if not ws_dir.is_dir():
-        print(f"Error: Workspace directory not found: {ws_dir}", file=sys.stderr)
-        return 1
-    if not (ws_dir / "workspace.md").is_file():
-        print(f"Error: workspace.md missing: {ws_dir / 'workspace.md'}", file=sys.stderr)
-        return 1
-
-    if workspace:
-        ws_md = ws_dir / "workspace.md"
-        packs, _ = cmd_resolve.get_effective_packs({}, ws_md)
-    else:
-        packs = resolved.get("packs") or []
 
     project_dir = Path(resolved.get("project_dir") or ".").resolve()
     payload = task_context_engine.build_context_explanation(

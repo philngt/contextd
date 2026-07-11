@@ -33,7 +33,7 @@ import generate_manifest  # noqa: E402
 import cmd_resolve  # noqa: E402
 import mcp_server  # noqa: E402
 import render_runtime  # noqa: E402
-from lib import contextd_resolver, pack_validation, task_context_engine  # noqa: E402
+from lib import contextd_resolver, find_engine, pack_validation, task_context_engine  # noqa: E402
 
 
 def _write(path: Path, text: str) -> None:
@@ -125,6 +125,22 @@ def test_pack_override_replace_semantics() -> None:
         print("  ok pack_override_replace_semantics")
 
 
+def test_workspace_pack_list_rejects_invalid_bullets() -> None:
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        ws = _workspace(root)
+        _write(ws / "workspace.md", "# Workspace\n\n## Packs\n\n- ../outside\n")
+        _write(root / ".contextd" / "config.json", json.dumps({
+            "workspace": "default",
+            "knowledge_root": ".",
+        }))
+        resolved = contextd_resolver.resolve(root, require_workspace=True)
+        assert resolved.get("error") == "invalid-pack", resolved
+        assert resolved.get("packs") == [], resolved
+        assert any("Invalid pack name" in warning for warning in resolved["warnings"]), resolved
+        print("  ok workspace_pack_list_rejects_invalid_bullets")
+
+
 def test_missing_workspace_lists_available() -> None:
     with tempfile.TemporaryDirectory() as td:
         root = Path(td)
@@ -149,6 +165,7 @@ def test_workspace_name_traversal_rejected() -> None:
         resolved = contextd_resolver.resolve(root, require_workspace=True)
         assert resolved["error"] == "invalid-workspace", resolved
         assert resolved["workspace_dir"] is None, resolved
+        assert resolved["knowledge_root"] == str(root.resolve()), resolved
         assert any("Invalid workspace name" in w for w in resolved["warnings"]), resolved
 
         try:
@@ -224,6 +241,41 @@ def test_context_artifact_and_materialized_pack() -> None:
         )
         assert changed["contextPack"]["packKey"] != first_key
         print("  ok context_artifact_and_materialized_pack")
+
+
+def test_materialize_context_rejects_symlink_write_boundary() -> None:
+    with tempfile.TemporaryDirectory() as td:
+        base = Path(td)
+        knowledge_root = base / "knowledge"
+        project_dir = base / "project"
+        outside = base / "outside-context"
+        _workspace(knowledge_root)
+        _pack(knowledge_root)
+        artifact = task_context_engine.build_context_artifact(
+            task="Implement demo feature",
+            wiki_root=knowledge_root,
+            workspace="default",
+            packs=["pack-demo"],
+            project_dir=project_dir,
+        )
+        (project_dir / ".contextd").mkdir(parents=True)
+        outside.mkdir()
+        try:
+            (project_dir / ".contextd" / "context").symlink_to(
+                outside, target_is_directory=True
+            )
+        except OSError:
+            print("  skip materialize_context_rejects_symlink_write_boundary")
+            return
+
+        try:
+            task_context_engine.materialize_context(artifact, project_dir)
+            raise AssertionError("materialization accepted a symlink write boundary")
+        except ValueError as exc:
+            assert "materialized context directory" in str(exc), exc
+            assert "escapes allowed root" in str(exc) or "symlink or junction" in str(exc), exc
+        assert not list(outside.iterdir()), list(outside.iterdir())
+        print("  ok materialize_context_rejects_symlink_write_boundary")
 
 
 def test_budget_report_and_explain_trace() -> None:
@@ -606,6 +658,174 @@ def test_evidence_glob_excludes_raw_sources() -> None:
         assert not any("/evidence/sources/" in path for path in paths), paths
         assert "PII and raw customer text" not in json.dumps(artifact, ensure_ascii=False)
         print("  ok evidence_glob_excludes_raw_sources")
+
+
+def test_knowledge_root_alias_keeps_relative_paths_and_globs() -> None:
+    with tempfile.TemporaryDirectory() as td:
+        base = Path(td)
+        root = base / "real-root"
+        alias = base / "root-alias"
+        _workspace(root)
+        _pack_with_retrieval(
+            root,
+            "pack-qc-glob",
+            {"test-execution": ["test execution", "evidence"]},
+            {"test-execution": "evidence/**/*.md"},
+        )
+        _write(root / "workspaces" / "default" / "evidence" / "qa" / "e1"
+               / "verified-facts.md", "# Verified Facts\n\n- Alias-safe evidence.\n")
+        try:
+            alias.symlink_to(root, target_is_directory=True)
+        except OSError:
+            print("  skip knowledge_root_alias_keeps_relative_paths_and_globs")
+            return
+
+        kwargs = {
+            "task": "summarize test execution evidence",
+            "workspace": "default",
+            "packs": ["pack-qc-glob"],
+            "project_dir": root,
+        }
+        via_real = task_context_engine.build_context_artifact(wiki_root=root, **kwargs)
+        via_alias = task_context_engine.build_context_artifact(wiki_root=alias, **kwargs)
+        paths = [
+            doc["path"]
+            for doc in via_alias["referenced_docs"] + via_alias.get("static_context", [])
+        ]
+        assert paths, via_alias
+        assert all(not Path(path).is_absolute() for path in paths), paths
+        assert all(path.startswith(("workspaces/", "packs/", "agents/")) for path in paths), paths
+        assert any(path.endswith("verified-facts.md") for path in paths), paths
+        assert via_alias["contextPack"]["packKey"] == via_real["contextPack"]["packKey"]
+        print("  ok knowledge_root_alias_keeps_relative_paths_and_globs")
+
+
+def test_evidence_symlink_to_raw_is_blocked() -> None:
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        _workspace(root)
+        _pack_with_retrieval(
+            root,
+            "pack-qc-glob",
+            {"test-execution": ["test execution", "evidence"]},
+            {"test-execution": "evidence/**/*.md"},
+        )
+        ws = root / "workspaces" / "default"
+        raw = ws / "evidence" / "sources" / "e1" / "raw.md"
+        alias = ws / "evidence" / "analysis" / "summary.md"
+        _write(raw, "# RAW CUSTOMER TRANSCRIPT\n\nSensitive source text.\n")
+        alias.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            alias.symlink_to(raw)
+        except OSError:
+            print("  skip evidence_symlink_to_raw_is_blocked")
+            return
+
+        artifact = task_context_engine.build_context_artifact(
+            task="summarize test execution evidence",
+            wiki_root=root,
+            workspace="default",
+            packs=["pack-qc-glob"],
+            project_dir=root,
+        )
+        payload = json.dumps(artifact, ensure_ascii=False)
+        assert "RAW CUSTOMER TRANSCRIPT" not in payload, payload
+        assert not any(
+            doc["path"].endswith("evidence/analysis/summary.md")
+            for doc in artifact["referenced_docs"]
+        ), artifact["referenced_docs"]
+        print("  ok evidence_symlink_to_raw_is_blocked")
+
+
+def test_workspace_child_symlink_cannot_cross_workspace() -> None:
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        default_ws = _workspace(root, "default")
+        other_ws = _workspace(root, "other")
+        other_patterns = other_ws / "platform" / "patterns"
+        _write(other_patterns / "other-secret.md", "# OTHER WORKSPACE MARKER\n")
+        default_patterns = default_ws / "platform" / "patterns"
+        shutil.rmtree(default_patterns)
+        try:
+            default_patterns.symlink_to(other_patterns, target_is_directory=True)
+        except OSError:
+            print("  skip workspace_child_symlink_cannot_cross_workspace")
+            return
+
+        artifact = task_context_engine.build_context_artifact(
+            task="Implement demo feature",
+            wiki_root=root,
+            workspace="default",
+            packs=[],
+            project_dir=root,
+        )
+        payload = json.dumps(artifact, ensure_ascii=False)
+        assert "OTHER WORKSPACE MARKER" not in payload, payload
+        assert not any(
+            doc["path"].startswith("workspaces/other/")
+            for doc in artifact["referenced_docs"]
+        ), artifact["referenced_docs"]
+
+        search_results = find_engine.find(
+            "OTHER WORKSPACE MARKER",
+            root,
+            workspace="default",
+            packs=[],
+            limit=10,
+        )
+        assert not any(
+            "OTHER WORKSPACE MARKER" in item["content"]
+            for _score, item in search_results
+        ), search_results
+
+        _pack(root)
+        bundle = cmd_bundle.bundle(
+            workspace="default",
+            knowledge_root=root,
+            include_packs=False,
+        )
+        assert "OTHER WORKSPACE MARKER" not in bundle, bundle
+
+        options = mcp_server.ServerOptions(
+            knowledge_root=root,
+            workspace="default",
+            cwd=root,
+        )
+        resources = mcp_server.list_resources(options, {})["resources"]
+        assert not any("other-secret.md" in item["uri"] for item in resources), resources
+        print("  ok workspace_child_symlink_cannot_cross_workspace")
+
+
+def test_contract_directory_symlink_cannot_cross_workspace() -> None:
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        default_ws = _workspace(root, "default")
+        other_ws = _workspace(root, "other")
+        other_contracts = other_ws / "platform" / "contracts"
+        _write(other_contracts / "other.v1.contract.json", '{"marker":"OTHER CONTRACT"}\n')
+        default_contracts = default_ws / "platform" / "contracts"
+        shutil.rmtree(default_contracts)
+        try:
+            default_contracts.symlink_to(other_contracts, target_is_directory=True)
+        except OSError:
+            print("  skip contract_directory_symlink_cannot_cross_workspace")
+            return
+
+        path, warnings = task_context_engine.resolve_contract_path(
+            "other.v1", root, "default", []
+        )
+        assert path is None, path
+        assert any("named root" in warning for warning in warnings), warnings
+
+        artifact = task_context_engine.build_context_artifact(
+            task="Implement other contract feature",
+            wiki_root=root,
+            workspace="default",
+            packs=[],
+            project_dir=root,
+        )
+        assert "OTHER CONTRACT" not in json.dumps(artifact, ensure_ascii=False), artifact
+        print("  ok contract_directory_symlink_cannot_cross_workspace")
 
 
 def test_contract_index_missing_target_is_gap() -> None:
@@ -1114,6 +1334,7 @@ def test_installer_dry_run_knowledge_root() -> None:
         root = base / "knowledge"
         home.mkdir()
         _workspace(root)
+        _pack(root)
         env = os.environ.copy()
         env["HOME"] = str(home)
 
@@ -1191,6 +1412,7 @@ def test_migrate_config_roundtrip_and_no_clobber() -> None:
     with tempfile.TemporaryDirectory() as td:
         root = Path(td)
         _workspace(root, "legacy")
+        _pack(root)
         _write(root / ".claude" / "wiki.json", json.dumps({
             "project": "legacy-app",
             "workspace": "legacy",
@@ -1221,6 +1443,100 @@ def test_migrate_config_roundtrip_and_no_clobber() -> None:
         code, out, err = _run_migrate(cwd=str(root), force=True)
         assert code == 0, (out, err)
     print("  ok migrate_config_roundtrip_and_no_clobber")
+
+
+def test_public_config_surfaces_reject_invalid_names() -> None:
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        _workspace(root)
+        _pack(root)
+
+        mcp_config = subprocess.run(
+            [
+                sys.executable, "-m", "scripts.cli", "mcp-config",
+                "--client", "codex",
+                "--knowledge-root", str(root),
+                "--workspace", "../outside",
+            ],
+            cwd=str(ROOT),
+            text=True,
+            capture_output=True,
+        )
+        assert mcp_config.returncode != 0, (mcp_config.stdout, mcp_config.stderr)
+        assert "invalid workspace" in mcp_config.stderr.lower(), mcp_config.stderr
+
+        legacy = root / "legacy-project"
+        _write(legacy / ".claude" / "wiki.json", json.dumps({
+            "workspace": "../outside",
+            "wiki_root": str(root),
+        }))
+        stdout = io.StringIO()
+        stderr = io.StringIO()
+        with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+            migrate_code = cmd_migrate_config.run(cwd=str(legacy), dry_run=True)
+        assert migrate_code == 1, (stdout.getvalue(), stderr.getvalue())
+        assert "invalid workspace" in stderr.getvalue().lower(), stderr.getvalue()
+
+        home = root / "home"
+        home.mkdir()
+        env = os.environ.copy()
+        env["HOME"] = str(home)
+        for invalid_workspace in ("../outside", "CON", "trailing."):
+            installer = subprocess.run(
+                [
+                    "bash", str(ROOT / "scripts" / "install-to-claude.sh"),
+                    "--knowledge-root", str(root),
+                    "--default-workspace", invalid_workspace,
+                    "--dry-run",
+                ],
+                cwd=str(ROOT),
+                text=True,
+                capture_output=True,
+                stdin=subprocess.DEVNULL,
+                env=env,
+            )
+            assert installer.returncode != 0, (installer.stdout, installer.stderr)
+            assert "invalid default workspace" in installer.stderr.lower(), installer.stderr
+
+        _write(
+            root / "workspaces" / "default" / "workspace.md",
+            "# Workspace\n\n## Packs\n\n- pack-missing\n",
+        )
+        broken_mcp_config = subprocess.run(
+            [
+                sys.executable, "-m", "scripts.cli", "mcp-config",
+                "--client", "codex",
+                "--knowledge-root", str(root),
+                "--workspace", "default",
+            ],
+            cwd=str(ROOT),
+            text=True,
+            capture_output=True,
+        )
+        assert broken_mcp_config.returncode != 0, (
+            broken_mcp_config.stdout, broken_mcp_config.stderr
+        )
+        assert "pack state" in broken_mcp_config.stderr.lower(), broken_mcp_config.stderr
+
+        broken_installer = subprocess.run(
+            [
+                "bash", str(ROOT / "scripts" / "install-to-claude.sh"),
+                "--knowledge-root", str(root),
+                "--default-workspace", "default",
+                "--dry-run",
+            ],
+            cwd=str(ROOT),
+            text=True,
+            capture_output=True,
+            stdin=subprocess.DEVNULL,
+            env=env,
+        )
+        assert broken_installer.returncode != 0, (
+            broken_installer.stdout, broken_installer.stderr
+        )
+        assert "pack state" in broken_installer.stderr.lower(), broken_installer.stderr
+        assert not (home / ".contextd" / "config.json").exists()
+    print("  ok public_config_surfaces_reject_invalid_names")
 
 
 def test_trace_uses_contextd_runs_and_renderer_fallback() -> None:
@@ -1349,9 +1665,11 @@ def run() -> int:
         test_contextd_config_wins,
         test_legacy_claude_still_resolves,
         test_pack_override_replace_semantics,
+        test_workspace_pack_list_rejects_invalid_bullets,
         test_missing_workspace_lists_available,
         test_workspace_name_traversal_rejected,
         test_context_artifact_and_materialized_pack,
+        test_materialize_context_rejects_symlink_write_boundary,
         test_budget_report_and_explain_trace,
         test_policy_check_pass_and_failures,
         test_pack_validation_catches_bad_pack_api,
@@ -1363,6 +1681,10 @@ def run() -> int:
         test_qc_evidence_retrieval_excludes_raw_sources,
         test_retrieval_map_safety_and_redaction,
         test_evidence_glob_excludes_raw_sources,
+        test_knowledge_root_alias_keeps_relative_paths_and_globs,
+        test_evidence_symlink_to_raw_is_blocked,
+        test_workspace_child_symlink_cannot_cross_workspace,
+        test_contract_directory_symlink_cannot_cross_workspace,
         test_contract_index_missing_target_is_gap,
         test_contract_index_traversal_is_blocking_gap,
         test_workspace_symlink_file_outside_is_not_read,
@@ -1377,6 +1699,7 @@ def run() -> int:
         test_mcp_server_smoke,
         test_installer_dry_run_knowledge_root,
         test_migrate_config_roundtrip_and_no_clobber,
+        test_public_config_surfaces_reject_invalid_names,
         test_trace_uses_contextd_runs_and_renderer_fallback,
         test_package_release_dry_run_shape,
     ]

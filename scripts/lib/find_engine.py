@@ -29,7 +29,35 @@ H1_RE = re.compile(r"^#\s+(.+)$", re.MULTILINE)
 H2_H3_RE = re.compile(r"^(##|###)\s+(.+)$", re.MULTILINE)
 
 
+def _safe_read_path(path: Path, allowed_root: Path) -> Optional[Path]:
+    """Return a canonical regular file without following any symlink."""
+    try:
+        relative = path.relative_to(allowed_root)
+        safe = context_security.confined_child(
+            allowed_root, relative, "search document", allow_symlink=False
+        )
+    except (OSError, RuntimeError, ValueError):
+        return None
+    if not safe.is_file():
+        return None
+    if context_security.path_policy_reason(safe, logical_path=path):
+        return None
+    return safe
+
+
+def _safe_directory(path: Path, allowed_root: Path, label: str) -> Optional[Path]:
+    try:
+        relative = path.relative_to(allowed_root)
+        safe = context_security.confined_child(
+            allowed_root, relative, label, allow_symlink=False
+        )
+    except (OSError, RuntimeError, ValueError):
+        return None
+    return safe if safe.is_dir() else None
+
+
 def _load_file(path: Path) -> Optional[str]:
+    """Read a path already accepted by `_safe_read_path`."""
     try:
         if path.stat().st_size > SKIP_SIZE_BYTES:
             return None
@@ -82,7 +110,7 @@ def _score_for_keyword(keyword: str, text: str, filename: str) -> int:
 
 def _kind_from_path(path: Path, wiki_root: Path, workspace: Optional[str]) -> str:
     """Determine the kind/category of a markdown file."""
-    rel = path.relative_to(wiki_root)
+    rel = Path(context_security.root_relative_posix(path, wiki_root))
     parts = rel.parts
 
     if "contracts" in parts:
@@ -122,18 +150,24 @@ def build_corpus(
 
     def _add(paths, kind_override=None, allowed_root: Optional[Path] = None):
         for p in paths:
-            if allowed_root is not None and not context_security.is_relative_to(p, allowed_root):
+            if allowed_root is None:
                 continue
-            if p.stat().st_size > SKIP_SIZE_BYTES:
+            safe = _safe_read_path(p, allowed_root)
+            if safe is None:
                 continue
-            content = _load_file(p)
+            content = _load_file(safe)
             if content is None:
                 continue
+            try:
+                relative_path = context_security.root_relative_posix(safe, wiki_root)
+            except ValueError:
+                continue
             corpus.append({
-                "path": p,
-                "kind": kind_override or _kind_from_path(p, wiki_root, workspace),
+                "path": safe,
+                "relative_path": relative_path,
+                "kind": kind_override or _kind_from_path(safe, wiki_root, workspace),
                 "content": content,
-                "filename": p.stem,
+                "filename": safe.stem,
             })
 
     # Engine
@@ -149,10 +183,24 @@ def build_corpus(
     # Packs
     if packs is None:
         # All packs
-        packs_dir = wiki_root / "packs"
-        if packs_dir.is_dir():
-            for pack_dir in packs_dir.iterdir():
-                if not pack_dir.is_dir() or not context_security.is_relative_to(pack_dir, packs_dir):
+        try:
+            packs_dir = context_security.confined_child(
+                wiki_root, "packs", "packs root", allow_symlink=False
+            )
+        except ValueError:
+            packs_dir = None
+        if packs_dir is not None and packs_dir.is_dir():
+            for candidate in packs_dir.iterdir():
+                if candidate.is_symlink():
+                    continue
+                pack_name, error = context_security.validate_context_name(candidate.name, "pack")
+                if error or pack_name is None:
+                    continue
+                try:
+                    pack_dir = context_security.pack_dir(wiki_root, pack_name)
+                except ValueError:
+                    continue
+                if not pack_dir.is_dir():
                     continue
                 pack_files = [
                     pack_dir / "agents" / "constraints.md",
@@ -185,26 +233,46 @@ def build_corpus(
             return corpus
         if ws_dir.is_dir():
             # contracts
-            contracts_dir = ws_dir / "platform" / "contracts"
-            if contracts_dir.is_dir():
-                _add(list(contracts_dir.glob("*.md")), "contract", contracts_dir)
+            contracts_dir = _safe_directory(
+                ws_dir / "platform" / "contracts", ws_dir, "contracts directory"
+            )
+            if contracts_dir is not None:
+                _add(list(contracts_dir.glob("*.md")), "contract", ws_dir)
             # patterns
-            patterns_dir = ws_dir / "platform" / "patterns"
-            if patterns_dir.is_dir():
-                _add(list(patterns_dir.glob("*.md")), "pattern", patterns_dir)
+            patterns_dir = _safe_directory(
+                ws_dir / "platform" / "patterns", ws_dir, "patterns directory"
+            )
+            if patterns_dir is not None:
+                _add(list(patterns_dir.glob("*.md")), "pattern", ws_dir)
             # services
-            services_dir = ws_dir / "projects"
-            if services_dir.is_dir():
+            services_dir = _safe_directory(
+                ws_dir / "projects", ws_dir, "projects directory"
+            )
+            if services_dir is not None:
                 for proj_dir in services_dir.iterdir():
-                    if not context_security.is_relative_to(proj_dir, services_dir):
+                    if proj_dir.is_symlink():
                         continue
-                    svc_dir = proj_dir / "services"
-                    if svc_dir.is_dir():
-                        _add(list(svc_dir.glob("*.md")), "service", svc_dir)
+                    try:
+                        rel_project = proj_dir.relative_to(ws_dir)
+                        safe_project = context_security.confined_child(
+                            ws_dir,
+                            rel_project,
+                            "project directory",
+                            allow_symlink=False,
+                        )
+                    except ValueError:
+                        continue
+                    svc_dir = _safe_directory(
+                        safe_project / "services", ws_dir, "services directory"
+                    )
+                    if svc_dir is not None:
+                        _add(list(svc_dir.glob("*.md")), "service", ws_dir)
             # runbooks
-            runbooks_dir = ws_dir / "runbooks"
-            if runbooks_dir.is_dir():
-                _add(list(runbooks_dir.glob("*.md")), "runbook", runbooks_dir)
+            runbooks_dir = _safe_directory(
+                ws_dir / "runbooks", ws_dir, "runbooks directory"
+            )
+            if runbooks_dir is not None:
+                _add(list(runbooks_dir.glob("*.md")), "runbook", ws_dir)
 
     return corpus
 
@@ -233,7 +301,7 @@ def find(
             results.append((score, item))
 
     # Sort by score desc
-    results.sort(key=lambda x: (-x[0], x[1]["kind"], x[1]["path"].name))
+    results.sort(key=lambda x: (-x[0], x[1]["kind"], x[1]["relative_path"]))
     return results[:limit]
 
 
@@ -262,7 +330,8 @@ def format_results(results: List[Tuple[int, Dict]], query: str, workspace: Optio
     lines = [f'Found {len(results)} match{"es" if len(results) != 1 else ""} for "{query}"'
                f' (workspace: {workspace or "all"}):\n']
     for i, (score, item) in enumerate(results, 1):
-        lines.append(f"{i}. [{item['kind']}] ({item['kind']}) {item['path']}")
+        display_path = item["path"]
+        lines.append(f"{i}. [{item['kind']}] ({item['kind']}) {display_path}")
         # first non-empty line
         for line in item["content"].splitlines():
             if line.strip():

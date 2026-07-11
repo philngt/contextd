@@ -20,28 +20,59 @@ sys.path.insert(0, str(SCRIPT_DIR / "lib"))
 
 import cmd_resolve  # noqa: E402
 import context_security  # noqa: E402
+import contextd_resolver  # noqa: E402
+
+
+def _confined_file(path: Path, allowed_root: Path, label: str) -> Optional[Path]:
+    try:
+        relative = path.relative_to(allowed_root)
+        safe = context_security.confined_child(
+            allowed_root, relative, label, allow_symlink=False
+        )
+    except (OSError, RuntimeError, ValueError):
+        return None
+    if not safe.is_file():
+        return None
+    if context_security.path_policy_reason(safe, logical_path=path):
+        return None
+    return safe
 
 
 def _collect_workspace_files(ws_dir: Path) -> List[Path]:
     """Collect all markdown files from a workspace directory."""
     files: List[Path] = []
-    for pattern in [
-        "platform/contracts/*.md",
-        "platform/patterns/*.md",
-        "projects/**/services/*.md",
-        "runbooks/*.md",
-        "domains/**/*.md",
-        "decisions/**/*.md",
-        "agents/**/*.md",
-        "patterns-index.md",
-        "workspace.md",
-    ]:
+    scan_specs = [
+        ("platform/contracts", "*.md"),
+        ("platform/patterns", "*.md"),
+        ("projects", "**/services/*.md"),
+        ("runbooks", "*.md"),
+        ("domains", "**/*.md"),
+        ("decisions", "**/*.md"),
+        ("agents", "**/*.md"),
+    ]
+    for directory, pattern in scan_specs:
+        try:
+            scan_root = context_security.confined_child(
+                ws_dir,
+                directory,
+                "workspace bundle directory",
+                allow_symlink=False,
+            )
+        except ValueError:
+            continue
+        if not scan_root.is_dir():
+            continue
         files.extend(
             sorted(
-                p for p in ws_dir.glob(pattern)
-                if p.is_file() and context_security.is_relative_to(p, ws_dir)
+                safe
+                for p in scan_root.glob(pattern)
+                if (safe := _confined_file(p, ws_dir, "workspace document")) is not None
             )
         )
+    for filename in ("patterns-index.md", "workspace.md"):
+        safe = _confined_file(ws_dir / filename, ws_dir, "workspace document")
+        if safe is not None:
+            files.append(safe)
     return files
 
 
@@ -62,8 +93,8 @@ def _collect_pack_files(wiki_root: Path, pack_name: str) -> List[Path]:
         "agents/pipeline/retrieval-map.md",
         "README.md",
     ]:
-        p = pack_dir / rel
-        if p.is_file():
+        p = _confined_file(pack_dir / rel, pack_dir, "pack document")
+        if p is not None:
             files.append(p)
     return files
 
@@ -77,15 +108,18 @@ def _collect_engine_files(wiki_root: Path) -> List[Path]:
         "agents/coding-rules.md",
         "agents/cross-cutting-principles.md",
     ]:
-        p = wiki_root / rel
-        if p.is_file():
+        p = _confined_file(wiki_root / rel, wiki_root, "engine document")
+        if p is not None:
             files.append(p)
     return files
 
 
-def _read_md(path: Path) -> Optional[str]:
+def _read_md(path: Path, allowed_root: Path) -> Optional[str]:
+    safe = _confined_file(path, allowed_root, "bundle document")
+    if safe is None:
+        return None
     try:
-        return path.read_text(encoding="utf-8")
+        return safe.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError):
         return None
 
@@ -101,48 +135,50 @@ def bundle(
     packs_override: Optional[List[str]] = None,
 ) -> str:
     """Build a single markdown bundle. Returns the bundle content."""
-    resolved = cmd_resolve.resolve(cwd=cwd)
-    wiki_root_str = str(knowledge_root) if knowledge_root else (
-        resolved.get("knowledge_root") or resolved.get("wiki_root")
-    )
-    if not wiki_root_str:
-        raise RuntimeError("Could not resolve knowledge_root. Run `contextd resolve` to diagnose.")
-
-    wiki_root = Path(wiki_root_str).resolve()
-    ws = workspace or resolved.get("workspace")
-    if not ws:
-        raise RuntimeError("No workspace resolved. Specify --workspace or run `contextd resolve`.")
-
+    resolved = cmd_resolve.resolve(cwd=cwd, require_workspace=True)
     try:
-        ws_dir = context_security.workspace_dir(wiki_root, ws)
+        wiki_root, ws, ws_dir, packs, _pack_source = (
+            contextd_resolver.select_workspace_state(
+                resolved,
+                workspace,
+                knowledge_root=knowledge_root,
+            )
+        )
     except ValueError as exc:
-        raise RuntimeError(f"Invalid workspace: {exc}") from exc
+        _safe_workspace, workspace_error = context_security.validate_context_name(
+            workspace if workspace is not None else resolved.get("workspace"),
+            "workspace",
+        )
+        if workspace_error:
+            raise RuntimeError(f"Invalid workspace: {workspace_error}") from exc
+        raise RuntimeError(f"Could not resolve workspace state: {exc}") from exc
 
     if packs_override is not None:
-        packs = packs_override
-    elif workspace:
-        ws_md = ws_dir / "workspace.md"
-        packs, _ = cmd_resolve.get_effective_packs({}, ws_md)
-    else:
-        packs = resolved.get("packs") or []
-
-    if not ws_dir.is_dir():
-        raise RuntimeError(f"Workspace directory not found: {ws_dir}")
-    if not (ws_dir / "workspace.md").is_file():
-        raise RuntimeError(f"workspace.md missing: {ws_dir / 'workspace.md'}")
+        try:
+            packs, _ = contextd_resolver.resolve_workspace_packs(
+                wiki_root,
+                ws,
+                resolved={
+                    "workspace": ws,
+                    "packs": list(packs_override),
+                    "pack_source": "override",
+                },
+            )
+        except ValueError as exc:
+            raise RuntimeError(f"Invalid pack override: {exc}") from exc
 
     parts: List[str] = []
     parts.append(f"# contextd Bundle — workspace: {ws}")
-    parts.append(f"Generated from: {wiki_root}")
+    parts.append("Generated from: knowledge_root")
     parts.append("")
 
     # Workspace files
     ws_files = _collect_workspace_files(ws_dir)
     for p in ws_files:
-        content = _read_md(p)
+        content = _read_md(p, ws_dir)
         if content is None:
             continue
-        rel = p.relative_to(wiki_root)
+        rel = context_security.root_relative_posix(p, wiki_root)
         parts.append(f"---")
         parts.append(f"# Source: {rel}")
         parts.append("")
@@ -154,10 +190,11 @@ def bundle(
         for pack_name in packs:
             pack_files = _collect_pack_files(wiki_root, pack_name)
             for p in pack_files:
-                content = _read_md(p)
+                pack_root = context_security.pack_dir(wiki_root, pack_name)
+                content = _read_md(p, pack_root)
                 if content is None:
                     continue
-                rel = p.relative_to(wiki_root)
+                rel = context_security.root_relative_posix(p, wiki_root)
                 parts.append(f"---")
                 parts.append(f"# Source: {rel}")
                 parts.append("")
@@ -168,10 +205,10 @@ def bundle(
     if include_engine:
         engine_files = _collect_engine_files(wiki_root)
         for p in engine_files:
-            content = _read_md(p)
+            content = _read_md(p, wiki_root)
             if content is None:
                 continue
-            rel = p.relative_to(wiki_root)
+            rel = context_security.root_relative_posix(p, wiki_root)
             parts.append(f"---")
             parts.append(f"# Source: {rel}")
             parts.append("")

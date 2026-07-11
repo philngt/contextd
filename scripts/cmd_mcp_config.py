@@ -10,6 +10,12 @@ import sys
 from pathlib import Path
 from typing import Dict, List, Optional
 
+SCRIPT_DIR = Path(__file__).resolve().parent
+sys.path.insert(0, str(SCRIPT_DIR / "lib"))
+
+import context_security  # noqa: E402
+import contextd_resolver  # noqa: E402
+
 
 VALID_CLIENTS = {"claude", "cursor", "codex", "all"}
 
@@ -79,12 +85,45 @@ def run(client: str, knowledge_root: str, workspace: Optional[str] = None,
     if not root.is_dir():
         print(f"Error: knowledge_root does not exist: {root}", file=sys.stderr)
         return 1
-    if not (root / "workspaces").is_dir():
+    try:
+        workspaces_root = context_security.confined_child(
+            root, "workspaces", "workspaces root", allow_symlink=False
+        )
+    except ValueError as exc:
+        print(f"Error: invalid knowledge_root: {exc}", file=sys.stderr)
+        return 1
+    if not workspaces_root.is_dir():
         print(f"Error: knowledge_root must contain workspaces/: {root}", file=sys.stderr)
         return 1
+    safe_workspace = None
+    if workspace is not None:
+        safe_workspace, workspace_error = context_security.validate_context_name(
+            workspace, "workspace"
+        )
+        if workspace_error or safe_workspace is None:
+            print(f"Error: invalid workspace: {workspace_error}", file=sys.stderr)
+            return 1
+        try:
+            ws_dir = context_security.workspace_dir(root, safe_workspace)
+            workspace_md = context_security.confined_child(
+                ws_dir, "workspace.md", "workspace.md", allow_symlink=False
+            )
+        except ValueError as exc:
+            print(f"Error: invalid workspace: {exc}", file=sys.stderr)
+            return 1
+        if not workspace_md.is_file():
+            print(f"Error: workspace.md missing: {workspace_md}", file=sys.stderr)
+            return 1
+        try:
+            contextd_resolver.resolve_workspace_packs(
+                root, safe_workspace, config={}
+            )
+        except ValueError as exc:
+            print(f"Error: invalid workspace pack state: {exc}", file=sys.stderr)
+            return 1
 
     try:
-        sys.stdout.write(render(client, root, workspace=workspace, command=command))
+        sys.stdout.write(render(client, root, workspace=safe_workspace, command=command))
     except ValueError as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 2

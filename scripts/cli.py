@@ -434,7 +434,10 @@ def _init_cmd(args) -> int:
     raw_root = args.knowledge_root
     project_dir = start
     try:
-        inferred_workspace_md = context_security.workspace_dir(project_dir, workspace) / "workspace.md"
+        inferred_ws_dir = context_security.workspace_dir(project_dir, workspace)
+        inferred_workspace_md = context_security.confined_child(
+            inferred_ws_dir, "workspace.md", "workspace.md", allow_symlink=False
+        )
     except ValueError:
         inferred_workspace_md = None
 
@@ -468,7 +471,10 @@ def _init_cmd(args) -> int:
         return 1
 
     try:
-        workspace_md = context_security.workspace_dir(root, workspace) / "workspace.md"
+        ws_dir = context_security.workspace_dir(root, workspace)
+        workspace_md = context_security.confined_child(
+            ws_dir, "workspace.md", "workspace.md", allow_symlink=False
+        )
     except ValueError as exc:
         print(f"Error: invalid workspace path: {exc}", file=sys.stderr)
         return 1
@@ -490,7 +496,16 @@ def _init_cmd(args) -> int:
         print(rendered, end="")
         return 0
 
-    out_path = project_dir / ".contextd" / "config.json"
+    try:
+        out_path = context_security.confined_child(
+            project_dir,
+            ".contextd/config.json",
+            "project config",
+            allow_symlink=False,
+        )
+    except ValueError as exc:
+        print(f"Error: unsafe config target: {exc}", file=sys.stderr)
+        return 1
     if out_path.is_file() and not args.force:
         print(f"Error: {out_path} already exists. Use --force to overwrite.", file=sys.stderr)
         return 1

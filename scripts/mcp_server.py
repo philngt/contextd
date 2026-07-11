@@ -138,15 +138,6 @@ def _available_workspaces(root: Optional[Path]) -> List[str]:
     return contextd_resolver.available_workspaces(root)
 
 
-def _workspace_packs(root: Path, workspace: str, resolved: Dict[str, Any],
-                     workspace_overridden: bool) -> Tuple[List[str], str]:
-    if not workspace_overridden:
-        return list(resolved.get("packs") or []), str(resolved.get("pack_source") or "resolved")
-    workspace_md = context_security.workspace_dir(root, workspace) / "workspace.md"
-    packs, source = cmd_resolve.get_effective_packs({}, workspace_md)
-    return packs, source
-
-
 def resolve_state(options: ServerOptions, cwd: Optional[str] = None,
                   workspace: Optional[str] = None,
                   require_workspace: bool = False) -> ResolvedState:
@@ -164,7 +155,6 @@ def resolve_state(options: ServerOptions, cwd: Optional[str] = None,
         resolved["wiki_root"] = str(root)
 
     selected_workspace = workspace or options.workspace or resolved.get("workspace")
-    workspace_overridden = bool(workspace or options.workspace)
     if selected_workspace:
         safe_workspace, workspace_error = context_security.validate_context_name(
             selected_workspace, "workspace"
@@ -189,23 +179,6 @@ def resolve_state(options: ServerOptions, cwd: Optional[str] = None,
     project_dir_raw = resolved.get("project_dir")
     project_dir = Path(str(project_dir_raw)).expanduser().resolve() if project_dir_raw else start_dir
 
-    if root is not None and selected_workspace:
-        try:
-            ws_dir = context_security.workspace_dir(root, selected_workspace)
-        except ValueError as exc:
-            warnings.append(str(exc))
-            resolved["workspace_dir"] = None
-            resolved["error"] = "invalid-workspace"
-            if require_workspace:
-                raise ToolExecutionError(str(exc), {
-                    "workspace": selected_workspace,
-                    "available_workspaces": _available_workspaces(root),
-                })
-        else:
-            resolved["workspace_dir"] = (
-                str(ws_dir) if ws_dir.is_dir() and (ws_dir / "workspace.md").is_file() else None
-            )
-
     if require_workspace:
         if root is None:
             raise ToolExecutionError("Could not resolve knowledge_root.", {
@@ -224,37 +197,44 @@ def resolve_state(options: ServerOptions, cwd: Optional[str] = None,
                 "available_workspaces": _available_workspaces(root),
                 "warnings": warnings,
             })
-        ws_dir = context_security.workspace_dir(root, selected_workspace)
-        if not ws_dir.is_dir():
-            raise ToolExecutionError(f"Workspace directory not found: {ws_dir}", {
-                "workspace": selected_workspace,
-                "available_workspaces": _available_workspaces(root),
-            })
-        if not (ws_dir / "workspace.md").is_file():
-            raise ToolExecutionError(f"workspace.md missing: {ws_dir / 'workspace.md'}", {
-                "workspace": selected_workspace,
-                "available_workspaces": _available_workspaces(root),
-            })
 
     packs: List[str] = []
     if root is not None and selected_workspace:
-        packs, pack_source = _workspace_packs(root, selected_workspace, resolved, workspace_overridden)
-        resolved["packs"] = packs
-        resolved["pack_source"] = pack_source
-        if root:
-            for pack_name in packs:
-                try:
-                    pack_root = context_security.pack_dir(root, pack_name)
-                except ValueError as exc:
-                    msg = f"Invalid pack path for {pack_name}: {exc}"
-                    if msg not in warnings:
-                        warnings.append(msg)
-                    continue
-                if (pack_root / "pack.yaml").is_file():
-                    continue
-                msg = f"Active pack not found: {pack_name}"
-                if msg not in warnings:
-                    warnings.append(msg)
+        try:
+            root, selected_workspace, ws_dir, packs, pack_source = (
+                contextd_resolver.select_workspace_state(
+                    resolved,
+                    selected_workspace,
+                    knowledge_root=root,
+                )
+            )
+        except ValueError as exc:
+            message = f"Could not resolve workspace state: {exc}"
+            if message not in warnings:
+                warnings.append(message)
+            resolved["workspace_dir"] = None
+            resolved["packs"] = []
+            resolved["error"] = "invalid-workspace-state"
+            if require_workspace:
+                raise ToolExecutionError(message, {
+                    "workspace": selected_workspace,
+                    "available_workspaces": _available_workspaces(root),
+                    "warnings": warnings,
+                }) from exc
+            packs = []
+        else:
+            resolved.pop("error", None)
+            resolved["knowledge_root"] = str(root)
+            resolved["wiki_root"] = str(root)
+            resolved["workspace"] = selected_workspace
+            resolved["workspace_dir"] = str(ws_dir)
+            resolved["packs"] = packs
+            resolved["pack_source"] = pack_source
+    elif require_workspace:
+        raise ToolExecutionError("No workspace state available.", {
+            "workspace": selected_workspace,
+            "warnings": warnings,
+        })
     resolved["warnings"] = warnings
 
     return ResolvedState(
@@ -354,10 +334,7 @@ def _validate_no_extra(arguments: Dict[str, Any], allowed: Iterable[str]) -> Non
 
 
 def _relative_or_abs(path: Path, root: Path) -> str:
-    try:
-        return path.relative_to(root).as_posix()
-    except ValueError:
-        return str(path)
+    return context_security.root_relative_posix(path, root)
 
 
 def _mime_type(path: Path) -> str:
@@ -370,12 +347,12 @@ def _mime_type(path: Path) -> str:
     return "text/markdown"
 
 
-def _resource_allowed(path: Path) -> bool:
+def _resource_allowed(path: Path, *, logical_path: Optional[Path] = None) -> bool:
     if not path.is_file():
         return False
     if path.suffix not in {".md", ".json", ".yaml", ".yml", ".txt"}:
         return False
-    if context_security.block_reason(path):
+    if context_security.path_policy_reason(path, logical_path=logical_path):
         return False
     parts = set(path.parts)
     if {".git", "node_modules", "__pycache__"}.intersection(parts):
@@ -385,16 +362,32 @@ def _resource_allowed(path: Path) -> bool:
     return True
 
 
+def _confined_resource(path: Path, allowed_root: Path) -> Optional[Path]:
+    try:
+        relative = path.relative_to(allowed_root)
+        safe = context_security.confined_child(
+            allowed_root, relative, "MCP resource", allow_symlink=False
+        )
+    except (OSError, RuntimeError, ValueError):
+        return None
+    if not _resource_allowed(safe, logical_path=path):
+        return None
+    return safe
+
+
 def _add_resource(resources: Dict[str, Dict[str, Any]], uri: str, path: Path,
-                  name: str, description: str) -> None:
-    if not _resource_allowed(path):
+                  allowed_root: Path, name: str, description: str) -> None:
+    safe = _confined_resource(path, allowed_root)
+    if safe is None:
         return
     resources[uri] = {
         "uri": uri,
         "name": name,
         "description": description,
-        "mimeType": _mime_type(path),
-        "_path": path,
+        "mimeType": _mime_type(safe),
+        "_path": safe,
+        "_logical_path": path,
+        "_root": allowed_root,
     }
 
 
@@ -404,16 +397,16 @@ def _resource_map(options: ServerOptions, cwd: Optional[str] = None) -> Dict[str
     resources: Dict[str, Dict[str, Any]] = {}
 
     ws_dir = context_security.workspace_dir(state.knowledge_root, state.workspace)
-    for path in sorted(ws_dir.rglob("*")):
-        if not context_security.is_relative_to(path, ws_dir):
+    for logical_path in sorted(ws_dir.rglob("*")):
+        path = _confined_resource(logical_path, ws_dir)
+        if path is None:
             continue
-        if not _resource_allowed(path):
-            continue
-        rel = path.relative_to(ws_dir).as_posix()
+        rel = context_security.root_relative_posix(path, ws_dir)
         _add_resource(
             resources,
             f"contextd://workspace/{state.workspace}/{rel}",
-            path,
+            logical_path,
+            ws_dir,
             f"{state.workspace}/{rel}",
             "Active workspace document",
         )
@@ -425,16 +418,16 @@ def _resource_map(options: ServerOptions, cwd: Optional[str] = None) -> Dict[str
             continue
         if not pack_dir.is_dir():
             continue
-        for path in sorted(pack_dir.rglob("*")):
-            if not context_security.is_relative_to(path, pack_dir):
+        for logical_path in sorted(pack_dir.rglob("*")):
+            path = _confined_resource(logical_path, pack_dir)
+            if path is None:
                 continue
-            if not _resource_allowed(path):
-                continue
-            rel = path.relative_to(pack_dir).as_posix()
+            rel = context_security.root_relative_posix(path, pack_dir)
             _add_resource(
                 resources,
                 f"contextd://pack/{pack}/{rel}",
-                path,
+                logical_path,
+                pack_dir,
                 f"{pack}/{rel}",
                 "Active pack document",
             )
@@ -445,6 +438,7 @@ def _resource_map(options: ServerOptions, cwd: Optional[str] = None) -> Dict[str
             resources,
             f"contextd://docs/{doc_name}",
             path,
+            state.knowledge_root,
             f"docs/{doc_name}",
             "contextd runtime documentation",
         )
@@ -456,6 +450,7 @@ def _resource_map(options: ServerOptions, cwd: Optional[str] = None) -> Dict[str
             resources,
             f"contextd://context/{filename}",
             path,
+            state.project_dir,
             f"context/{filename}",
             "Materialized current task artifact",
         )
@@ -467,7 +462,7 @@ def list_resources(options: ServerOptions, params: Dict[str, Any]) -> Dict[str, 
     _validate_no_extra(params, {"cwd", "cursor"})
     resources = []
     for entry in _resource_map(options, cwd=params.get("cwd")).values():
-        public = {k: v for k, v in entry.items() if k != "_path"}
+        public = {k: v for k, v in entry.items() if not k.startswith("_")}
         resources.append(public)
     resources.sort(key=lambda item: item["uri"])
     return {"resources": resources}
@@ -482,7 +477,9 @@ def read_resource(options: ServerOptions, params: Dict[str, Any]) -> Dict[str, A
     entry = resources.get(uri)
     if not entry:
         raise ValueError(f"Unknown or unavailable resource: {uri}")
-    path = entry["_path"]
+    path = _confined_resource(entry["_logical_path"], entry["_root"])
+    if path is None or path != entry["_path"]:
+        raise ValueError(f"Resource is no longer safely available: {uri}")
     return {
         "contents": [
             {
@@ -539,6 +536,13 @@ def get_prompt(params: Dict[str, Any]) -> Dict[str, Any]:
         raise ValueError("params.arguments must be an object")
     task = str(arguments.get("task") or "<task>")
     workspace = str(arguments.get("workspace") or "").strip()
+    if workspace:
+        safe_workspace, workspace_error = context_security.validate_context_name(
+            workspace, "workspace"
+        )
+        if workspace_error or safe_workspace is None:
+            raise ValueError(f"Invalid workspace: {workspace_error}")
+        workspace = safe_workspace
     workspace_flag = f" --workspace {workspace}" if workspace else ""
     commands = {
         "contextd.build_task_context": (
@@ -606,7 +610,9 @@ def call_tool(name: str, arguments: Dict[str, Any], options: ServerOptions) -> D
             matches.append({
                 "score": score,
                 "kind": item["kind"],
-                "path": _relative_or_abs(path, state.knowledge_root),
+                "path": item.get("relative_path") or _relative_or_abs(
+                    path, state.knowledge_root
+                ),
                 "absolute_path": str(path),
                 "filename": item["filename"],
             })
@@ -662,12 +668,13 @@ def call_tool(name: str, arguments: Dict[str, Any], options: ServerOptions) -> D
             state.workspace,
             state.packs,
         )
+        relative_path = _relative_or_abs(path, state.knowledge_root) if path else None
         payload = {
             "contract_id": contract_id,
             "workspace": state.workspace,
             "knowledge_root": str(state.knowledge_root),
             "path": str(path) if path else None,
-            "relative_path": _relative_or_abs(path, state.knowledge_root) if path else None,
+            "relative_path": relative_path,
             "warnings": state.warnings + warnings,
         }
         if path is None:

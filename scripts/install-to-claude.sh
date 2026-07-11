@@ -177,9 +177,44 @@ if [[ ! -d "$KNOWLEDGE_ROOT" ]]; then
   echo "Error: knowledge_root does not exist: $KNOWLEDGE_ROOT" >&2
   exit 1
 fi
-if [[ ! -d "$KNOWLEDGE_ROOT/workspaces" ]]; then
+if [[ ! -d "$KNOWLEDGE_ROOT/workspaces" || -L "$KNOWLEDGE_ROOT/workspaces" ]]; then
   echo "Error: knowledge_root must contain workspaces/: $KNOWLEDGE_ROOT" >&2
   exit 1
+fi
+
+if [[ -n "$DEFAULT_WORKSPACE" ]]; then
+  if [[ ! "$DEFAULT_WORKSPACE" =~ ^[A-Za-z0-9_][A-Za-z0-9._-]*$ \
+        || "$DEFAULT_WORKSPACE" == *..* \
+        || "$DEFAULT_WORKSPACE" == *:* \
+        || "$DEFAULT_WORKSPACE" == *. ]]; then
+    echo "Error: invalid default workspace: $DEFAULT_WORKSPACE" >&2
+    exit 1
+  fi
+  DEFAULT_WORKSPACE_BASE="${DEFAULT_WORKSPACE%%.*}"
+  DEFAULT_WORKSPACE_BASE_LOWER="$(printf '%s' "$DEFAULT_WORKSPACE_BASE" | tr '[:upper:]' '[:lower:]')"
+  case "$DEFAULT_WORKSPACE_BASE_LOWER" in
+    con|prn|aux|nul|com[1-9]|lpt[1-9])
+      echo "Error: invalid default workspace: $DEFAULT_WORKSPACE" >&2
+      exit 1
+      ;;
+  esac
+  DEFAULT_WORKSPACE_DIR="$KNOWLEDGE_ROOT/workspaces/$DEFAULT_WORKSPACE"
+  if [[ ! -d "$DEFAULT_WORKSPACE_DIR" || -L "$DEFAULT_WORKSPACE_DIR" ]]; then
+    echo "Error: default workspace not found or is an alias: $DEFAULT_WORKSPACE" >&2
+    exit 1
+  fi
+  if [[ ! -f "$DEFAULT_WORKSPACE_DIR/workspace.md" \
+        || -L "$DEFAULT_WORKSPACE_DIR/workspace.md" ]]; then
+    echo "Error: workspace.md missing or aliased: $DEFAULT_WORKSPACE_DIR/workspace.md" >&2
+    exit 1
+  fi
+  if ! python3 "$ENGINE_ROOT/scripts/cmd_mcp_config.py" \
+      --client codex \
+      --knowledge-root "$KNOWLEDGE_ROOT" \
+      --workspace "$DEFAULT_WORKSPACE" >/dev/null; then
+    echo "Error: invalid default workspace pack state: $DEFAULT_WORKSPACE" >&2
+    exit 1
+  fi
 fi
 if ! git -C "$KNOWLEDGE_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   echo "Warning: knowledge_root is not a git repo: $KNOWLEDGE_ROOT" >&2

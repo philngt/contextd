@@ -17,6 +17,12 @@ import sys
 from pathlib import Path
 from typing import Optional
 
+SCRIPT_DIR = Path(__file__).resolve().parent
+sys.path.insert(0, str(SCRIPT_DIR / "lib"))
+
+import context_security  # noqa: E402
+import contextd_resolver  # noqa: E402
+
 
 def resolve_dir(raw: Optional[str], default: Path) -> Path:
     if not raw:
@@ -41,9 +47,44 @@ def validate_knowledge_root(knowledge_root: Path) -> None:
     if not knowledge_root.is_dir():
         print(f"Error: knowledge_root does not exist: {knowledge_root}", file=sys.stderr)
         sys.exit(1)
-    if not (knowledge_root / "workspaces").is_dir():
+    try:
+        workspaces_root = context_security.confined_child(
+            knowledge_root, "workspaces", "workspaces root", allow_symlink=False
+        )
+    except ValueError as exc:
+        print(f"Error: invalid knowledge_root: {exc}", file=sys.stderr)
+        sys.exit(1)
+    if not workspaces_root.is_dir():
         print(f"Error: knowledge_root must contain workspaces/: {knowledge_root}", file=sys.stderr)
         sys.exit(1)
+
+
+def validate_default_workspace(knowledge_root: Path, workspace: Optional[str]) -> Optional[str]:
+    if workspace is None:
+        return None
+    safe, error = context_security.validate_context_name(workspace, "default workspace")
+    if error or safe is None:
+        print(f"Error: invalid default workspace: {error}", file=sys.stderr)
+        sys.exit(1)
+    try:
+        ws_dir = context_security.workspace_dir(knowledge_root, safe)
+        workspace_md = context_security.confined_child(
+            ws_dir, "workspace.md", "workspace.md", allow_symlink=False
+        )
+    except ValueError as exc:
+        print(f"Error: invalid default workspace: {exc}", file=sys.stderr)
+        sys.exit(1)
+    if not workspace_md.is_file():
+        print(f"Error: workspace.md missing: {workspace_md}", file=sys.stderr)
+        sys.exit(1)
+    try:
+        contextd_resolver.resolve_workspace_packs(
+            knowledge_root, safe, config={}
+        )
+    except ValueError as exc:
+        print(f"Error: invalid default workspace pack state: {exc}", file=sys.stderr)
+        sys.exit(1)
+    return safe
 
 
 def sync_file(src: Path, dst: Path, label: str, dry_run: bool) -> None:
@@ -223,6 +264,9 @@ def main() -> None:
 
     knowledge_root = resolve_dir(args.knowledge_root, engine_root)
     validate_knowledge_root(knowledge_root)
+    args.default_workspace = validate_default_workspace(
+        knowledge_root, args.default_workspace
+    )
 
     if args.print_mcp_config:
         sys.exit(print_mcp_config(

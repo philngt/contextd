@@ -22,6 +22,7 @@ sys.path.insert(0, str(SCRIPT_DIR / "lib"))
 import cmd_resolve  # noqa: E402
 import cmd_bundle  # noqa: E402
 import context_security  # noqa: E402
+import contextd_resolver  # noqa: E402
 
 REPO_ROOT = SCRIPT_DIR.parent
 
@@ -29,6 +30,20 @@ REPO_ROOT = SCRIPT_DIR.parent
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+def _confined_file(path: Path, allowed_root: Path, label: str) -> Optional[Path]:
+    try:
+        relative = path.relative_to(allowed_root)
+        safe = context_security.confined_child(
+            allowed_root, relative, label, allow_symlink=False
+        )
+    except (OSError, RuntimeError, ValueError):
+        return None
+    if not safe.is_file():
+        return None
+    if context_security.path_policy_reason(safe, logical_path=path):
+        return None
+    return safe
 
 def _load_manifest() -> Optional[Dict]:
     # PyInstaller onefile bundle: resources extracted to sys._MEIPASS
@@ -54,19 +69,33 @@ def _collect_workspace_files(wiki_root: Path, workspace: str) -> Dict[str, str]:
         return {}
 
     files: Dict[str, str] = {}
-    for pattern in [
-        "platform/contracts/*.md",
-        "platform/patterns/*.md",
-        "projects/**/services/*.md",
-        "runbooks/*.md",
-        "domains/**/*.md",
-        "decisions/**/*.md",
-    ]:
-        for p in ws_dir.glob(pattern):
-            if not context_security.is_relative_to(p, ws_dir):
+    scan_specs = [
+        ("platform/contracts", "*.md"),
+        ("platform/patterns", "*.md"),
+        ("projects", "**/services/*.md"),
+        ("runbooks", "*.md"),
+        ("domains", "**/*.md"),
+        ("decisions", "**/*.md"),
+    ]
+    for directory, pattern in scan_specs:
+        try:
+            scan_root = context_security.confined_child(
+                ws_dir,
+                directory,
+                "workspace export directory",
+                allow_symlink=False,
+            )
+        except ValueError:
+            continue
+        if not scan_root.is_dir():
+            continue
+        for p in scan_root.glob(pattern):
+            safe = _confined_file(p, ws_dir, "workspace export document")
+            if safe is None:
                 continue
             try:
-                files[str(p.relative_to(wiki_root))] = p.read_text(encoding="utf-8")
+                rel = context_security.root_relative_posix(safe, wiki_root)
+                files[rel] = safe.read_text(encoding="utf-8")
             except (OSError, UnicodeDecodeError):
                 pass
     return files
@@ -81,8 +110,8 @@ def _collect_engine_files(wiki_root: Path) -> Dict[str, str]:
         "agents/coding-rules.md",
         "agents/cross-cutting-principles.md",
     ]:
-        p = wiki_root / rel
-        if p.is_file():
+        p = _confined_file(wiki_root / rel, wiki_root, "engine export document")
+        if p is not None:
             files[rel] = p.read_text(encoding="utf-8")
     return files
 
@@ -102,9 +131,10 @@ def _collect_pack_files(wiki_root: Path, pack_name: str) -> Dict[str, str]:
         "agents/common-pitfalls.md",
         "README.md",
     ]:
-        p = pack_dir / rel
-        if p.is_file() and context_security.is_relative_to(p, pack_dir):
-            files[str(p.relative_to(wiki_root))] = p.read_text(encoding="utf-8")
+        p = _confined_file(pack_dir / rel, pack_dir, "pack export document")
+        if p is not None:
+            output_path = context_security.root_relative_posix(p, wiki_root)
+            files[output_path] = p.read_text(encoding="utf-8")
     return files
 
 
@@ -395,33 +425,55 @@ def render_codex_instructions(manifest: Dict, workspace: str, wiki_root: Path,
         ws_dir = context_security.workspace_dir(wiki_root, workspace)
     except ValueError:
         ws_dir = wiki_root / "workspaces" / "__invalid__"
-    contracts_dir = ws_dir / "platform" / "contracts"
+    try:
+        contracts_dir = context_security.confined_child(
+            ws_dir,
+            "platform/contracts",
+            "contracts directory",
+            allow_symlink=False,
+        )
+    except ValueError:
+        contracts_dir = ws_dir / "__invalid-contracts__"
     if contracts_dir.is_dir():
         lines.append("## Key Contracts")
         for p in sorted(contracts_dir.glob("*.md"))[:5]:
-            if not context_security.is_relative_to(p, contracts_dir):
+            safe = _confined_file(p, ws_dir, "contract export document")
+            if safe is None:
                 continue
-            content = p.read_text(encoding="utf-8")[:800]
-            lines.append(f"### {p.stem}")
+            content = safe.read_text(encoding="utf-8")[:800]
+            lines.append(f"### {safe.stem}")
             lines.append(content)
             lines.append("")
 
     # Key patterns
-    patterns_dir = ws_dir / "platform" / "patterns"
+    try:
+        patterns_dir = context_security.confined_child(
+            ws_dir,
+            "platform/patterns",
+            "patterns directory",
+            allow_symlink=False,
+        )
+    except ValueError:
+        patterns_dir = ws_dir / "__invalid-patterns__"
     if patterns_dir.is_dir():
         lines.append("## Key Patterns")
         for p in sorted(patterns_dir.glob("*.md"))[:5]:
-            if not context_security.is_relative_to(p, patterns_dir):
+            safe = _confined_file(p, ws_dir, "pattern export document")
+            if safe is None:
                 continue
-            content = p.read_text(encoding="utf-8")[:800]
-            lines.append(f"### {p.stem}")
+            content = safe.read_text(encoding="utf-8")[:800]
+            lines.append(f"### {safe.stem}")
             lines.append(content)
             lines.append("")
 
     # Engine system prompt excerpt
     if include_engine:
-        system_prompt = wiki_root / "agents" / "system-prompt.md"
-        if system_prompt.is_file():
+        system_prompt = _confined_file(
+            wiki_root / "agents" / "system-prompt.md",
+            wiki_root,
+            "engine system prompt",
+        )
+        if system_prompt is not None:
             lines.append("## System Prompt")
             lines.append(system_prompt.read_text(encoding="utf-8")[:1200])
             lines.append("")
@@ -459,35 +511,13 @@ def render(runtime: str, workspace: Optional[str] = None,
     if manifest is None:
         raise RuntimeError("Manifest not found. Run `python scripts/generate_manifest.py` first.")
 
-    resolved = cmd_resolve.resolve()
-    wiki_root_str = resolved.get("knowledge_root") or resolved.get("wiki_root")
-    if not wiki_root_str:
-        raise RuntimeError("Could not resolve knowledge_root.")
-
-    wiki_root = Path(wiki_root_str).resolve()
-    resolved_ws = resolved.get("workspace")
-    ws = workspace or resolved_ws
-
-    if not ws:
-        raise RuntimeError("No workspace resolved. Specify --workspace.")
+    resolved = cmd_resolve.resolve(require_workspace=True)
     try:
-        ws_dir = context_security.workspace_dir(wiki_root, ws)
+        wiki_root, ws, _ws_dir, packs, _pack_source = (
+            contextd_resolver.select_workspace_state(resolved, workspace)
+        )
     except ValueError as exc:
-        raise RuntimeError(f"Invalid workspace: {exc}") from exc
-    if not ws_dir.is_dir():
-        raise RuntimeError(f"Workspace directory not found: {ws_dir}")
-    if not (ws_dir / "workspace.md").is_file():
-        raise RuntimeError(f"workspace.md missing: {ws_dir / 'workspace.md'}")
-
-    # If workspace is overridden, read packs from that workspace's workspace.md
-    if workspace and workspace != resolved_ws:
-        ws_md = ws_dir / "workspace.md"
-        if ws_md.is_file():
-            packs, _ = cmd_resolve.get_effective_packs({}, ws_md)
-        else:
-            packs = []
-    else:
-        packs = resolved.get("packs") or []
+        raise RuntimeError(f"Could not resolve workspace state: {exc}") from exc
 
     return renderer(manifest, ws, wiki_root, packs, include_engine)
 

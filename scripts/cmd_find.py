@@ -18,6 +18,7 @@ sys.path.insert(0, str(SCRIPT_DIR / "lib"))
 
 import cmd_resolve  # noqa: E402
 import context_security  # noqa: E402
+import contextd_resolver  # noqa: E402
 import find_engine  # noqa: E402
 
 
@@ -30,35 +31,18 @@ def run(query: str, workspace: str | None = None, limit: int = 5, fmt: str = "te
         return 1
 
     # Resolve workspace context
-    resolved = cmd_resolve.resolve()
-    wiki_root_str = resolved.get("knowledge_root") or resolved.get("wiki_root")
-    if not wiki_root_str:
+    resolved = cmd_resolve.resolve(require_workspace=True)
+    try:
+        wiki_root, ws, _ws_dir, packs, _pack_source = (
+            contextd_resolver.select_workspace_state(resolved, workspace)
+        )
+    except ValueError as exc:
+        message = f"Could not resolve workspace state: {exc}"
         if fmt == "json":
-            print(json.dumps({"error": "Could not resolve knowledge_root"}, ensure_ascii=False))
+            print(json.dumps({"error": message}, ensure_ascii=False))
         else:
-            print("Error: Could not resolve knowledge_root. Run `contextd resolve` to diagnose.", file=sys.stderr)
+            print(f"Error: {message}", file=sys.stderr)
         return 1
-
-    wiki_root = Path(wiki_root_str).resolve()
-    ws = workspace or resolved.get("workspace")
-    packs = resolved.get("packs") or []
-    if ws:
-        try:
-            ws_dir = context_security.workspace_dir(wiki_root, ws)
-        except ValueError as exc:
-            message = f"Invalid workspace: {exc}"
-            if fmt == "json":
-                print(json.dumps({"error": message}, ensure_ascii=False))
-            else:
-                print(f"Error: {message}", file=sys.stderr)
-            return 1
-        if not ws_dir.is_dir() or not (ws_dir / "workspace.md").is_file():
-            message = f"Workspace not available: {ws}"
-            if fmt == "json":
-                print(json.dumps({"error": message}, ensure_ascii=False))
-            else:
-                print(f"Error: {message}", file=sys.stderr)
-            return 1
 
     results = find_engine.find(query, wiki_root, workspace=ws, packs=packs, limit=limit)
 
@@ -69,6 +53,9 @@ def run(query: str, workspace: str | None = None, limit: int = 5, fmt: str = "te
                 "score": score,
                 "kind": item["kind"],
                 "path": str(item["path"]),
+                "relative_path": item.get("relative_path") or context_security.root_relative_posix(
+                    Path(item["path"]), wiki_root
+                ),
                 "filename": item["filename"],
             })
         out = {

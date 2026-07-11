@@ -17,12 +17,22 @@ sys.path.insert(0, str(SCRIPT_DIR / "lib"))
 
 import cmd_resolve  # noqa: E402
 import context_security  # noqa: E402
+import contextd_resolver  # noqa: E402
 import task_context_engine  # noqa: E402
 
 
-def _load_fixture(path: Path) -> Dict | None:
+def _load_fixture(path: Path, allowed_root: Path) -> Dict | None:
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
+        relative = path.relative_to(allowed_root)
+        safe = context_security.confined_child(
+            allowed_root, relative, "evaluation fixture", allow_symlink=False
+        )
+    except ValueError:
+        return None
+    if context_security.path_policy_reason(safe, logical_path=path):
+        return None
+    try:
+        return json.loads(safe.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError):
         return None
 
@@ -73,15 +83,37 @@ def _score_fixture(fixture: Dict, artifact: Dict) -> Dict:
 
 def _fixture_paths(wiki_root: Path, workspace: str) -> List[Path]:
     try:
-        base = context_security.workspace_dir(wiki_root, workspace) / "eval" / "golden-tasks"
+        ws_dir = context_security.workspace_dir(wiki_root, workspace)
+        base = context_security.confined_child(
+            ws_dir,
+            "eval/golden-tasks",
+            "evaluation fixture directory",
+            allow_symlink=False,
+        )
     except ValueError:
         return []
     if not base.is_dir():
         return []
     return sorted(
-        p for p in base.glob("*.json")
-        if p.is_file() and context_security.is_relative_to(p, base)
+        safe
+        for p in base.glob("*.json")
+        if (
+            safe := _confined_fixture(p, ws_dir)
+        ) is not None
     )
+
+
+def _confined_fixture(path: Path, allowed_root: Path) -> Path | None:
+    try:
+        relative = path.relative_to(allowed_root)
+        safe = context_security.confined_child(
+            allowed_root, relative, "evaluation fixture", allow_symlink=False
+        )
+    except ValueError:
+        return None
+    if not safe.is_file() or context_security.path_policy_reason(safe, logical_path=path):
+        return None
+    return safe
 
 
 def _render_text(report: Dict) -> str:
@@ -114,46 +146,59 @@ def run(golden: bool = False, workspace: str | None = None, fmt: str = "json",
         return 1
     start = Path(cwd).resolve() if cwd else None
     resolved = cmd_resolve.resolve(cwd=start, require_workspace=True)
-    if resolved.get("error"):
-        print(f"Error: {resolved['error']}", file=sys.stderr)
-        return 1
-    root_raw = resolved.get("knowledge_root") or resolved.get("wiki_root")
-    if not root_raw:
-        print("Error: Could not resolve knowledge_root.", file=sys.stderr)
-        return 1
-    wiki_root = Path(str(root_raw)).resolve()
-    ws = workspace or resolved.get("workspace")
-    if not ws:
-        print("Error: No workspace resolved.", file=sys.stderr)
-        return 1
     try:
-        ws_dir = context_security.workspace_dir(wiki_root, ws)
+        wiki_root, ws, ws_dir, default_packs, _pack_source = (
+            contextd_resolver.select_workspace_state(resolved, workspace)
+        )
     except ValueError as exc:
-        print(f"Error: Invalid workspace: {exc}", file=sys.stderr)
+        print(f"Error: Could not resolve workspace state: {exc}", file=sys.stderr)
         return 1
-    if not ws_dir.is_dir() or not (ws_dir / "workspace.md").is_file():
-        print(f"Error: Workspace not available: {ws}", file=sys.stderr)
-        return 1
-    default_packs = resolved.get("packs") or []
     results: List[Dict] = []
     load_errors: List[Dict] = []
     for path in _fixture_paths(wiki_root, ws):
-        fixture = _load_fixture(path)
+        fixture_path = context_security.root_relative_posix(path, wiki_root)
+        fixture = _load_fixture(path, ws_dir)
         if fixture is None:
-            load_errors.append({"path": path.relative_to(wiki_root).as_posix(), "error": "invalid-json"})
+            load_errors.append({"path": fixture_path, "error": "invalid-json-or-unsafe-path"})
+            continue
+        fixture_workspace = fixture.get("workspace") or ws
+        if fixture_workspace != ws:
+            load_errors.append({
+                "path": fixture_path,
+                "error": f"cross-workspace fixture rejected: {fixture_workspace!r}",
+            })
             continue
         task = str(fixture.get("task") or "")
-        packs = [str(pack) for pack in fixture.get("packs") or default_packs]
+        raw_packs = fixture.get("packs")
+        if raw_packs is None:
+            packs = default_packs
+        elif not isinstance(raw_packs, list):
+            load_errors.append({"path": fixture_path, "error": "packs must be an array"})
+            continue
+        else:
+            try:
+                packs, _ = contextd_resolver.resolve_workspace_packs(
+                    wiki_root,
+                    ws,
+                    resolved={
+                        "workspace": ws,
+                        "packs": raw_packs,
+                        "pack_source": "golden fixture",
+                    },
+                )
+            except ValueError as exc:
+                load_errors.append({"path": fixture_path, "error": str(exc)})
+                continue
         artifact = task_context_engine.build_context_artifact(
             task=task,
             wiki_root=wiki_root,
-            workspace=str(fixture.get("workspace") or ws),
+            workspace=ws,
             packs=packs,
             project_dir=Path(resolved.get("project_dir") or ".").resolve(),
             warnings=resolved.get("warnings") or [],
         )
         scored = _score_fixture(fixture, artifact)
-        scored["fixture_path"] = path.relative_to(wiki_root).as_posix()
+        scored["fixture_path"] = fixture_path
         results.append(scored)
 
     failed = sum(1 for result in results if result["status"] == "fail")

@@ -13,7 +13,7 @@ sys.path.insert(0, str(SCRIPT_DIR))
 sys.path.insert(0, str(SCRIPT_DIR / "lib"))
 
 import cmd_resolve  # noqa: E402
-import context_security  # noqa: E402
+import contextd_resolver  # noqa: E402
 import task_context_engine  # noqa: E402
 
 
@@ -54,25 +54,12 @@ def _render_text(report: dict) -> str:
 def _resolve_task(task: str, workspace: str | None, cwd: str | None) -> tuple[dict, Path, str, list[str]]:
     start = Path(cwd).resolve() if cwd else None
     resolved = cmd_resolve.resolve(cwd=start, require_workspace=True)
-    if resolved.get("error"):
-        raise RuntimeError(str(resolved["error"]))
-    root_raw = resolved.get("knowledge_root") or resolved.get("wiki_root")
-    if not root_raw:
-        raise RuntimeError("Could not resolve knowledge_root.")
-    wiki_root = Path(str(root_raw)).resolve()
-    ws = workspace or resolved.get("workspace")
-    if not ws:
-        raise RuntimeError("No workspace resolved.")
     try:
-        ws_dir = context_security.workspace_dir(wiki_root, ws)
+        wiki_root, ws, _ws_dir, packs, _pack_source = (
+            contextd_resolver.select_workspace_state(resolved, workspace)
+        )
     except ValueError as exc:
-        raise RuntimeError(f"Invalid workspace: {exc}") from exc
-    if not ws_dir.is_dir() or not (ws_dir / "workspace.md").is_file():
-        raise RuntimeError(f"Workspace not available: {ws}")
-    if workspace:
-        packs, _ = cmd_resolve.get_effective_packs({}, ws_dir / "workspace.md")
-    else:
-        packs = resolved.get("packs") or []
+        raise RuntimeError(f"Could not resolve workspace state: {exc}") from exc
     artifact = task_context_engine.build_context_artifact(
         task=task,
         wiki_root=wiki_root,
