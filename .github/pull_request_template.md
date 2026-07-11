@@ -11,6 +11,9 @@
 - [ ] `python scripts/test_lint_wiki.py`
 - [ ] `python scripts/test_atomic_write.py`
 - [ ] `python scripts/test_detect_repetition.py`
+- [ ] `python scripts/test_contextd_runtime.py`
+- [ ] `python scripts/test_context_security.py`
+- [ ] `python -m json.tool templates/contextd-config.schema.json` and `python -m json.tool templates/task-context.schema.json`
 - [ ] `python scripts/lint-wiki.py --all-workspaces --wiki-root .`
 - [ ] N/A (reason):
 
@@ -28,6 +31,15 @@
 - [ ] Preserved workspace isolation
 - [ ] No cross-workspace knowledge mixing
 - [ ] Avoided duplicate docs/patterns
+
+## Path safety / adapter parity (when applicable)
+
+- [ ] Workspace and pack identifiers fail closed before path construction
+- [ ] Named workspace/pack roots are non-aliased; descendant symlinks stay within their named root
+- [ ] Artifact provenance paths remain normalized and relative; explicitly absolute diagnostics remain absolute
+- [ ] CLI and MCP produce the same scope/security decision
+- [ ] Ubuntu, macOS, and Windows path/runtime CI passed
+- [ ] N/A (reason):
 
 ## Project Spirit Check
 

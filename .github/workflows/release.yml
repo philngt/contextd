@@ -92,6 +92,18 @@ jobs:
       - name: Build binary
         run: pyinstaller --clean contextd.spec
 
+      - name: Smoke test binary
+        shell: bash
+        run: |
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            BIN="./dist/contextd.exe"
+          else
+            BIN="./dist/contextd"
+          fi
+          "$BIN" --version
+          "$BIN" resolve --format json > /dev/null
+          "$BIN" context "release binary path smoke" --format json --no-materialize > /dev/null
+
       - name: Stage artifact
         shell: bash
         run: |

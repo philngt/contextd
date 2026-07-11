@@ -6,6 +6,14 @@ on:
 
 jobs:
   python-checks:
+    name: Python checks (${{ matrix.python-version }})
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version:
+          - '3.10'
+          - '3.12'
+          - '3.14'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -14,7 +22,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: ${{ matrix.python-version }}
 
       - name: Run test_lint_wiki
         run: python scripts/test_lint_wiki.py
@@ -28,5 +36,38 @@ jobs:
       - name: Run test_contextd_runtime
         run: python scripts/test_contextd_runtime.py
 
+      - name: Run test_context_security
+        run: python scripts/test_context_security.py
+
+      - name: Validate JSON schemas
+        run: |
+          python -m json.tool templates/contextd-config.schema.json > /dev/null
+          python -m json.tool templates/task-context.schema.json > /dev/null
+
       - name: Run wiki lint
         run: python scripts/lint-wiki.py --all-workspaces --wiki-root .
+
+  path-runtime-cross-platform:
+    name: Path/runtime (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - macos-latest
+          - windows-latest
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Run cross-platform path/runtime tests
+        env:
+          PYTHONDONTWRITEBYTECODE: '1'
+        run: |
+          python scripts/test_context_security.py
+          python scripts/test_contextd_runtime.py
