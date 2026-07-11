@@ -219,7 +219,12 @@ def _setup_workspace(tmp: Path, workspace_name: str = "_test-ws") -> Path:
         json.dumps({"workspace": workspace_name, "wiki_root": "."}),
         encoding="utf-8",
     )
-    (tmp / "workspaces" / workspace_name).mkdir(parents=True)
+    workspace = tmp / "workspaces" / workspace_name
+    workspace.mkdir(parents=True)
+    (workspace / "workspace.md").write_text(
+        "# Workspace\n\n## Packs\n\n",
+        encoding="utf-8",
+    )
     return tmp
 
 

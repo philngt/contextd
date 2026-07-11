@@ -19,22 +19,26 @@ try:
     from . import context_policy
     from .atomic_write import atomic_write_text
     from .context_security import (
-        block_reason,
         is_relative_to,
         pack_dir,
+        path_policy_reason,
+        confined_child,
         redact_text,
         reject_unsafe_entry,
+        root_relative_posix,
         workspace_dir,
     )
 except ImportError:  # pragma: no cover - top-level script import path
     import context_policy  # type: ignore
     from atomic_write import atomic_write_text  # type: ignore
     from context_security import (  # type: ignore
-        block_reason,
         is_relative_to,
         pack_dir,
+        path_policy_reason,
+        confined_child,
         redact_text,
         reject_unsafe_entry,
+        root_relative_posix,
         workspace_dir,
     )
 
@@ -313,8 +317,14 @@ def _now() -> str:
 
 
 def _read(path: Path) -> Optional[str]:
+    """Read a UTF-8 file after resolving the final target.
+
+    Callers that need a narrower boundary validate it before calling this
+    helper. Resolving here avoids a second lexical-path read after a caller
+    already approved the canonical target.
+    """
     try:
-        return path.read_text(encoding="utf-8")
+        return path.resolve(strict=True).read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError):
         return None
 
@@ -329,10 +339,18 @@ def _sha256_file(path: Path) -> Optional[str]:
 
 
 def _rel(path: Path, root: Path) -> str:
-    try:
-        return path.relative_to(root).as_posix()
-    except ValueError:
-        return path.as_posix()
+    """Return a canonical root-relative POSIX path or raise.
+
+    Never fall back to an absolute path: artifact provenance is part of the
+    public task-context contract and must remain deterministic across aliases
+    such as macOS ``/var`` -> ``/private/var``.
+    """
+    return root_relative_posix(path, root)
+
+
+def _policy_reason(path: Path) -> Optional[str]:
+    """Apply the secret-path policy to both logical and canonical paths."""
+    return path_policy_reason(path, logical_path=path)
 
 
 def detect_intent(task: str) -> str:
@@ -347,7 +365,9 @@ def detect_intent(task: str) -> str:
     return max(scores, key=scores.get)
 
 
-def _parse_pack_keywords(pack_yaml: Path) -> Dict[str, List[str]]:
+def _parse_pack_keywords(pack_yaml: Path, pack_root: Path) -> Dict[str, List[str]]:
+    if not is_relative_to(pack_yaml, pack_root):
+        return {}
     text = _read(pack_yaml)
     if text is None:
         return {}
@@ -377,7 +397,7 @@ def detect_components(task: str, wiki_root: Path, packs: List[str]) -> List[str]
             pack_root = pack_dir(wiki_root, pack_name)
         except ValueError:
             continue
-        keywords = _parse_pack_keywords(pack_root / "pack.yaml")
+        keywords = _parse_pack_keywords(pack_root / "pack.yaml", pack_root)
         for component, words in keywords.items():
             if any(word.lower() in task_lower for word in words):
                 components.add(component)
@@ -397,7 +417,7 @@ def detect_scope(task: str, wiki_root: Path, workspace: str) -> Tuple[Optional[s
             return None
         for path in sorted(
             p for p in parent.iterdir()
-            if p.is_dir() and is_relative_to(p, parent)
+            if p.is_dir() and not p.is_symlink() and is_relative_to(p, parent)
         ):
             name = path.name.lower()
             variants = {name, name.replace("-", " "), name.replace("_", " ")}
@@ -434,7 +454,9 @@ def _strip_inline_note(value: str) -> str:
     return re.sub(r"\s+\([^)]*\)\s*$", "", value).strip()
 
 
-def _parse_retrieval_map(path: Path) -> Dict[str, List[str]]:
+def _parse_retrieval_map(path: Path, allowed_root: Optional[Path] = None) -> Dict[str, List[str]]:
+    if allowed_root is not None and not is_relative_to(path, allowed_root):
+        return {}
     text = _read(path)
     if text is None:
         return {}
@@ -520,13 +542,21 @@ def _safe_evidence_files(path: Path) -> List[Path]:
         "applied/**/manifest.yaml",
     ]:
         candidates.extend(sorted(path.glob(rel)))
-    return [p for p in candidates if p.is_file() and _is_safe_evidence_doc(p)]
+    return [
+        p for p in candidates
+        if p.is_file() and is_relative_to(p, path) and _is_safe_evidence_doc(p)
+    ]
 
 
 def _is_safe_evidence_doc(path: Path) -> bool:
-    parts = path.parts
-    if "sources" in parts:
+    views = [path]
+    try:
+        views.append(path.resolve(strict=True))
+    except OSError:
         return False
+    for view in views:
+        if "sources" in {part.lower() for part in view.parts}:
+            return False
     name = path.name
     return (
         name in {"_index.md", "verified-facts.md", "recommendations.md", "pending-external.md",
@@ -566,37 +596,67 @@ def _expand_map_entry(
             "blocking_hint": False,
         }
     expanded = raw.replace("{domain}", domain or "").replace("{project}", project or "")
-    allowed_root = ws_dir
+    expanded_unsafe = reject_unsafe_entry(expanded)
+    if expanded_unsafe:
+        return [], {
+            "category": "security-policy",
+            "missing": f"Unsafe expanded pack retrieval path `{expanded}`: {expanded_unsafe}",
+            "blocking_hint": True,
+        }
+
+    search_root = ws_dir
+    pattern = expanded
     if expanded.startswith("{ws}/"):
-        base_path = ws_dir / expanded[len("{ws}/"):]
+        pattern = expanded[len("{ws}/"):]
     elif expanded.startswith("packs/"):
-        base_path = wiki_root / expanded
-        allowed_root = wiki_root / "packs" / pack_name
+        try:
+            search_root = pack_dir(wiki_root, pack_name)
+        except ValueError as exc:
+            return [], {
+                "category": "security-policy",
+                "missing": f"Invalid active pack `{pack_name}`: {exc}",
+                "blocking_hint": True,
+            }
+        prefix = f"packs/{pack_name}/"
+        if not expanded.startswith(prefix):
+            return [], {
+                "category": "security-policy",
+                "missing": f"Pack retrieval path crosses active pack boundary: {expanded}",
+                "blocking_hint": True,
+            }
+        pattern = expanded[len(prefix):]
     elif expanded.startswith("templates/"):
-        base_path = wiki_root / expanded
-        allowed_root = wiki_root / "templates"
-    else:
-        base_path = ws_dir / expanded
+        search_root = (wiki_root / "templates").resolve()
+        pattern = expanded[len("templates/"):]
+
+    if not is_relative_to(search_root, wiki_root):
+        return [], {
+            "category": "security-policy",
+            "missing": f"Pack retrieval root escapes knowledge root: {expanded}",
+            "blocking_hint": True,
+        }
+
+    base_path = search_root / pattern
 
     paths: List[Path] = []
-    if any(ch in base_path.as_posix() for ch in "*?["):
+    if any(ch in pattern for ch in "*?["):
         paths = sorted(
-            p for p in wiki_root.glob(_rel(base_path, wiki_root))
-            if p.is_file() and is_relative_to(p, allowed_root)
+            p for p in search_root.glob(pattern)
+            if p.is_file() and is_relative_to(p, search_root)
         )
         paths = [
             p for p in paths
             if "evidence" not in p.parts or _is_safe_evidence_doc(p)
         ]
     elif "/evidence/" in base_path.as_posix() or base_path.name == "evidence":
-        paths = [p for p in _safe_evidence_files(base_path) if is_relative_to(p, allowed_root)]
+        paths = [p for p in _safe_evidence_files(base_path) if is_relative_to(p, search_root)]
     elif base_path.is_dir():
         paths = sorted(
             p for p in base_path.rglob("*.md")
-            if p.is_file() and is_relative_to(p, allowed_root)
+            if p.is_file() and is_relative_to(p, search_root)
         )
     elif base_path.is_file():
-        paths = [base_path] if is_relative_to(base_path, allowed_root) else []
+        paths = [base_path] if is_relative_to(base_path, search_root) else []
     if not paths:
         return [], {
             "category": "pack-retrieval",
@@ -628,15 +688,16 @@ def _collect_pack_retrieval_candidates(
         return candidates, gaps
     for pack_name in packs:
         try:
-            map_path = pack_dir(wiki_root, pack_name) / "agents" / "pipeline" / "retrieval-map.md"
+            pack_root = pack_dir(wiki_root, pack_name)
+            map_path = pack_root / "agents" / "pipeline" / "retrieval-map.md"
         except ValueError:
             gaps.append({
                 "category": "pack",
                 "missing": f"Invalid pack name: {pack_name}",
-                "blocking_hint": False,
+                "blocking_hint": True,
             })
             continue
-        rows = _parse_retrieval_map(map_path)
+        rows = _parse_retrieval_map(map_path, pack_root)
         if not rows:
             continue
         for component in components:
@@ -656,16 +717,22 @@ def _collect_pack_retrieval_candidates(
     return candidates, gaps
 
 
-def _iter_files(base: Path, patterns: Iterable[str]) -> List[Path]:
+def _iter_files(
+    base: Path,
+    patterns: Iterable[str],
+    allowed_root: Optional[Path] = None,
+) -> List[Path]:
     if not base.exists():
         return []
-    allowed_root = base.resolve()
+    boundary = (allowed_root or base).resolve()
+    if not is_relative_to(base, boundary):
+        return []
     out: List[Path] = []
     for pattern in patterns:
         out.extend(
             sorted(
                 p for p in base.glob(pattern)
-                if p.is_file() and is_relative_to(p, allowed_root)
+                if p.is_file() and is_relative_to(p, boundary)
             )
         )
     return out
@@ -674,8 +741,17 @@ def _iter_files(base: Path, patterns: Iterable[str]) -> List[Path]:
 def _doc(path: Path, category: str, wiki_root: Path,
          gaps: Optional[List[Dict]] = None,
          warnings: Optional[List[str]] = None) -> Optional[Dict]:
-    rel = _rel(path, wiki_root)
-    reason = block_reason(path)
+    try:
+        rel = _rel(path, wiki_root)
+    except (OSError, ValueError):
+        if gaps is not None:
+            gaps.append({
+                "category": "workspace-isolation",
+                "missing": f"Path escapes knowledge root: {path}",
+                "blocking_hint": True,
+            })
+        return None
+    reason = _policy_reason(path)
     if reason:
         if gaps is not None:
             gaps.append({
@@ -732,17 +808,39 @@ def _safe_contract_index_target(
         return None, f"contract-index maps {contract_id} outside contract directory: {raw}"
     if target.suffix not in {".md", ".json"}:
         return None, f"contract-index maps {contract_id} to unsupported file type: {raw}"
+    policy_reason = _policy_reason(target) if target.exists() else None
+    if policy_reason:
+        return None, f"contract-index maps {contract_id} to blocked path {raw!r}: {policy_reason}"
     return target, None
 
 
-def _contract_files(directory: Path, wiki_root: Path) -> Tuple[List[Path], List[Dict]]:
+def _contract_files(
+    directory: Path,
+    wiki_root: Path,
+    allowed_root: Optional[Path] = None,
+) -> Tuple[List[Path], List[Dict]]:
     """Return contract files plus blocking gaps from contract-index.json."""
     if not directory.is_dir():
         return [], []
     gaps: List[Dict] = []
+    boundary = allowed_root or directory
+    if not is_relative_to(directory, boundary):
+        return [], [{
+            "category": "workspace-isolation",
+            "missing": f"Contract directory escapes allowed root: {directory}",
+            "blocking_hint": True,
+        }]
     paths: List[Path] = []
     index_path = directory / "contract-index.json"
-    index = _load_index(index_path)
+    if index_path.is_symlink() and not is_relative_to(index_path, directory):
+        gaps.append({
+            "category": "contract-index",
+            "missing": f"{_rel(index_path, wiki_root)} resolves outside contract directory",
+            "blocking_hint": True,
+        })
+        index = {}
+    else:
+        index = _load_index(index_path, directory)
     for contract_id, rel_path in sorted(index.items()):
         target, target_error = _safe_contract_index_target(directory, contract_id, rel_path)
         if target_error:
@@ -764,7 +862,7 @@ def _contract_files(directory: Path, wiki_root: Path) -> Tuple[List[Path], List[
                 "blocking_hint": True,
             })
     loose = [
-        p for p in _iter_files(directory, ["*.md", "*.json"])
+        p for p in _iter_files(directory, ["*.md", "*.json"], boundary)
         if p.name != "contract-index.json"
     ]
     paths.extend(loose)
@@ -808,30 +906,30 @@ def _collect_candidates(
     architecture = ws_dir / "platform" / "architecture"
     decisions = ws_dir / "decisions"
 
-    contract_files, contract_gaps = _contract_files(contracts, wiki_root)
+    contract_files, contract_gaps = _contract_files(contracts, wiki_root, ws_dir)
     gaps.extend(contract_gaps)
 
     if intent == "implement_feature":
         add_many(contract_files, "contract")
-        add_many(_iter_files(patterns, ["*.md"]), "pattern")
-        add_many(_iter_files(projects, ["*/knowledge-map.md", "*/services/*.md"]), "project")
-        add_many(_iter_files(domains, ["*/workflow.md"]), "domain")
+        add_many(_iter_files(patterns, ["*.md"], ws_dir), "pattern")
+        add_many(_iter_files(projects, ["*/knowledge-map.md", "*/services/*.md"], ws_dir), "project")
+        add_many(_iter_files(domains, ["*/workflow.md"], ws_dir), "domain")
     elif intent == "fix_bug":
-        add_many(_iter_files(runbooks, ["*.md"]), "runbook")
-        add_many(_iter_files(projects, ["*/services/*.md", "*/knowledge-map.md"]), "project")
-        add_many(_iter_files(patterns, ["*.md"]), "pattern")
+        add_many(_iter_files(runbooks, ["*.md"], ws_dir), "runbook")
+        add_many(_iter_files(projects, ["*/services/*.md", "*/knowledge-map.md"], ws_dir), "project")
+        add_many(_iter_files(patterns, ["*.md"], ws_dir), "pattern")
     elif intent == "design":
-        add_many(_iter_files(architecture, ["*.md"]), "architecture")
-        add_many(_iter_files(decisions, ["*.md"]), "decision")
-        add_many(_iter_files(patterns, ["*.md"]), "pattern")
+        add_many(_iter_files(architecture, ["*.md"], ws_dir), "architecture")
+        add_many(_iter_files(decisions, ["*.md"], ws_dir), "decision")
+        add_many(_iter_files(patterns, ["*.md"], ws_dir), "pattern")
         add_many(contract_files, "contract")
     elif intent == "incident":
-        add_many(_iter_files(runbooks, ["*.md"]), "runbook")
-        add_many(_iter_files(projects, ["*/services/*.md"]), "project")
+        add_many(_iter_files(runbooks, ["*.md"], ws_dir), "runbook")
+        add_many(_iter_files(projects, ["*/services/*.md"], ws_dir), "project")
     elif intent == "review":
         add_many(contract_files, "contract")
-        add_many(_iter_files(patterns, ["*.md"]), "pattern")
-        add_many(_iter_files(domains, ["*/workflow.md"]), "domain")
+        add_many(_iter_files(patterns, ["*.md"], ws_dir), "pattern")
+        add_many(_iter_files(domains, ["*/workflow.md"], ws_dir), "domain")
 
     pack_candidates, pack_gaps = _collect_pack_retrieval_candidates(
         wiki_root, workspace, packs, components, domain, project, warnings=warnings,
@@ -846,7 +944,7 @@ def _collect_candidates(
             gaps.append({
                 "category": "pack",
                 "missing": f"Invalid pack name: {pack_name}",
-                "blocking_hint": False,
+                "blocking_hint": True,
             })
             continue
         if not pack_root.is_dir():
@@ -856,7 +954,7 @@ def _collect_candidates(
                 "blocking_hint": False,
             })
             continue
-        add_many(_iter_files(pack_root, ["agents/common-pitfalls.md"]), "pitfalls")
+        add_many(_iter_files(pack_root, ["agents/common-pitfalls.md"], pack_root), "pitfalls")
 
     if not candidates:
         gaps.append({
@@ -1041,7 +1139,11 @@ def _slice_doc(doc: Dict) -> Dict:
     return out
 
 
-def _load_index(index_path: Path) -> Dict[str, str]:
+def _load_index(index_path: Path, allowed_root: Optional[Path] = None) -> Dict[str, str]:
+    if allowed_root is not None and not is_relative_to(index_path, allowed_root):
+        return {}
+    if index_path.exists() and _policy_reason(index_path):
+        return {}
     data = _read(index_path)
     if data is None:
         return {}
@@ -1067,7 +1169,7 @@ def _contract_dirs(wiki_root: Path, workspace: str, packs: List[str]) -> List[Pa
         dirs.extend(
             sorted(
                 p / "contracts" for p in domains.iterdir()
-                if p.is_dir() and is_relative_to(p, domains)
+                if p.is_dir() and not p.is_symlink() and is_relative_to(p, domains)
             )
         )
     for pack_name in packs:
@@ -1099,16 +1201,29 @@ def resolve_contract_path(contract_id: str, wiki_root: Path, workspace: str,
             "path separators and '..' are not allowed"
         )
         return None, warnings
+    try:
+        allowed_roots = [workspace_dir(wiki_root, workspace)]
+    except ValueError:
+        return None, [f"Invalid workspace: {workspace}"]
+    for pack_name in packs:
+        try:
+            allowed_roots.append(pack_dir(wiki_root, pack_name))
+        except ValueError:
+            warnings.append(f"Invalid active pack: {pack_name}")
+
     for directory in _contract_dirs(wiki_root, workspace, packs):
         if not directory.is_dir():
             continue
-        index = _load_index(directory / "contract-index.json")
+        if not any(is_relative_to(directory, root) for root in allowed_roots):
+            warnings.append(f"Contract directory escapes its named root: {directory}")
+            continue
+        index = _load_index(directory / "contract-index.json", directory)
         if contract_id in index:
             path, path_error = _safe_contract_index_target(directory, contract_id, index[contract_id])
             if path_error:
                 warnings.append(path_error)
                 return None, warnings
-            if path and path.is_file():
+            if path and path.is_file() and not _policy_reason(path):
                 return path, warnings
             warnings.append(f"contract-index maps {contract_id} to missing file: {path}")
             return None, warnings
@@ -1117,13 +1232,18 @@ def resolve_contract_path(contract_id: str, wiki_root: Path, workspace: str,
                 directory / f"{contract_id}{ext}",
                 directory / f"{contract_id}.contract{ext}",
             ):
-                if candidate.is_file() and is_relative_to(candidate, directory):
+                if (
+                    candidate.is_file()
+                    and is_relative_to(candidate, directory)
+                    and not _policy_reason(candidate)
+                ):
                     return candidate, warnings
         for candidate in directory.glob("*"):
             if (
                 candidate.is_file()
                 and candidate.stem == contract_id
                 and is_relative_to(candidate, directory)
+                and not _policy_reason(candidate)
             ):
                 return candidate, warnings
     return None, warnings
@@ -1146,7 +1266,7 @@ def _collect_static_context(wiki_root: Path, workspace: str, packs: List[str]) -
     try:
         ws_dir = workspace_dir(wiki_root, workspace)
     except ValueError:
-        ws_dir = wiki_root / "workspaces" / "__invalid__"
+        return []
     sources: List[Tuple[Path, str]] = [
         (ws_dir / "workspace.md", "workspace-profile"),
         (wiki_root / "agents" / "system-prompt.md", "engine-guidance"),
@@ -1224,6 +1344,9 @@ def build_context_artifact(
     include_selection_trace: bool = False,
 ) -> Dict:
     """Build the canonical JSON context artifact."""
+    wiki_root = wiki_root.resolve()
+    if project_dir is not None:
+        project_dir = project_dir.resolve()
     warnings_out = list(warnings or [])
     intent_type = detect_intent(task)
     components = detect_components(task, wiki_root, packs)
@@ -1413,10 +1536,40 @@ def _pack_markdown(artifact: Dict) -> str:
 
 def materialize_context(artifact: Dict, project_dir: Path) -> Dict:
     """Write current-task JSON/Markdown and compiled static context pack."""
-    context_dir = project_dir / ".contextd" / "context"
-    packs_dir = context_dir / "packs"
+    project_dir = project_dir.resolve()
+    context_dir = confined_child(
+        project_dir,
+        ".contextd/context",
+        "materialized context directory",
+        allow_symlink=False,
+    )
+    packs_dir = confined_child(
+        project_dir,
+        ".contextd/context/packs",
+        "materialized context packs directory",
+        allow_symlink=False,
+    )
     packs_dir.mkdir(parents=True, exist_ok=True)
-    pack_path = packs_dir / f"{artifact['contextPack']['packKey']}.md"
+    # Revalidate after directory creation so a pre-existing alias cannot become
+    # the write boundary between the initial check and file creation.
+    context_dir = confined_child(
+        project_dir,
+        ".contextd/context",
+        "materialized context directory",
+        allow_symlink=False,
+    )
+    packs_dir = confined_child(
+        project_dir,
+        ".contextd/context/packs",
+        "materialized context packs directory",
+        allow_symlink=False,
+    )
+    pack_path = confined_child(
+        packs_dir,
+        f"{artifact['contextPack']['packKey']}.md",
+        "materialized context pack",
+        allow_symlink=False,
+    )
     atomic_write_text(pack_path, _pack_markdown(artifact))
 
     artifact = json.loads(json.dumps(artifact, ensure_ascii=False))
@@ -1425,8 +1578,12 @@ def materialize_context(artifact: Dict, project_dir: Path) -> Dict:
     artifact["contextPack"]["compiledRef"] = rel_pack
     artifact["contextPack"]["status"] = "materialized"
 
-    json_path = context_dir / "current-task.json"
-    md_path = context_dir / "current-task.md"
+    json_path = confined_child(
+        context_dir, "current-task.json", "materialized task JSON", allow_symlink=False
+    )
+    md_path = confined_child(
+        context_dir, "current-task.md", "materialized task Markdown", allow_symlink=False
+    )
     atomic_write_text(json_path, json.dumps(artifact, indent=2, ensure_ascii=False) + "\n")
     atomic_write_text(md_path, render_markdown(artifact))
     artifact["materialized"] = {

@@ -190,7 +190,7 @@ PACKS_SECTION_RE = re.compile(
     r"^\s*##\s+Packs\s*$(.+?)(?=^\s*##\s|\Z)",
     re.MULTILINE | re.DOTALL | re.IGNORECASE
 )
-PACK_LIST_ITEM_RE = re.compile(r"^\s*[-*]\s+([a-z0-9][\w\-]*)\s*$", re.MULTILINE)
+PACK_LIST_ITEM_RE = re.compile(r"^\s*[-*]\s+(.+?)\s*$", re.MULTILINE)
 
 
 def parse_workspace_packs(workspace_md_path: Path) -> List[str]:
@@ -217,7 +217,8 @@ class Pack:
 
     @property
     def files(self) -> Dict:
-        return self.manifest.get("files") or {}
+        files = self.manifest.get("files") or {}
+        return files if isinstance(files, dict) else {}
 
     @property
     def conflicts_with(self) -> List[str]:
@@ -225,10 +226,26 @@ class Pack:
 
     def file_path(self, key: str) -> Optional[Path]:
         rel = self.files.get(key)
-        if not rel:
+        if not isinstance(rel, str) or not rel:
             return None
-        p = self.root / rel
-        return p if p.is_file() else None
+        try:
+            path = context_security.confined_child(
+                self.root,
+                rel,
+                f"pack file `{key}`",
+                allow_symlink=False,
+            )
+        except ValueError as exc:
+            sys.stderr.write(
+                f"[pack_loader] pack '{self.name}' has unsafe {key}: {exc}\n"
+            )
+            return None
+        if key == "validator_script" and path.suffix.lower() != ".py":
+            sys.stderr.write(
+                f"[pack_loader] pack '{self.name}' validator_script must be a .py file\n"
+            )
+            return None
+        return path if path.is_file() else None
 
     def __repr__(self):
         return f"Pack({self.name}@{self.manifest.get('version', '?')})"
@@ -237,9 +254,12 @@ class Pack:
 def discover_pack(wiki_root: Path, pack_name: str) -> Optional[Pack]:
     try:
         pack_dir = context_security.pack_dir(wiki_root, pack_name)
-    except ValueError:
+        manifest_path = context_security.confined_child(
+            pack_dir, "pack.yaml", "pack manifest", allow_symlink=False
+        )
+    except ValueError as exc:
+        sys.stderr.write(f"[pack_loader] unsafe pack '{pack_name}': {exc}\n")
         return None
-    manifest_path = pack_dir / "pack.yaml"
     if not manifest_path.is_file():
         return None
     try:
@@ -247,25 +267,66 @@ def discover_pack(wiki_root: Path, pack_name: str) -> Optional[Pack]:
     except Exception as e:
         sys.stderr.write(f"[pack_loader] failed to parse {manifest_path}: {e}\n")
         return None
-    return Pack(pack_name, pack_dir, manifest or {})
+    pack = Pack(pack_name, pack_dir, manifest or {})
+    for key, relative in pack.files.items():
+        if not isinstance(relative, str) or not relative:
+            sys.stderr.write(
+                f"[pack_loader] pack '{pack_name}' has invalid file declaration `{key}`\n"
+            )
+            return None
+        try:
+            declared = context_security.confined_child(
+                pack_dir,
+                relative,
+                f"pack file `{key}`",
+                allow_symlink=False,
+            )
+        except ValueError as exc:
+            sys.stderr.write(
+                f"[pack_loader] pack '{pack_name}' has unsafe file `{key}`: {exc}\n"
+            )
+            return None
+        if key == "validator_script":
+            if declared.suffix.lower() != ".py" or not declared.is_file():
+                sys.stderr.write(
+                    f"[pack_loader] pack '{pack_name}' has invalid validator_script\n"
+                )
+                return None
+    return pack
 
 
 def load_packs_for_workspace(wiki_root: Path, ws_name: str) -> List[Pack]:
     """Resolve packs for a given workspace. Returns sorted-alphabetical list."""
     try:
-        ws_md = context_security.workspace_dir(wiki_root, ws_name) / "workspace.md"
-    except ValueError:
-        return []
-    pack_names = sorted(set(parse_workspace_packs(ws_md)))
+        ws_root = context_security.workspace_dir(wiki_root, ws_name)
+        ws_md = context_security.confined_child(
+            ws_root, "workspace.md", "workspace profile", allow_symlink=False
+        )
+    except ValueError as exc:
+        raise RuntimeError(f"Unsafe workspace pack profile: {exc}") from exc
+    if not ws_md.is_file():
+        raise RuntimeError(f"Workspace profile missing: {ws_md}")
+    raw_pack_names = parse_workspace_packs(ws_md)
+    pack_names: List[str] = []
+    for raw_name in raw_pack_names:
+        safe_name, name_error = context_security.validate_context_name(
+            raw_name, "pack"
+        )
+        if name_error or safe_name is None:
+            raise RuntimeError(
+                f"Workspace '{ws_name}' contains invalid active pack "
+                f"{raw_name!r}: {name_error}"
+            )
+        pack_names.append(safe_name)
+    pack_names = sorted(set(pack_names))
     packs: List[Pack] = []
     for name in pack_names:
         p = discover_pack(wiki_root, name)
         if p is None:
-            sys.stderr.write(
-                f"[pack_loader] workspace '{ws_name}' references unknown pack "
-                f"'{name}' (not found in {wiki_root}/packs/).\n"
+            raise RuntimeError(
+                f"Workspace '{ws_name}' references missing or unsafe pack "
+                f"'{name}'"
             )
-            continue
         packs.append(p)
     # Conflict check
     enabled = {p.name for p in packs}

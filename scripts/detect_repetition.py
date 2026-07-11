@@ -86,10 +86,43 @@ def resolve_workspace(cwd: Path) -> tuple[Path, str] | None:
 # ---------------------------------------------------------------------------
 
 def obs_dir(wiki_root: Path, workspace: str) -> Path:
-    return context_security.workspace_dir(wiki_root, workspace) / ".observations"
+    ws_root = context_security.workspace_dir(wiki_root, workspace)
+    base = context_security.confined_child(
+        ws_root,
+        ".observations",
+        "observations directory",
+        allow_symlink=False,
+    )
+    return _checked_observations_dir(base)
+
+
+def _checked_observations_dir(base: Path) -> Path:
+    if base.name != ".observations":
+        raise ValueError("observations directory must be named `.observations`")
+    return context_security.confined_child(
+        base.parent,
+        base.name,
+        "observations directory",
+        allow_symlink=False,
+    )
+
+
+def _observation_file(base: Path, filename: str) -> Path:
+    safe_base = _checked_observations_dir(base)
+    return context_security.confined_child(
+        safe_base,
+        filename,
+        f"observation file `{filename}`",
+        allow_symlink=False,
+    )
 
 
 def load_clusters(path: Path) -> list[Cluster]:
+    try:
+        path = _observation_file(path.parent, path.name)
+    except ValueError as e:
+        warn(f"unsafe clusters path: {e}")
+        return []
     if not path.is_file():
         return []
     try:
@@ -117,6 +150,7 @@ def save_clusters(
     members_cap: int,
     last_hint_emitted_at: str = "",
 ) -> None:
+    path = _observation_file(path.parent, path.name)
     payload = {
         "stage": "observations",
         "updated_at": now_iso(),
@@ -128,6 +162,11 @@ def save_clusters(
 
 def load_clusters_with_meta(path: Path) -> tuple[list[Cluster], str]:
     """Return (clusters, last_hint_emitted_at)."""
+    try:
+        path = _observation_file(path.parent, path.name)
+    except ValueError as e:
+        warn(f"unsafe clusters path: {e}")
+        return [], ""
     if not path.is_file():
         return [], ""
     try:
@@ -154,7 +193,11 @@ def archive_clusters(path: Path, evicted: list[Cluster]) -> None:
     """Append evicted clusters to a sibling archive JSONL. Best-effort."""
     if not evicted:
         return
-    archive = path.with_name("clusters.archive.jsonl")
+    try:
+        archive = _observation_file(path.parent, "clusters.archive.jsonl")
+    except ValueError as e:
+        warn(f"unsafe cluster archive path: {e}")
+        return
     try:
         with open(archive, "a", encoding="utf-8") as f:
             for c in evicted:
@@ -164,6 +207,10 @@ def archive_clusters(path: Path, evicted: list[Cluster]) -> None:
 
 
 def load_suppressions(path: Path) -> set[str]:
+    try:
+        path = _observation_file(path.parent, path.name)
+    except ValueError:
+        return set()
     if not path.is_file():
         return set()
     try:
@@ -180,10 +227,11 @@ def append_observation(path: Path, record: dict) -> None:
     """Append a single JSON line. Best-effort; never raises."""
     line = json.dumps(record, ensure_ascii=False)
     try:
+        path = _observation_file(path.parent, path.name)
         path.parent.mkdir(parents=True, exist_ok=True)
         with open(path, "a", encoding="utf-8") as f:
             f.write(line + "\n")
-    except OSError as e:
+    except (OSError, ValueError) as e:
         warn(f"failed to append {path}: {e}")
 
 
@@ -195,14 +243,19 @@ def maybe_trim_prompts_log(path: Path) -> None:
     check os.stat first.
     """
     try:
+        path = _observation_file(path.parent, path.name)
         size = path.stat().st_size
-    except OSError:
+    except (OSError, ValueError):
         return
     if size < PROMPTS_LOG_MAX_BYTES:
         return
     cutoff = datetime.now(timezone.utc) - timedelta(days=PROMPTS_LOG_KEEP_DAYS)
     cutoff_iso = cutoff.isoformat(timespec="seconds")
-    tmp = path.with_suffix(path.suffix + ".trim.tmp")
+    try:
+        tmp = _observation_file(path.parent, path.name + ".trim.tmp")
+    except ValueError as e:
+        warn(f"unsafe prompts trim path: {e}")
+        return
     kept = 0
     try:
         with open(path, "r", encoding="utf-8", errors="replace") as src, \
@@ -291,10 +344,14 @@ def main() -> int:
         return 0
 
     tun = Tunables.from_env()
-    base = obs_dir(wiki_root, workspace)
-    prompts_log = base / "prompts.jsonl"
-    clusters_file = base / "clusters.json"
-    suppressions_file = base / "suppressions.json"
+    try:
+        base = obs_dir(wiki_root, workspace)
+        prompts_log = _observation_file(base, "prompts.jsonl")
+        clusters_file = _observation_file(base, "clusters.json")
+        suppressions_file = _observation_file(base, "suppressions.json")
+    except ValueError as e:
+        warn(f"unsafe observations path - skipping update: {e}")
+        return 0
 
     p_hash = prompt_hash(prompt)
     ts = now_iso()
@@ -316,6 +373,7 @@ def main() -> int:
         return 0
 
     try:
+        clusters_file = _observation_file(base, "clusters.json")
         with with_advisory_lock(clusters_file, timeout_ms=400):
             clusters, last_hint_emitted_at = load_clusters_with_meta(clusters_file)
             clusters = prune_old_clusters(clusters, tun.window_days)
@@ -367,7 +425,7 @@ def main() -> int:
     except LockTimeout:
         warn("clusters.json lock contention - skipping update")
         return 0
-    except OSError as e:
+    except (OSError, ValueError) as e:
         warn(f"clusters.json update failed: {e}")
         return 0
 

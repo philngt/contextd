@@ -10,7 +10,7 @@ from typing import Dict, Iterable, List, Optional
 
 import pack_loader
 import task_context_engine
-from context_security import reject_unsafe_entry
+import context_security
 
 
 PACK_NAME_RE = re.compile(r"^pack-[a-z0-9][a-z0-9-]*$")
@@ -29,25 +29,60 @@ def _issue(severity: str, check: str, message: str, path: str) -> Dict:
 
 
 def _rel(path: Path, root: Path) -> str:
-    try:
-        return path.relative_to(root).as_posix()
-    except ValueError:
-        return path.as_posix()
+    return context_security.root_relative_posix(path, root)
 
 
 def _load_manifest(pack_dir: Path) -> Dict:
-    path = pack_dir / "pack.yaml"
     try:
+        path = context_security.confined_child(
+            pack_dir, "pack.yaml", "pack manifest", allow_symlink=False
+        )
         return pack_loader._parse_simple_yaml(path.read_text(encoding="utf-8"))  # noqa: SLF001
-    except Exception:
+    except (OSError, UnicodeDecodeError, ValueError):
         return {}
 
 
-def _list_pack_dirs(wiki_root: Path) -> List[Path]:
-    packs_dir = wiki_root / "packs"
+def _list_pack_dirs(wiki_root: Path) -> tuple[List[Path], List[Dict]]:
+    issues: List[Dict] = []
+    try:
+        packs_dir = context_security.confined_child(
+            wiki_root, "packs", "packs root", allow_symlink=False
+        )
+    except ValueError as exc:
+        return [], [_issue("error", "pack.root", str(exc), "packs")]
+    if not packs_dir.exists():
+        return [], issues
     if not packs_dir.is_dir():
-        return []
-    return sorted(p for p in packs_dir.iterdir() if p.is_dir())
+        return [], [_issue("error", "pack.root", "packs must be a directory", "packs")]
+
+    pack_dirs: List[Path] = []
+    for candidate in sorted(packs_dir.iterdir()):
+        if not candidate.is_dir():
+            continue
+        safe_name, name_error = context_security.validate_context_name(
+            candidate.name, "pack"
+        )
+        if name_error or safe_name is None:
+            issues.append(_issue(
+                "error",
+                "pack.name",
+                f"Unsafe pack directory name `{candidate.name}`: {name_error}",
+                "packs/<invalid>",
+            ))
+            continue
+        try:
+            safe_dir = context_security.pack_dir(wiki_root, safe_name)
+        except ValueError as exc:
+            issues.append(_issue(
+                "error",
+                "pack.path",
+                f"Unsafe pack directory `{safe_name}`: {exc}",
+                f"packs/{safe_name}",
+            ))
+            continue
+        if safe_dir.is_dir():
+            pack_dirs.append(safe_dir)
+    return pack_dirs, issues
 
 
 def _as_list(value: object) -> List[str]:
@@ -83,7 +118,14 @@ def _validate_pack_dir(wiki_root: Path, pack_dir: Path,
     issues: List[Dict] = []
     pack_name = pack_dir.name
     rel_pack = _rel(pack_dir, wiki_root)
-    manifest_path = pack_dir / "pack.yaml"
+    try:
+        manifest_path = context_security.confined_child(
+            pack_dir, "pack.yaml", "pack manifest", allow_symlink=False
+        )
+    except ValueError as exc:
+        return [_issue(
+            "error", "pack.manifest", f"Unsafe pack.yaml: {exc}", f"{rel_pack}/pack.yaml"
+        )]
     if not manifest_path.is_file():
         return [_issue("error", "pack.manifest", "Missing pack.yaml", rel_pack)]
 
@@ -99,7 +141,7 @@ def _validate_pack_dir(wiki_root: Path, pack_dir: Path,
             f"pack.yaml name `{declared_name}` must match directory `{pack_name}`",
             _rel(manifest_path, wiki_root),
         ))
-    if not PACK_NAME_RE.match(pack_name):
+    if not PACK_NAME_RE.fullmatch(pack_name):
         issues.append(_issue("error", "pack.name", "Pack name must match `pack-{slug}`", rel_pack))
     if not manifest.get("version"):
         issues.append(_issue("warning", "pack.version", "Missing version", _rel(manifest_path, wiki_root)))
@@ -139,16 +181,53 @@ def _validate_pack_dir(wiki_root: Path, pack_dir: Path,
             issues.append(_issue("error", "pack.files", f"Invalid file path for `{key}`",
                                  _rel(manifest_path, wiki_root)))
             continue
-        if Path(rel_path).is_absolute() or ".." in Path(rel_path).parts:
-            issues.append(_issue("error", "pack.files", f"Unsafe file path for `{key}`: {rel_path}",
-                                 _rel(manifest_path, wiki_root)))
+        try:
+            declared_path = context_security.confined_child(
+                pack_dir,
+                rel_path,
+                f"pack file `{key}`",
+                allow_symlink=False,
+            )
+        except ValueError as exc:
+            issues.append(_issue(
+                "error",
+                "pack.files",
+                f"Unsafe file path for `{key}`: {rel_path} ({exc})",
+                _rel(manifest_path, wiki_root),
+            ))
             continue
-        if not (pack_dir / rel_path).is_file():
+        if key == "validator_script" and declared_path.suffix.lower() != ".py":
+            issues.append(_issue(
+                "error",
+                "pack.validator_script",
+                f"validator_script must be a .py file: {rel_path}",
+                _rel(manifest_path, wiki_root),
+            ))
+            continue
+        if not declared_path.is_file():
             issues.append(_issue("warning", "pack.files", f"Declared file missing for `{key}`: {rel_path}",
                                  _rel(manifest_path, wiki_root)))
 
-    validator_rules_path = pack_dir / "agents" / "pipeline" / "validator-rules.md"
-    if _documented_validator_rule_ids(validator_rules_path) and not files.get("validator_script"):
+    try:
+        validator_rules_path = context_security.confined_child(
+            pack_dir,
+            "agents/pipeline/validator-rules.md",
+            "validator rules documentation",
+            allow_symlink=False,
+        )
+    except ValueError as exc:
+        validator_rules_path = None
+        issues.append(_issue(
+            "error",
+            "pack.validator_rules",
+            f"Unsafe validator-rules.md: {exc}",
+            f"{rel_pack}/agents/pipeline/validator-rules.md",
+        ))
+    if (
+        validator_rules_path is not None
+        and _documented_validator_rule_ids(validator_rules_path)
+        and not files.get("validator_script")
+    ):
         issues.append(_issue(
             "warning",
             "pack.validator_script",
@@ -165,8 +244,22 @@ def _validate_pack_dir(wiki_root: Path, pack_dir: Path,
             issues.append(_issue("warning", "pack.conflicts_with", f"Referenced pack not found: {conflict}",
                                  _rel(manifest_path, wiki_root)))
 
-    map_path = pack_dir / "agents" / "pipeline" / "retrieval-map.md"
-    if map_path.is_file():
+    try:
+        map_path = context_security.confined_child(
+            pack_dir,
+            "agents/pipeline/retrieval-map.md",
+            "retrieval map",
+            allow_symlink=False,
+        )
+    except ValueError as exc:
+        map_path = None
+        issues.append(_issue(
+            "error",
+            "retrieval-map.path",
+            f"Unsafe retrieval-map.md: {exc}",
+            f"{rel_pack}/agents/pipeline/retrieval-map.md",
+        ))
+    if map_path is not None and map_path.is_file():
         rows = task_context_engine._parse_retrieval_map(map_path)  # noqa: SLF001
         for component in sorted(rows):
             if component not in component_set:
@@ -180,7 +273,7 @@ def _validate_pack_dir(wiki_root: Path, pack_dir: Path,
                                      _rel(map_path, wiki_root)))
         for component, entries in rows.items():
             for entry in entries:
-                unsafe = reject_unsafe_entry(entry)
+                unsafe = context_security.reject_unsafe_entry(entry)
                 if unsafe:
                     issues.append(_issue("error", "retrieval-map.path",
                                          f"`{component}` has unsafe path `{entry}`: {unsafe}",
@@ -189,7 +282,7 @@ def _validate_pack_dir(wiki_root: Path, pack_dir: Path,
                     issues.append(_issue("error", "retrieval-map.cross-pack",
                                          f"`{component}` reads outside active pack: {entry}",
                                          _rel(map_path, wiki_root)))
-    else:
+    elif map_path is not None:
         issues.append(_issue("warning", "retrieval-map.missing",
                              "Missing agents/pipeline/retrieval-map.md", rel_pack))
 
@@ -197,18 +290,52 @@ def _validate_pack_dir(wiki_root: Path, pack_dir: Path,
 
 
 def validate_packs(wiki_root: Path, pack_names: Optional[List[str]] = None) -> Dict:
-    pack_dirs = _list_pack_dirs(wiki_root)
-    all_pack_names = [p.name for p in pack_dirs]
-    if pack_names is not None:
-        requested = set(pack_names)
-        pack_dirs = [p for p in pack_dirs if p.name in requested]
-        for name in sorted(requested - set(all_pack_names)):
-            pack_dirs.append(wiki_root / "packs" / name)
-
-    issues: List[Dict] = []
+    root = Path(wiki_root).resolve()
+    catalog_dirs, catalog_issues = _list_pack_dirs(root)
+    all_pack_names = [path.name for path in catalog_dirs]
+    issues: List[Dict] = list(catalog_issues if pack_names is None else [])
     by_pack: Dict[str, List[Dict]] = {}
+
+    if pack_names is None:
+        pack_dirs = catalog_dirs
+    else:
+        pack_dirs = []
+        for raw_name in sorted(set(pack_names), key=str):
+            safe_name, name_error = context_security.validate_context_name(
+                raw_name, "pack"
+            )
+            if (
+                name_error
+                or safe_name is None
+                or not PACK_NAME_RE.fullmatch(safe_name)
+            ):
+                requested_issue = _issue(
+                    "error",
+                    "pack.name",
+                    f"Invalid requested pack `{raw_name}`: "
+                    f"{name_error or 'must match `pack-{slug}`'}",
+                    "packs/<invalid>",
+                )
+                key = str(raw_name)
+                by_pack[key] = [requested_issue]
+                issues.append(requested_issue)
+                continue
+            try:
+                requested_dir = context_security.pack_dir(root, safe_name)
+            except ValueError as exc:
+                requested_issue = _issue(
+                    "error",
+                    "pack.path",
+                    f"Unsafe requested pack `{safe_name}`: {exc}",
+                    f"packs/{safe_name}",
+                )
+                by_pack[safe_name] = [requested_issue]
+                issues.append(requested_issue)
+                continue
+            pack_dirs.append(requested_dir)
+
     for pack_dir in pack_dirs:
-        pack_issues = _validate_pack_dir(wiki_root, pack_dir, all_pack_names)
+        pack_issues = _validate_pack_dir(root, pack_dir, all_pack_names)
         by_pack[pack_dir.name] = pack_issues
         issues.extend(pack_issues)
 
@@ -219,7 +346,7 @@ def validate_packs(wiki_root: Path, pack_names: Optional[List[str]] = None) -> D
         "artifact_type": "contextd_pack_validation_report.v1",
         "status": status,
         "summary": {
-            "packs_checked": len(pack_dirs),
+            "packs_checked": len(by_pack),
             "issues": len(issues),
             "errors": errors,
             "warnings": warnings,

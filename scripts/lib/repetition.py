@@ -357,42 +357,70 @@ def load_artifact_keywords(
     than crash the hook).
     """
     out: dict[str, set[str]] = {}
-    locations: list[tuple[str, Path, str]] = [
-        ("command", wiki_root / ".claude" / "commands", "*.md"),
-        ("agent", wiki_root / ".claude" / "agents", "*.md"),
+    locations: list[tuple[str, Path, str, Path]] = [
+        ("command", wiki_root / ".claude" / "commands", "*.md", wiki_root),
+        ("agent", wiki_root / ".claude" / "agents", "*.md", wiki_root),
     ]
     # Pack-level artifacts.
-    packs_dir = wiki_root / "packs"
-    if packs_dir.is_dir():
-        for pack in packs_dir.iterdir():
-            if not pack.is_dir() or not context_security.is_relative_to(pack, packs_dir):
+    try:
+        packs_dir = context_security.confined_child(
+            wiki_root, "packs", "packs root", allow_symlink=False
+        )
+    except ValueError:
+        packs_dir = None
+    if packs_dir is not None and packs_dir.is_dir():
+        for candidate in packs_dir.iterdir():
+            if candidate.is_symlink():
                 continue
-            locations.append(("pack-agent", pack / "agents", "*.md"))
-            locations.append(("pack-command", pack / ".claude" / "commands", "*.md"))
-            locations.append(("pack-skill", pack / "skills", "*.md"))
+            name, error = context_security.validate_context_name(candidate.name, "pack")
+            if error or name is None:
+                continue
+            try:
+                pack = context_security.pack_dir(wiki_root, name)
+            except ValueError:
+                continue
+            if not pack.is_dir():
+                continue
+            locations.append(("pack-agent", pack / "agents", "*.md", pack))
+            locations.append(("pack-command", pack / ".claude" / "commands", "*.md", pack))
+            locations.append(("pack-skill", pack / "skills", "*.md", pack))
     # Workspace-level overrides.
     if workspace:
         try:
             ws_dir = context_security.workspace_dir(wiki_root, workspace)
-            locations.append(("ws-agent", ws_dir / "agents", "*.md"))
-            locations.append(("ws-command", ws_dir / ".claude" / "commands", "*.md"))
+            workspace_md = context_security.confined_child(
+                ws_dir, "workspace.md", "workspace.md", allow_symlink=False
+            )
+            if not workspace_md.is_file():
+                raise ValueError(f"workspace.md missing: {workspace_md}")
+            locations.append(("ws-agent", ws_dir / "agents", "*.md", ws_dir))
+            locations.append(("ws-command", ws_dir / ".claude" / "commands", "*.md", ws_dir))
         except ValueError:
             pass
 
-    for kind, root, glob in locations:
+    for kind, root, glob, allowed_root in locations:
         if not root.is_dir():
             continue
         for path in root.glob(glob):
-            if not context_security.is_relative_to(path, root):
+            try:
+                relative = path.relative_to(allowed_root)
+                safe = context_security.confined_child(
+                    allowed_root, relative, "artifact definition", allow_symlink=False
+                )
+            except ValueError:
+                continue
+            if not safe.is_file():
+                continue
+            if context_security.path_policy_reason(safe, logical_path=path):
                 continue
             try:
-                text = path.read_text(encoding="utf-8", errors="replace")
+                text = safe.read_text(encoding="utf-8", errors="replace")
             except OSError:
                 continue
             name, kw = _extract_md_keywords(text)
             if not kw:
                 continue
-            label = f"{kind}:{name or path.stem}"
+            label = f"{kind}:{name or safe.stem}"
             out[label] = kw
     return out
 
