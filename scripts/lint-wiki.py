@@ -472,6 +472,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--wiki-root", help="Override wiki root directory")
     ap.add_argument("--all-workspaces", action="store_true",
                     help="Lint every workspace under {wiki-root}/workspaces/")
+    ap.add_argument("--strict", action="store_true",
+                    help="Exit 2 on OKF warnings (default: warnings don't affect exit code)")
     args = ap.parse_args(argv)
 
     # Resolve project config (only needed if wiki-root or workspace not provided).
@@ -528,7 +530,9 @@ def main(argv: list[str] | None = None) -> int:
 
     if total_broken > 0:
         return 1
-    if total_orphan > 0 or total_okf > 0:
+    if total_orphan > 0:
+        return 2
+    if total_okf > 0 and args.strict:
         return 2
     return 0
 

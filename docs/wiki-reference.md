@@ -128,7 +128,7 @@ Concept files trong workspace theo [OKF v0.2](https://github.com/GoogleCloudPlat
 - Per-claim attribution: footnote `[^id]` trong body, `id` join vào `sources[].id`.
 - Consumers KHÔNG reject unknown keys/types — OKF "tolerate unknown" (lint chỉ warning).
 
-**Enforcement**: `scripts/lint-wiki.py` check frontmatter parseable, `type` non-empty, type ∈ set, `status` ∈ enum, `sources[].id` có footnote tương ứng — tất cả warning (exit 2). File ngoài concept (index/config) và `.claude/**` (harness schema riêng) không bị check.
+**Enforcement**: `scripts/lint-wiki.py` check frontmatter parseable, `type` non-empty, type ∈ set, `status` ∈ enum, `sources[].id` có footnote tương ứng — tất cả warning, **exit 0 mặc định** (CI-friendly; `--strict` → exit 2 nếu muốn warnings-as-errors). File ngoài concept (index/config) và `.claude/**` (harness schema riêng) không bị check.
 
 ## Detailed References
 

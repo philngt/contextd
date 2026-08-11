@@ -180,7 +180,7 @@ Knowledge files in `workspaces/{ws}/` follow [OKF v0.2](https://github.com/Googl
 - **Write new concepts from templates** in [templates/](templates/) — they already carry the OKF fields; just fill them in.
 - **Trust is derived, not claimed**: `status: draft | stable | deprecated`; `verified` by a `human:` actor outranks process-only confirmation.
 - **Index and config files are the exception** (`README.md`, `INDEX.md`, `_index.md`, `patterns-index.md`, `workspace.md`) — they are navigation, not concepts, so no frontmatter is required.
-- **The linter keeps you honest**: `python scripts/lint-wiki.py` warns on missing/unknown `type`, bad `status`, and unreferenced `sources[].id` — warnings, never blocks, per OKF's "tolerate unknown" stance.
+- **The linter keeps you honest**: `python scripts/lint-wiki.py` warns on missing/unknown `type`, bad `status`, and unreferenced `sources[].id` — warnings never fail the run (exit 0), per OKF's "tolerate unknown" stance; pass `--strict` for warnings-as-errors.
 
 Full mapping, type set, and enforcement rules: [docs/wiki-reference.md#okf-open-knowledge-format](docs/wiki-reference.md).
 

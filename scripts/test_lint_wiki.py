@@ -60,9 +60,10 @@ def make_fake_wiki(root: Path, ws_name: str = "fixture-ws") -> Path:
     return ws
 
 
-def run_lint(wiki_root: Path, workspace: str) -> tuple[int, dict, str]:
+def run_lint(wiki_root: Path, workspace: str, extra: list[str] | None = None) -> tuple[int, dict, str]:
     proc = subprocess.run(
-        [sys.executable, str(SCRIPT), "--workspace", workspace, "--wiki-root", str(wiki_root)],
+        [sys.executable, str(SCRIPT), "--workspace", workspace, "--wiki-root", str(wiki_root)]
+        + (extra or []),
         capture_output=True, text=True,
     )
     data = json.loads(proc.stdout) if proc.stdout.strip() else {}
@@ -126,7 +127,7 @@ def test_orphan_only_exit_code() -> None:
 
 
 def test_okf_missing_type_warns() -> None:
-    """Concept file without frontmatter -> okf warning, exit code 2."""
+    """Concept file without frontmatter -> okf warning, exit code 0 (warn-only)."""
     with tempfile.TemporaryDirectory() as td:
         root = Path(td)
         ws = root / "workspaces" / "ws"
@@ -137,7 +138,7 @@ def test_okf_missing_type_warns() -> None:
         rc, data, _err = run_lint(root, "ws")
         kinds = [f["kind"] for f in data["okf"]]
         assert "okf_missing_frontmatter" in kinds, kinds
-        assert rc == 2, rc
+        assert rc == 0, rc
 
 
 def test_okf_unknown_type_and_bad_status() -> None:
@@ -155,7 +156,7 @@ def test_okf_unknown_type_and_bad_status() -> None:
         kinds = {f["kind"] for f in data["okf"]}
         assert "okf_unknown_type" in kinds, kinds
         assert "okf_bad_status" in kinds, kinds
-        assert rc == 2, rc
+        assert rc == 0, rc
 
 
 def test_okf_source_id_unreferenced() -> None:
@@ -175,7 +176,7 @@ def test_okf_source_id_unreferenced() -> None:
         rc, data, _err = run_lint(root, "ws")
         kinds = [(f["kind"], f["detail"]) for f in data["okf"]]
         assert any("orphan-source" in d for k, d in kinds if k == "okf_source_id_unreferenced"), kinds
-        assert rc == 2, rc
+        assert rc == 0, rc
 
 
 def test_okf_conformant_clean() -> None:
@@ -217,6 +218,23 @@ def test_okf_skips_index_config_files() -> None:
         assert rc == 0, rc
 
 
+def test_okf_strict_flag_fails() -> None:
+    """Same warning with --strict -> exit code 2 (warnings-as-errors)."""
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        ws = root / "workspaces" / "ws"
+        (ws / "platform" / "contracts").mkdir(parents=True)
+        (ws / "platform" / "contracts" / "c.md").write_text(
+            "---\ntype: TotallyUnknownThing\nstatus: pending\n---\n# c\n",
+            encoding="utf-8",
+        )
+        (ws / "workspace.md").write_text("# ws\n[c](platform/contracts/c.md)\n", encoding="utf-8")
+        (ws / "patterns-index.md").write_text("# i\n[c](platform/contracts/c.md)\n", encoding="utf-8")
+        rc, data, _err = run_lint(root, "ws", extra=["--strict"])
+        assert data["summary"]["okf"] > 0, data
+        assert rc == 2, rc
+
+
 def test_okf_skips_evidence_runtime_artifacts() -> None:
     """Generated evidence artifacts (raw.md, analysis, qa) are not concepts."""
     with tempfile.TemporaryDirectory() as td:
@@ -248,6 +266,7 @@ def main() -> int:
     test_okf_conformant_clean()
     test_okf_skips_index_config_files()
     test_okf_skips_evidence_runtime_artifacts()
+    test_okf_strict_flag_fails()
     print("ALL TESTS PASSED")
     return 0
 
