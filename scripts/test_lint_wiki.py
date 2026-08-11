@@ -97,15 +97,17 @@ def test_clean_workspace() -> None:
         ws = root / "workspaces" / "clean"
         (ws / "platform" / "patterns").mkdir(parents=True)
         (ws / "platform" / "contracts").mkdir(parents=True)
-        (ws / "platform" / "patterns" / "p.md").write_text("# p", encoding="utf-8")
-        (ws / "platform" / "contracts" / "c.md").write_text("# c", encoding="utf-8")
+        (ws / "platform" / "patterns" / "p.md").write_text(
+            "---\ntype: Pattern\ntitle: P\ndescription: D\n---\n# p", encoding="utf-8")
+        (ws / "platform" / "contracts" / "c.md").write_text(
+            "---\ntype: Contract\ntitle: C\ndescription: D\n---\n# c", encoding="utf-8")
         (ws / "workspace.md").write_text("# ws\n[p](patterns-index.md)\n", encoding="utf-8")
         (ws / "patterns-index.md").write_text(
             "# i\n[p](platform/patterns/p.md)\n[c](platform/contracts/c.md)\n",
             encoding="utf-8",
         )
         rc, data, _err = run_lint(root, "clean")
-        assert data["summary"] == {"broken": 0, "orphaned": 0}, data
+        assert data["summary"] == {"broken": 0, "orphaned": 0, "okf": 0}, data
         assert rc == 0, rc
 
 
@@ -123,10 +125,124 @@ def test_orphan_only_exit_code() -> None:
         assert rc == 2, rc
 
 
+def test_okf_missing_type_warns() -> None:
+    """Concept file without frontmatter -> okf warning, exit code 2."""
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        ws = root / "workspaces" / "ws"
+        (ws / "platform" / "patterns").mkdir(parents=True)
+        (ws / "platform" / "patterns" / "p.md").write_text("# p", encoding="utf-8")
+        (ws / "workspace.md").write_text("# ws\n[p](platform/patterns/p.md)\n", encoding="utf-8")
+        (ws / "patterns-index.md").write_text("# i\n[p](platform/patterns/p.md)\n", encoding="utf-8")
+        rc, data, _err = run_lint(root, "ws")
+        kinds = [f["kind"] for f in data["okf"]]
+        assert "okf_missing_frontmatter" in kinds, kinds
+        assert rc == 2, rc
+
+
+def test_okf_unknown_type_and_bad_status() -> None:
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        ws = root / "workspaces" / "ws"
+        (ws / "platform" / "contracts").mkdir(parents=True)
+        (ws / "platform" / "contracts" / "c.md").write_text(
+            "---\ntype: TotallyUnknownThing\nstatus: pending\n---\n# c\n",
+            encoding="utf-8",
+        )
+        (ws / "workspace.md").write_text("# ws\n[c](platform/contracts/c.md)\n", encoding="utf-8")
+        (ws / "patterns-index.md").write_text("# i\n[c](platform/contracts/c.md)\n", encoding="utf-8")
+        rc, data, _err = run_lint(root, "ws")
+        kinds = {f["kind"] for f in data["okf"]}
+        assert "okf_unknown_type" in kinds, kinds
+        assert "okf_bad_status" in kinds, kinds
+        assert rc == 2, rc
+
+
+def test_okf_source_id_unreferenced() -> None:
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        ws = root / "workspaces" / "ws"
+        (ws / "platform" / "contracts").mkdir(parents=True)
+        (ws / "platform" / "contracts" / "c.md").write_text(
+            "---\ntype: Contract\ntitle: T\ndescription: D\nsources:\n"
+            "  - id: used-source\n    resource: https://example.com/a\n"
+            "  - id: orphan-source\n    resource: https://example.com/b\n"
+            "---\n# T\n\nClaim [^used-source].\n",
+            encoding="utf-8",
+        )
+        (ws / "workspace.md").write_text("# ws\n[c](platform/contracts/c.md)\n", encoding="utf-8")
+        (ws / "patterns-index.md").write_text("# i\n[c](platform/contracts/c.md)\n", encoding="utf-8")
+        rc, data, _err = run_lint(root, "ws")
+        kinds = [(f["kind"], f["detail"]) for f in data["okf"]]
+        assert any("orphan-source" in d for k, d in kinds if k == "okf_source_id_unreferenced"), kinds
+        assert rc == 2, rc
+
+
+def test_okf_conformant_clean() -> None:
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        ws = root / "workspaces" / "ws"
+        (ws / "platform" / "contracts").mkdir(parents=True)
+        (ws / "platform" / "contracts" / "c.md").write_text(
+            "---\ntype: Contract\ntitle: T\ndescription: D\ntags: [a, b]\n"
+            "generated: { by: process:test, at: 2026-08-11T00:00:00Z }\n"
+            "sources:\n  - id: s1\n    resource: https://example.com/a\n"
+            "---\n# T\n\nClaim [^s1].\n",
+            encoding="utf-8",
+        )
+        (ws / "workspace.md").write_text("# ws\n[c](platform/contracts/c.md)\n", encoding="utf-8")
+        (ws / "patterns-index.md").write_text("# i\n[c](platform/contracts/c.md)\n", encoding="utf-8")
+        rc, data, _err = run_lint(root, "ws")
+        assert data["okf"] == [], data["okf"]
+        assert rc == 0, rc
+
+
+def test_okf_skips_index_config_files() -> None:
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        ws = root / "workspaces" / "ws"
+        ws.mkdir(parents=True)
+        # Index/config files must not be flagged for missing frontmatter
+        for name in ("README.md", "INDEX.md", "_index.md", "patterns-index.md",
+                     "workspace.md", "knowledge-map.md"):
+            (ws / name).write_text("# x", encoding="utf-8")
+        (ws / "patterns-index.md").write_text("# i\n", encoding="utf-8")
+        rc, data, _err = run_lint(root, "ws")
+        assert data["okf"] == [], data["okf"]
+        assert rc == 0, rc
+
+
+def test_okf_skips_evidence_runtime_artifacts() -> None:
+    """Generated evidence artifacts (raw.md, analysis, qa) are not concepts."""
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        ws = root / "workspaces" / "ws"
+        (ws / "evidence" / "sources" / "2026-01-01-code-foo").mkdir(parents=True)
+        (ws / "evidence" / "analysis" / "2026-01-01-code-foo").mkdir(parents=True)
+        (ws / "evidence" / "qa" / "2026-01-01-code-foo").mkdir(parents=True)
+        (ws / "evidence" / "sources" / "2026-01-01-code-foo" / "raw.md").write_text(
+            "# Raw\nno frontmatter here", encoding="utf-8")
+        (ws / "evidence" / "analysis" / "2026-01-01-code-foo" / "c01-proposals.md").write_text(
+            "# c01\nno frontmatter", encoding="utf-8")
+        (ws / "evidence" / "qa" / "2026-01-01-code-foo" / "recommendations.md").write_text(
+            "# rec\nno frontmatter", encoding="utf-8")
+        (ws / "workspace.md").write_text("# ws\n", encoding="utf-8")
+        (ws / "patterns-index.md").write_text("# i\n", encoding="utf-8")
+        rc, data, _err = run_lint(root, "ws")
+        assert data["okf"] == [], data["okf"]
+        assert rc == 0, rc
+
+
 def main() -> int:
     test_broken_and_orphan()
     test_clean_workspace()
     test_orphan_only_exit_code()
+    test_okf_missing_type_warns()
+    test_okf_unknown_type_and_bad_status()
+    test_okf_source_id_unreferenced()
+    test_okf_conformant_clean()
+    test_okf_skips_index_config_files()
+    test_okf_skips_evidence_runtime_artifacts()
     print("ALL TESTS PASSED")
     return 0
 
