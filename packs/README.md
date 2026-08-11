@@ -87,10 +87,11 @@ This generates all 8 files (pack.yaml, README, 5 agent docs, scripts/rules.py wi
 | [pack-ba](pack-ba/) | beta (v0.1) | Business analysis knowledge — requirements modeling, acceptance criteria, process mapping, stakeholder alignment. For **BA** users needing requirement clarity/testability |
 | [pack-security](pack-security/) | beta (v0.2) | Security engineering + authorized pentest — threat modeling, authz boundaries, secret hygiene, logging redaction, scope discipline, evidence-based findings, risk rating, remediation reporting. Absorbs former `pack-pentest` |
 | [pack-dba](pack-dba/) | beta (v0.1) | Database administration knowledge — migration rollback safety, query evidence, backup/restore readiness, DB operational guardrails |
+| [pack-devops-iac](pack-devops-iac/) | beta (v0.1) | DevOps + infrastructure as code — Terraform dependency safety, Kubernetes workload readiness, CI/CD plan gates, promotion, drift, and rollback controls |
 | [pack-solo-builder](pack-solo-builder/) | beta (v0.1) | For **non-technical domain experts** (mechanical, accounting, healthcare, ...) using Claude Code as a "no-code IDE" — tool design coach + cross-platform tech recipe library (Linux native + Windows Docker). Pairs with `/tool-design`, `/tool-list`, `/tool-extend` |
 | [pack-ui-ux](pack-ui-ux/) | beta (v0.1) | UI/UX design — design system, design tokens, WCAG 2.1 AA accessibility, user flows, UX writing conventions. Pairs with `pack-frontend-react` (design doc ↔ code impl) |
 
-Roadmap (Phase 3+): `pack-mobile-react-native`, `pack-mobile-flutter`, `pack-mobile-ios-swift`, `pack-mobile-android-kotlin`, `pack-data-engineering`, `pack-ml-training`, `pack-devops-iac`.
+Roadmap (Phase 3+): `pack-mobile-react-native`, `pack-mobile-flutter`, `pack-mobile-ios-swift`, `pack-mobile-android-kotlin`, `pack-data-engineering`, `pack-ml-training`.
 
 ## Composition examples
 

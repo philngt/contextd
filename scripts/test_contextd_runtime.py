@@ -31,6 +31,7 @@ import contextd_version  # noqa: E402
 import generate_manifest  # noqa: E402
 import cmd_resolve  # noqa: E402
 import render_runtime  # noqa: E402
+import test_pack_devops_iac  # noqa: E402
 from lib import contextd_resolver, pack_validation, task_context_engine  # noqa: E402
 
 
@@ -1342,6 +1343,7 @@ def run() -> int:
         test_doctor_and_adapter_drift_checks,
         test_codex_agents_use_json_canonical_artifact,
         test_pack_ui_ux_rules,
+        test_pack_devops_iac.test_pack_devops_iac_rules,
         test_stdio_utf8_under_legacy_codepage,
         test_intent_classification_word_boundaries,
         test_pack_keyword_special_chars,

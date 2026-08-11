@@ -1,0 +1,30 @@
+name: pack-devops-iac
+version: 0.1.0
+description: DevOps and infrastructure-as-code pack — Terraform dependency safety, Kubernetes workload readiness, CI/CD deployment gates, environment promotion, drift control, and rollback readiness.
+
+components:
+  - terraform-safety
+  - kubernetes-workload
+  - ci-cd-release
+  - environment-promotion
+  - infrastructure-drift
+  - rollback-readiness
+
+keywords:
+  terraform-safety: [terraform, opentofu, hcl, provider version, terraform module, infrastructure as code]
+  kubernetes-workload: [kubernetes, k8s, deployment yaml, statefulset, daemonset, helm]
+  ci-cd-release: [ci/cd, pipeline, deployment pipeline, github actions, gitlab ci, release workflow]
+  environment-promotion: [environment promotion, promote to production, staging, production deployment]
+  infrastructure-drift: [infrastructure drift, drift detection, terraform plan, desired state]
+  rollback-readiness: [rollback, roll back, rollout undo, deployment recovery, release recovery]
+
+files:
+  constraints: agents/constraints.md
+  coding_rules: agents/coding-rules.md
+  validator_rules: agents/pipeline/validator-rules.md
+  validator_script: scripts/rules.py
+  retrieval_map: agents/pipeline/retrieval-map.md
+  prompt_overrides: agents/pipeline/prompt-overrides.md
+  common_pitfalls: agents/common-pitfalls.md
+
+conflicts_with: []

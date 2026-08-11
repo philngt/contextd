@@ -273,6 +273,20 @@
       "template_file": "packs/pack-dba/pack.yaml"
     },
     {
+      "name": "pack-devops-iac",
+      "description": "DevOps and infrastructure-as-code pack — Terraform dependency safety, Kubernetes workload readiness, CI/CD deployment gates, environment promotion, drift control, and rollback readiness.",
+      "version": "0.1.0",
+      "components": [
+        "terraform-safety",
+        "kubernetes-workload",
+        "ci-cd-release",
+        "environment-promotion",
+        "infrastructure-drift",
+        "rollback-readiness"
+      ],
+      "template_file": "packs/pack-devops-iac/pack.yaml"
+    },
+    {
       "name": "pack-event-driven",
       "description": "Kafka, MQTT, and event-driven backend patterns (DLQ, offset commit, idempotent consumer, batch processing)",
       "version": "1.0.0",
