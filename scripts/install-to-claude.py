@@ -17,6 +17,8 @@ import sys
 from pathlib import Path
 from typing import Optional
 
+from lib.stdio import configure_stdio
+
 
 def resolve_dir(raw: Optional[str], default: Path) -> Path:
     if not raw:
@@ -192,6 +194,7 @@ def print_mcp_config(engine_root: Path, client: str, knowledge_root: Path,
 
 
 def main() -> None:
+    configure_stdio()
     parser = argparse.ArgumentParser(description="Install contextd Claude adapter files.")
     parser.add_argument("engine_root", nargs="?", default=None,
                         help="Path to contextd engine repo")

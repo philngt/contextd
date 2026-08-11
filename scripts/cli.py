@@ -15,6 +15,7 @@ sys.path.insert(0, str(SCRIPT_DIR))
 sys.path.insert(0, str(SCRIPT_DIR / "lib"))
 
 from contextd_version import get_version  # noqa: E402
+from stdio import configure_stdio  # noqa: E402
 
 __version__ = get_version(start_path=SCRIPT_DIR.parent)
 
@@ -604,6 +605,7 @@ def _mcp_config_cmd(args) -> int:
 
 
 def main() -> int:
+    configure_stdio()
     raw_args = sys.argv[1:]
     if not raw_args or raw_args in (["--help"], ["-h"]):
         print(_render_starter_help(), end="")

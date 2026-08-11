@@ -33,6 +33,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR / "lib"))
 
 import contextd_resolver  # noqa: E402
+from stdio import configure_stdio  # noqa: E402
 
 STAGE_FILES = [
     "run.json",
@@ -895,6 +896,7 @@ def watch_loop(run_dir: Path, workspace_active: str | None, out_path: Path) -> i
 
 
 def main() -> int:
+    configure_stdio()
     p = argparse.ArgumentParser(description="Render contextd pipeline trace as HTML.")
     p.add_argument("--run", help="Run ID (or prefix)")
     p.add_argument("--last", action="store_true", help="Latest run")

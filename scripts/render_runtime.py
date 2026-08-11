@@ -21,6 +21,7 @@ sys.path.insert(0, str(SCRIPT_DIR / "lib"))
 
 import cmd_resolve  # noqa: E402
 import cmd_bundle  # noqa: E402
+from stdio import configure_stdio  # noqa: E402
 
 REPO_ROOT = SCRIPT_DIR.parent
 
@@ -469,6 +470,7 @@ def render(runtime: str, workspace: Optional[str] = None,
 
 
 def main():
+    configure_stdio()
     import argparse
     parser = argparse.ArgumentParser(description="Export contextd knowledge to runtime-specific formats.")
     parser.add_argument("--runtime", required=True,

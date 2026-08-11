@@ -37,6 +37,8 @@ import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+
+from lib.stdio import configure_stdio  # noqa: E402
 PACKS_DIR = REPO_ROOT / "packs"
 TEMPLATE_PACK_YAML = REPO_ROOT / "templates" / "pack.yaml"
 
@@ -49,6 +51,7 @@ def die(msg: str) -> None:
 
 
 def main() -> None:
+    configure_stdio()
     if len(sys.argv) != 2:
         die("Usage: python scripts/scaffold-pack.py <pack-name>")
 

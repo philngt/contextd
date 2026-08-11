@@ -59,6 +59,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent / "lib"))
 import pack_loader  # noqa: E402
 import contextd_resolver  # noqa: E402
+from stdio import configure_stdio  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
@@ -337,6 +338,7 @@ def run(file_path: Path, ws_root: Optional[Path], domain: Optional[str],
 
 
 def main(argv: List[str]) -> int:
+    configure_stdio()
     parser = argparse.ArgumentParser(
         prog="validate.py",
         description="Layer 1 rule-based validator — see "

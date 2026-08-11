@@ -18,6 +18,7 @@ sys.path.insert(0, str(SCRIPT_DIR / "lib"))
 
 import cmd_resolve  # noqa: E402
 import find_engine  # noqa: E402
+from stdio import configure_stdio  # noqa: E402
 
 
 def run(query: str, workspace: str | None = None, limit: int = 5, fmt: str = "text") -> int:
@@ -74,6 +75,7 @@ def run(query: str, workspace: str | None = None, limit: int = 5, fmt: str = "te
 
 
 def main():
+    configure_stdio()
     import argparse
     parser = argparse.ArgumentParser(description="Fuzzy search across contextd workspace knowledge.")
     parser.add_argument("query", help="Search keywords")

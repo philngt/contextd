@@ -19,6 +19,7 @@ import pack_validation  # noqa: E402
 import render_runtime  # noqa: E402
 import task_context_engine  # noqa: E402
 from context_security import block_reason, reject_unsafe_entry  # noqa: E402
+from stdio import configure_stdio  # noqa: E402
 
 
 Issue = Dict[str, str]
@@ -320,6 +321,7 @@ def run(cwd: str | None = None, fmt: str = "json") -> int:
 
 
 def main() -> None:
+    configure_stdio()
     import argparse
     parser = argparse.ArgumentParser(description="Diagnose contextd production-readiness issues.")
     parser.add_argument("--cwd", default=None, help="Start directory (default: current)")

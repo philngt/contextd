@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Fixed — Windows console encoding and keyword matching
+
+- All CLI/MCP entry points now force UTF-8 on stdin/stdout/stderr (`scripts/lib/stdio.py`), fixing crashes on Windows consoles using a legacy codepage (e.g. cp1252) whenever workspace content contains non-ASCII characters (Vietnamese text, arrows, etc.). Previously `contextd context`, `contextd explain`, `contextd check`, and `contextd mcp-server` could raise `UnicodeEncodeError`/`UnicodeDecodeError` mid-run.
+- `detect_intent`/`detect_workstream`/`detect_components`/`_score` in `task_context_engine.py` now match keywords on word boundaries instead of raw substrings, fixing false-positive classifications (e.g. `"api"` no longer matches inside `"rapid"`, `"ui"` no longer matches inside `"build"`, `"check"` no longer matches inside `"checkout"`). Punctuation-heavy keywords (`.proto`, `@RestController`) and multi-word/hyphenated keywords (`drift-check`) still match correctly, and Vietnamese keywords keep correct boundaries.
+- `detect_intent`/`detect_workstream` now break keyword-score ties deterministically via an explicit precedence order instead of relying on Python dict iteration order.
+- Added `intent.classification` (per-axis scores, runner-up, tie-broken flag) to the `contextd_task_context.v1` artifact and surfaced it in `contextd explain --text` output, for debugging classification decisions.
+- Added `"debug"` to the `fix_bug` intent keyword list (previously matched only by accident via the `"bug"` substring inside `"debug"`, which the word-boundary fix above no longer allows).
+
 ### Added — Production context diagnostics
 
 Added P0 production-readiness diagnostics and context quality tooling:

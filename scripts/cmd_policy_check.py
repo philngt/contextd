@@ -14,6 +14,7 @@ sys.path.insert(0, str(SCRIPT_DIR / "lib"))
 
 import cmd_resolve  # noqa: E402
 import task_context_engine  # noqa: E402
+from stdio import configure_stdio  # noqa: E402
 
 
 def _render_text(report: dict) -> str:
@@ -107,6 +108,7 @@ def run(task: str, workspace: str | None = None, cwd: str | None = None,
 
 
 def main() -> None:
+    configure_stdio()
     import argparse
     parser = argparse.ArgumentParser(description="Evaluate contextd policy-as-code for a task.")
     parser.add_argument("task", help="Task description (quote if multi-word)")

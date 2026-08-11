@@ -24,6 +24,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent
 sys.path.insert(0, str(SCRIPT_DIR))
 import pack_loader  # noqa: E402
+from lib.stdio import configure_stdio  # noqa: E402
 
 
 def _parse_frontmatter(text: str) -> Optional[Dict[str, str]]:
@@ -234,6 +235,7 @@ def write_manifest(manifest: Dict, output_path: Optional[Path] = None) -> Path:
 
 
 def main():
+    configure_stdio()
     import argparse
     parser = argparse.ArgumentParser(description="Generate contextd manifest index.")
     parser.add_argument("--output", default=None, help="Output path (default: .contextd/manifest.json)")

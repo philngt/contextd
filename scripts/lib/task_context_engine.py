@@ -27,7 +27,7 @@ INTENT_KEYWORDS = {
         "producer", "service", "handler", "controller",
     ],
     "fix_bug": [
-        "fix", "bug", "broken", "breaks", "error", "crash", "fails", "failing",
+        "fix", "bug", "debug", "broken", "breaks", "error", "crash", "fails", "failing",
         "not working", "doesn't work", "exception", "regression", "issue",
     ],
     "design": [
@@ -288,6 +288,15 @@ WORKSTREAM_PRIORITY = {
     },
 }
 
+# Deterministic tie-break order for detect_intent()/detect_workstream() when
+# keyword scores are equal. Most specific/urgent first; generic fallback
+# values (implement_feature, engineering) last so they only win by default.
+INTENT_PRECEDENCE = ["incident", "fix_bug", "review", "design", "implement_feature"]
+WORKSTREAM_PRECEDENCE = [
+    "security", "ops", "quality", "business_analysis",
+    "product", "design", "domain_research", "engineering",
+]
+
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
@@ -316,16 +325,73 @@ def _rel(path: Path, root: Path) -> str:
         return path.as_posix()
 
 
-def detect_intent(task: str) -> str:
-    task_lower = task.lower()
+_KEYWORD_PATTERN_CACHE: Dict[str, "re.Pattern"] = {}
+
+
+def _keyword_pattern(keyword: str) -> "re.Pattern":
+    """Compile (and cache) a word-boundary-aware pattern for `keyword`.
+
+    Boundaries are added only where the keyword's edge character is itself
+    a word character. This keeps substring-only keywords like `.proto` or
+    `@RestController` matching (they'd never match with hard `\\b` anchors)
+    while stopping plain-word keywords like `api`/`ui`/`check` from matching
+    inside unrelated words (`rapid`, `build`, `checkout`). `\\w` is
+    unicode-aware, so Vietnamese keywords (e.g. "đánh giá") keep correct
+    boundaries too. Multi-word keywords also match hyphen/underscore/slash
+    joins, e.g. "drift check" matches "drift-check".
+    """
+    pattern = _KEYWORD_PATTERN_CACHE.get(keyword)
+    if pattern is None:
+        tokens = keyword.split()
+        body = r"[\s\-_/]+".join(re.escape(tok) for tok in tokens)
+        prefix = r"(?<!\w)" if keyword[:1].isalnum() or keyword[:1] == "_" else ""
+        suffix = r"(?!\w)" if keyword[-1:].isalnum() or keyword[-1:] == "_" else ""
+        pattern = re.compile(prefix + body + suffix, re.IGNORECASE)
+        _KEYWORD_PATTERN_CACHE[keyword] = pattern
+    return pattern
+
+
+def _matches(keyword: str, text: str) -> bool:
+    return bool(keyword) and _keyword_pattern(keyword).search(text) is not None
+
+
+def _pick_by_precedence(scores: Dict[str, int], precedence: List[str],
+                        default: str) -> str:
+    """Pick the highest-scoring key; ties broken by `precedence` order."""
+    if not scores:
+        return default
+    order = {name: idx for idx, name in enumerate(precedence)}
+    fallback_rank = len(precedence)
+    return max(
+        scores,
+        key=lambda name: (scores[name], -order.get(name, fallback_rank)),
+    )
+
+
+def _classification_summary(scores: Dict[str, int], chosen: str) -> Dict:
+    """Expose why `chosen` won, for `contextd explain` debugging."""
+    ranked = sorted(scores.items(), key=lambda item: -item[1])
+    top_score = scores.get(chosen)
+    tie_broken = sum(1 for _, score in ranked if score == top_score) > 1
+    runner_up = next((name for name, _ in ranked if name != chosen), None)
+    return {
+        "scores": dict(sorted(scores.items())),
+        "runner_up": runner_up,
+        "tie_broken": tie_broken,
+    }
+
+
+def _intent_scores(task: str) -> Dict[str, int]:
     scores: Dict[str, int] = {}
     for intent, keywords in INTENT_KEYWORDS.items():
-        score = sum(1 for kw in keywords if kw in task_lower)
+        score = sum(1 for kw in keywords if _matches(kw, task))
         if score:
             scores[intent] = score
-    if not scores:
-        return "implement_feature"
-    return max(scores, key=scores.get)
+    return scores
+
+
+def detect_intent(task: str) -> str:
+    return _pick_by_precedence(_intent_scores(task), INTENT_PRECEDENCE, "implement_feature")
 
 
 def _parse_pack_keywords(pack_yaml: Path) -> Dict[str, List[str]]:
@@ -351,19 +417,17 @@ def _parse_pack_keywords(pack_yaml: Path) -> Dict[str, List[str]]:
 
 
 def detect_components(task: str, wiki_root: Path, packs: List[str]) -> List[str]:
-    task_lower = task.lower()
     components: set[str] = set()
     for pack_name in packs:
         keywords = _parse_pack_keywords(wiki_root / "packs" / pack_name / "pack.yaml")
         for component, words in keywords.items():
-            if any(word.lower() in task_lower for word in words):
+            if any(_matches(word, task) for word in words):
                 components.add(component)
     return sorted(components)
 
 
 def detect_scope(task: str, wiki_root: Path, workspace: str) -> Tuple[Optional[str], Optional[str]]:
     """Detect domain + project by matching directory names in task text."""
-    task_lower = task.lower()
     ws_dir = wiki_root / "workspaces" / workspace
 
     def match_dir(parent: Path) -> Optional[str]:
@@ -372,18 +436,17 @@ def detect_scope(task: str, wiki_root: Path, workspace: str) -> Tuple[Optional[s
         for path in sorted(p for p in parent.iterdir() if p.is_dir()):
             name = path.name.lower()
             variants = {name, name.replace("-", " "), name.replace("_", " ")}
-            if any(v and v in task_lower for v in variants):
+            if any(v and _matches(v, task) for v in variants):
                 return path.name
         return None
 
     return match_dir(ws_dir / "domains"), match_dir(ws_dir / "projects")
 
 
-def detect_workstream(task: str, packs: List[str], components: List[str]) -> str:
-    task_lower = task.lower()
+def _workstream_scores(task: str, packs: List[str], components: List[str]) -> Dict[str, int]:
     scores: Dict[str, int] = {}
     for workstream, keywords in WORKSTREAM_KEYWORDS.items():
-        score = sum(1 for kw in keywords if kw in task_lower)
+        score = sum(1 for kw in keywords if _matches(kw, task))
         if score:
             scores[workstream] = scores.get(workstream, 0) + score
 
@@ -396,9 +459,12 @@ def detect_workstream(task: str, packs: List[str], components: List[str]) -> str
         else:
             scores[workstream] = scores.get(workstream, 0) + 1
 
-    if not scores:
-        return "engineering"
-    return max(scores, key=scores.get)
+    return scores
+
+
+def detect_workstream(task: str, packs: List[str], components: List[str]) -> str:
+    scores = _workstream_scores(task, packs, components)
+    return _pick_by_precedence(scores, WORKSTREAM_PRECEDENCE, "engineering")
 
 
 def _strip_inline_note(value: str) -> str:
@@ -776,7 +842,7 @@ def _collect_candidates(
 
 
 def _keywords(task: str, components: List[str]) -> List[str]:
-    raw = re.findall(r"[A-Za-z0-9_\-]{3,}", task.lower())
+    raw = re.findall(r"[^\W_][\w\-]{2,}", task.lower(), flags=re.UNICODE)
     stop = {
         "the", "and", "for", "with", "this", "that", "into", "from", "contextd",
         "implement", "create", "build", "design", "review",
@@ -790,11 +856,11 @@ def _score(doc: Dict, words: List[str]) -> int:
     name = Path(doc["path"]).stem.lower()
     score = 0
     for word in words:
-        if word in name:
+        if _matches(word, name):
             score += 10
-        if word in text[:800]:
+        if _matches(word, text[:800]):
             score += 3
-        elif word in text:
+        elif _matches(word, text):
             score += 1
     score += max(0, 5 - PRIORITY.get(doc["category"], 5))
     return score
@@ -1106,10 +1172,12 @@ def build_context_artifact(
 ) -> Dict:
     """Build the canonical JSON context artifact."""
     warnings_out = list(warnings or [])
-    intent_type = detect_intent(task)
+    intent_scores = _intent_scores(task)
+    intent_type = _pick_by_precedence(intent_scores, INTENT_PRECEDENCE, "implement_feature")
     components = detect_components(task, wiki_root, packs)
     domain, scope = detect_scope(task, wiki_root, workspace)
-    workstream = detect_workstream(task, packs, components)
+    workstream_scores = _workstream_scores(task, packs, components)
+    workstream = _pick_by_precedence(workstream_scores, WORKSTREAM_PRECEDENCE, "engineering")
     meta = WORKSTREAM_PRIORITY.get(workstream, WORKSTREAM_PRIORITY["engineering"])
     candidates, gaps = _collect_candidates(
         intent_type,
@@ -1152,6 +1220,10 @@ def build_context_artifact(
                 Path(doc["path"]).stem for doc in docs if doc["category"] == "pattern"
             ],
             "contracts_touched": _contracts_touched(docs),
+            "classification": {
+                "intent": _classification_summary(intent_scores, intent_type),
+                "workstream": _classification_summary(workstream_scores, workstream),
+            },
         },
         "referenced_docs": docs,
         "static_context": static_docs,
