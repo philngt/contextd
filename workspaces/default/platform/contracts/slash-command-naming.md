@@ -1,3 +1,9 @@
+---
+type: Contract
+title: "Contract: slash-command-naming"
+description: "Slash commands trong .claude/commands/ PHẢI theo naming /{kebab-case-lowercase} — subject-verb preferred."
+---
+
 # Contract: slash-command-naming
 
 ## Rule

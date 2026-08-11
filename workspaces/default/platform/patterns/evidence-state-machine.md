@@ -1,3 +1,9 @@
+---
+type: Pattern
+title: "Pattern: evidence-state-machine"
+description: "State machine 7 states cho evidence pipeline (ingest → analyze → qa → apply → archive) — resume sau interruption, validate precondition, audit trail."
+---
+
 # Pattern: evidence-state-machine
 
 > PAIR pattern của contract `../contracts/evidence-state-machine-transitions.md`. Pattern describes implementation skeleton; contract describes invariant rules.

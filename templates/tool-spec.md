@@ -1,4 +1,5 @@
 ---
+type: Tool
 slug: "{tool-slug}"
 title: "{Tool title — 1 dòng action-oriented}"
 status: draft  # draft | specced | building | done | shelved

@@ -1,3 +1,9 @@
+---
+type: Contract
+title: "Contract: evidence-state-machine-transitions"
+description: "Transition ownership + precondition của 7 states — DAG chặt, cấm skip stage, cấm reverse transition, workspace lock I-2."
+---
+
 # Contract: evidence-state-machine-transitions
 
 > PAIR contract của pattern `../patterns/evidence-state-machine.md`. Pattern describes implementation skeleton; contract describes invariant rules.

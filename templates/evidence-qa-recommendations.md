@@ -1,3 +1,10 @@
+---
+type: Evidence
+title: "QA Recommendations — {evid-id}"
+description: "QA recommendations cho evidence {evid-id} — read-only trong QA session"
+generated: { by: process:evidence-qa, at: {ISO timestamp} }
+---
+
 # QA Recommendations — {evid-id}
 
 > Template — auto-generated tại `{ws}/evidence/qa/{evid-id}/recommendations.md`

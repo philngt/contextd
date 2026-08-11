@@ -1,3 +1,9 @@
+---
+type: Contract
+title: "Contract: source-yaml-schema"
+description: "source.yaml PHẢI có required fields — conditional fields cho source_type=code và bundle mode, workspace_at_ingest immutable."
+---
+
 # Contract: source-yaml-schema
 
 ## Rule

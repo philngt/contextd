@@ -1,3 +1,9 @@
+---
+type: Contract
+title: "Contract: citation-format"
+description: "Format citation strict cho mọi claim — path relative-to-repo-root, line ranges L42-L58, anchor #section-N, validator behavior."
+---
+
 # Contract: citation-format
 
 > PAIR contract của pattern `../patterns/citation-rule.md`. Pattern describes path format skeleton; contract describes invariants + validator behavior.

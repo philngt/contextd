@@ -1,3 +1,12 @@
+---
+type: Decision
+title: "ADR-{NNN}: {Decision Title}"
+description: "{1-line: quyết định này là gì}"
+# OKF lifecycle: draft | stable | deprecated — ADR ACCEPTED → stable
+status: stable
+tags: [adr]
+---
+
 # ADR-{NNN}: {Decision Title}
 
 ## Scope

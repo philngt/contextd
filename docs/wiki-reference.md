@@ -103,6 +103,33 @@ When code changes, update the wiki of the **active workspace**. Keep both in syn
 
 Use templates in [templates/](../templates/).
 
+## OKF (Open Knowledge Format)
+
+Concept files trong workspace theo [OKF v0.2](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md): YAML frontmatter bắt buộc `type`, khuyến nghị `title`/`description`. Mục đích: metadata đồng nhất để agent/tool parse, provenance (ai tạo, verified bởi ai) traceable, diffable trong version control.
+
+**Type set hiện tại** (lint warning nếu type ngoài set): `Contract`, `Pattern`, `Decision`, `Evidence`, `Runbook`, `Report`, `Tool`, `Service`, `Domain`, `Reference`, `Recipe`.
+
+**Field mapping contextd → OKF:**
+
+| contextd | OKF |
+|----------|-----|
+| `{ws}/platform/contracts/*.md` | `type: Contract` |
+| `{ws}/platform/patterns/*.md` | `type: Pattern` |
+| `{ws}/decisions/*.md` | `type: Decision`, `status: stable` khi ACCEPTED (OKF status = lifecycle; ADR Status trong body giữ nguyên) |
+| `{ws}/runbooks/*.md` | `type: Runbook` |
+| `{ws}/evidence/qa/*/...` | `type: Evidence` + `generated: { by, at }` |
+| `agents/*.md` (engine rules) | `type: Reference` (khi áp dụng) |
+| `patterns-index.md`, `README.md`, `INDEX.md`, `_index.md` | index role — KHÔNG cần frontmatter (OKF reserve `index.md`/`log.md`; project giữ tên riêng) |
+
+**Quy tắc:**
+
+- `status` ∈ `draft | stable | deprecated` (absent ⇒ `stable`). Tool-spec dùng lifecycle riêng (`draft|specced|building|done|shelved` — pack constraint, không đổi).
+- Provenance: `generated: { by: <actor>, at: <ISO> }`, `verified: [{ by, at }]`, actor convention `human:<id>` / `process:<id>` / `<agent>/<version>`.
+- Per-claim attribution: footnote `[^id]` trong body, `id` join vào `sources[].id`.
+- Consumers KHÔNG reject unknown keys/types — OKF "tolerate unknown" (lint chỉ warning).
+
+**Enforcement**: `scripts/lint-wiki.py` check frontmatter parseable, `type` non-empty, type ∈ set, `status` ∈ enum, `sources[].id` có footnote tương ứng — tất cả warning (exit 2). File ngoài concept (index/config) và `.claude/**` (harness schema riêng) không bị check.
+
 ## Detailed References
 
 | Topic | File |

@@ -1,3 +1,9 @@
+---
+type: Contract
+title: "Contract: evidence-file-layout"
+description: "Layout invariant của evidence set — sources/analysis/qa/applied sub-paths, _index.md single source of truth, immutability I-1."
+---
+
 # Contract: evidence-file-layout
 
 ## Rule
