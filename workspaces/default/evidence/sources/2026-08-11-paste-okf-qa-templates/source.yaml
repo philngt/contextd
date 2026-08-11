@@ -1,0 +1,21 @@
+evid_id: "2026-08-11-paste-okf-qa-templates"
+source_type: "paste"
+origin: "user_paste"
+label: "OKF QA templates frontmatter verification"
+fetched_at: "2026-08-11T10:00:00+07:00"
+fetched_by: "therealtinhtute@gmail.com"
+sha256: "17c967fd58596094359e40d283bcbc0be1b778b29ba7dba028f952f62bb5640a"
+raw_filename: "raw.md"
+raw_size_bytes: 1802
+normalized: false
+workspace_at_ingest: "default"
+evidence_kind: "decision"
+audience: "engineering"
+confidence: "medium"
+related_files:
+  - "templates/evidence-qa-answers.md"
+  - "templates/evidence-qa-recommendations.md"
+  - "templates/evidence-pending-external.md"
+notes: |
+  Fixture evidence set để chạy /evidence-qa end-to-end: verify QA templates
+  với OKF frontmatter không phá pipeline (PR #3 test plan item).
