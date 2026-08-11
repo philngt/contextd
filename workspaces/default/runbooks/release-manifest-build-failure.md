@@ -1,3 +1,9 @@
+---
+type: Runbook
+title: "Runbook: Release Manifest Build Failure"
+description: "Release packaging, manifest generation, PyInstaller smoke hoặc editable install version detection fail từ clean checkout."
+---
+
 # Runbook: Release Manifest Build Failure
 
 ## Symptom

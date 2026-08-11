@@ -1,3 +1,9 @@
+---
+type: Runbook
+title: "Runbook: Config Resolution Failure"
+description: "Config/workspace/knowledge_root không resolve được — các command active-workspace fail."
+---
+
 # Runbook: Config Resolution Failure
 
 ## Symptom

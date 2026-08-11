@@ -1,3 +1,9 @@
+---
+type: Runbook
+title: "Runbook: Policy Check Failure"
+description: "contextd policy-check exit 1/2 — governance_report status error hoặc warning."
+---
+
 # Runbook: Policy Check Failure
 
 ## Symptoms

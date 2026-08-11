@@ -1,3 +1,9 @@
+---
+type: Brief
+title: "Product Brief: Reliable Agent Inputs"
+description: "Product brief — teams có decisions/contracts/requirements nhưng agents consume inconsistently; mục tiêu là reliable agent inputs."
+---
+
 # Product Brief: Reliable Agent Inputs
 
 ## Problem

@@ -1,3 +1,9 @@
+---
+type: Runbook
+title: "Runbook: Materialized Context Pack Stale"
+description: ".contextd/context/current-task.* stale sau khi contracts, patterns, workspace profile hoặc active packs đổi."
+---
+
 # Runbook: Materialized Context Pack Stale
 
 ## Symptom

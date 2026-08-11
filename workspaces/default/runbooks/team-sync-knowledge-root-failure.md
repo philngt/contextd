@@ -1,3 +1,9 @@
+---
+type: Runbook
+title: "Runbook: Team Sync Knowledge Root Failure"
+description: "/contextd-team-sync pull|push|status không tìm được team knowledge repo — wrong remote, pull/push conflicts."
+---
+
 # Runbook: Team Sync Knowledge Root Failure
 
 ## Symptom

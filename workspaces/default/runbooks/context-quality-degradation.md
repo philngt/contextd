@@ -1,3 +1,9 @@
+---
+type: Runbook
+title: "Runbook: Context Quality Degradation"
+description: "Context thành công nhưng agent nhận context yếu/sai — wrong docs, over-budget, stale current-task, adapter drift."
+---
+
 # Runbook: Context Quality Degradation
 
 ## Symptom

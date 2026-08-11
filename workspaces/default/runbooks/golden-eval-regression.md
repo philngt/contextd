@@ -1,3 +1,9 @@
+---
+type: Runbook
+title: "Runbook: Golden Eval Regression"
+description: "contextd eval --golden exit non-zero — fixture report missing/forbidden docs, category, gap, policy mismatch."
+---
+
 # Runbook: Golden Eval Regression
 
 ## Symptoms

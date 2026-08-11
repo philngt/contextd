@@ -107,7 +107,7 @@ Use templates in [templates/](../templates/).
 
 Concept files trong workspace theo [OKF v0.2](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md): YAML frontmatter bắt buộc `type`, khuyến nghị `title`/`description`. Mục đích: metadata đồng nhất để agent/tool parse, provenance (ai tạo, verified bởi ai) traceable, diffable trong version control.
 
-**Type set hiện tại** (lint warning nếu type ngoài set): `Contract`, `Pattern`, `Decision`, `Evidence`, `Runbook`, `Report`, `Tool`, `Service`, `Domain`, `Reference`, `Recipe`.
+**Type set hiện tại** (lint warning nếu type ngoài set): `Contract`, `Pattern`, `Decision`, `Evidence`, `Runbook`, `Report`, `Tool`, `Service`, `Domain`, `Reference`, `Recipe`, `Brief`, `Requirement`, `Design`.
 
 **Field mapping contextd → OKF:**
 
