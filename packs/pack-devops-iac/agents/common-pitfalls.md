@@ -10,17 +10,17 @@ Anti-patterns for infrastructure changes and deployment operations. Additive on 
 - **Severity**: error
 
 ## P02 — Floating remote module
-- **NG**: use an unversioned registry module or Git branch.
-- **OK**: set a registry `version` or immutable Git `ref`.
+- **NG**: use an unversioned registry module, Git branch, tag, or short SHA.
+- **OK**: set a registry `version` or a full 40-hex Git commit `ref`.
 - **Why**: identical source code can produce different infrastructure plans over time.
 - **Detect**: Layer-1 `pack-devops-iac-terraform-unpinned-module`.
 - **Severity**: error
 
-## P03 — Mutable workload image
-- **NG**: deploy `image: service:latest`.
-- **OK**: deploy a release tag or digest that identifies one artifact.
+## P03 — Image not digest-pinned
+- **NG**: deploy an untagged image or any tag, including `stable` or `v1.2.3`.
+- **OK**: deploy `image: repository@sha256:<64-hex-digest>`.
 - **Why**: rollback and audit evidence become nondeterministic.
-- **Detect**: Layer-1 `pack-devops-iac-k8s-mutable-image-tag`.
+- **Detect**: Layer-1 `pack-devops-iac-k8s-image-not-digest-pinned`.
 - **Severity**: error
 
 ## P04 — Traffic before readiness
@@ -38,10 +38,10 @@ Anti-patterns for infrastructure changes and deployment operations. Additive on 
 - **Severity**: warn
 
 ## P06 — Apply without a plan gate
-- **NG**: CI runs `terraform apply` without producing or consuming a plan.
-- **OK**: review a plan and apply the reviewed plan artifact.
+- **NG**: CI runs `terraform plan`, then `terraform apply -auto-approve` without passing the saved plan to apply.
+- **OK**: review a saved plan and pass that plan artifact as the positional argument to every apply command.
 - **Why**: reviewers cannot see the actual infrastructure mutation.
-- **Detect**: Layer-1 `pack-devops-iac-terraform-apply-without-plan`.
+- **Detect**: Layer-1 `pack-devops-iac-terraform-apply-without-saved-plan`.
 - **Severity**: error
 
 ## P07 — Rebuild during promotion
@@ -78,10 +78,10 @@ Anti-patterns for infrastructure changes and deployment operations. Additive on 
 |---|---|---|
 | P01 provider pinning | `pack-devops-iac-terraform-unpinned-provider` | ✓ |
 | P02 module pinning | `pack-devops-iac-terraform-unpinned-module` | ✓ |
-| P03 image immutability | `pack-devops-iac-k8s-mutable-image-tag` | ✓ |
+| P03 image immutability | `pack-devops-iac-k8s-image-not-digest-pinned` | ✓ |
 | P04 readiness | `pack-devops-iac-k8s-missing-readiness-probe` | ✓ |
 | P05 resource requests | `pack-devops-iac-k8s-missing-resource-requests` | ✓ |
-| P06 plan gate | `pack-devops-iac-terraform-apply-without-plan` | ✓ |
+| P06 plan gate | `pack-devops-iac-terraform-apply-without-saved-plan` | ✓ |
 | P07 promotion | — | ✓ |
 | P08 drift | — | ✓ |
 | P09 rollback | `pack-devops-iac-deployment-no-rollback` | ✓ |

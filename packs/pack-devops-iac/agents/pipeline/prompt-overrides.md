@@ -12,8 +12,8 @@ For infrastructure and deployment work, treat the reviewed change plan, immutabl
 ### DevOps and IaC (pack-devops-iac)
 - Remote Terraform/OpenTofu providers and modules are versioned immutably.
 - The reviewed plan identifies creates, updates, replacements, destroys, and affected environments.
-- Automated apply consumes or follows a reviewed plan.
-- Kubernetes workload images are immutable; readiness and resource requests are explicit.
+- Every automated apply command consumes an explicit reviewed saved-plan argument.
+- Every Kubernetes workload container is checked independently for a digest-pinned image, readiness probe, and resource requests.
 - Production promotes the same artifact verified in the preceding environment.
 - Drift detection has a cadence, owner, notification route, and reconciliation workflow.
 - Rollback or roll-forward defines trigger, owner, commands, data implications, and verification.

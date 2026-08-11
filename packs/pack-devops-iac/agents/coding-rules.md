@@ -10,7 +10,7 @@
 
 ## Kubernetes workloads
 
-- Use immutable image digests for production where the delivery platform supports them.
+- Use digest-pinned images for long-running workloads; resolve release tags to digests before deployment.
 - Base requests and autoscaling thresholds on observed demand; label provisional values for follow-up.
 - Design probes around service readiness rather than process existence.
 - Validate rendered manifests when Helm, Kustomize, or another generator is used.

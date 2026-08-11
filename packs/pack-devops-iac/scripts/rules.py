@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import re
+import shlex
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
@@ -38,7 +39,7 @@ def _brace_block(lines: List[str], start: int) -> Tuple[int, List[str]]:
 
 
 def _assignment_block_start(lines: List[str], source_index: int) -> Optional[int]:
-    for index in range(source_index, max(-1, source_index - 8), -1):
+    for index in range(source_index, -1, -1):
         if re.match(r"^\s*[A-Za-z0-9_-]+\s*=\s*{\s*$", lines[index]):
             return index
         if re.match(r"^\s*required_providers\s*{", lines[index]):
@@ -50,29 +51,38 @@ def rule_terraform_unpinned_provider(file_path: Path, lines: List[str],
                                      ctx: Dict) -> List[Dict]:
     if file_path.suffix.lower() != ".tf":
         return []
-    text = "\n".join(lines)
-    if not re.search(r"\brequired_providers\s*{", text):
-        return []
     out = []
-    for index, raw in enumerate(lines):
-        if not re.search(r"\bsource\s*=\s*[\"'][^\"']+[\"']", raw):
+    index = 0
+    while index < len(lines):
+        if not re.search(r"\brequired_providers\s*{", lines[index]):
+            index += 1
             continue
-        start = _assignment_block_start(lines, index)
-        if start is None:
-            continue
-        _, block = _brace_block(lines, start)
-        if re.search(r"(?m)^\s*version\s*=\s*[\"'][^\"']+[\"']", "\n".join(block)):
-            continue
-        out.append(_vio(
-            "pack-devops-iac-terraform-unpinned-provider", "error",
-            file_path, index + 1, raw,
-            "Terraform provider source has no version constraint in its provider block.",
-        ))
+        required_end, required_lines = _brace_block(lines, index)
+        for offset, raw in enumerate(required_lines):
+            if not re.search(r"\bsource\s*=\s*[\"'][^\"']+[\"']", raw):
+                continue
+            start = _assignment_block_start(required_lines, offset)
+            if start is None:
+                continue
+            _, provider_block = _brace_block(required_lines, start)
+            if re.search(
+                r"(?m)^\s*version\s*=\s*[\"'][^\"']+[\"']",
+                "\n".join(provider_block),
+            ):
+                continue
+            source_line = index + offset
+            out.append(_vio(
+                "pack-devops-iac-terraform-unpinned-provider", "error",
+                file_path, source_line + 1, raw,
+                "Terraform provider source has no version constraint in its provider block.",
+            ))
+        index = required_end + 1
     return out
 
 
 MODULE_START = re.compile(r'^\s*module\s+[\"\'][^\"\']+[\"\']\s*{')
 SOURCE_VALUE = re.compile(r'(?m)^\s*source\s*=\s*[\"\']([^\"\']+)[\"\']')
+FULL_COMMIT_REF = re.compile(r"[?&]ref=[0-9a-fA-F]{40}(?:&|$)")
 
 
 def rule_terraform_unpinned_module(file_path: Path, lines: List[str],
@@ -94,10 +104,16 @@ def rule_terraform_unpinned_module(file_path: Path, lines: List[str],
             has_version = bool(re.search(
                 r"(?m)^\s*version\s*=\s*[\"'][^\"']+[\"']", block
             ))
-            has_git_ref = "?ref=" in source and not re.search(
-                r"[?&]ref=(main|master|head)(?:&|$)", source, re.IGNORECASE
+            has_full_commit_ref = bool(FULL_COMMIT_REF.search(source))
+            source_without_query = source.split("?", 1)[0].lower()
+            is_git_source = (
+                source.startswith("git::")
+                or source.startswith(("github.com/", "bitbucket.org/"))
+                or source_without_query.endswith(".git")
             )
-            if not local and not has_version and not has_git_ref:
+            dependency_is_pinned = (has_full_commit_ref if is_git_source
+                                    else has_version)
+            if not local and not dependency_is_pinned:
                 source_line = index + next(
                     (offset for offset, line in enumerate(block_lines)
                      if SOURCE_VALUE.search(line)), 0
@@ -105,7 +121,7 @@ def rule_terraform_unpinned_module(file_path: Path, lines: List[str],
                 out.append(_vio(
                     "pack-devops-iac-terraform-unpinned-module", "error",
                     file_path, source_line + 1, lines[source_line],
-                    f"Remote Terraform module '{source}' is not pinned to a version or immutable ref.",
+                    f"Remote Terraform module '{source}' is not pinned to a registry version or full Git commit SHA.",
                 ))
         index = end + 1
     return out
@@ -115,59 +131,149 @@ def _is_yaml(file_path: Path) -> bool:
     return file_path.suffix.lower() in {".yaml", ".yml"}
 
 
-def _is_k8s_workload(lines: List[str]) -> bool:
-    text = "\n".join(lines)
-    return bool(re.search(
-        r"(?m)^\s*kind\s*:\s*(Deployment|StatefulSet|DaemonSet)\s*$", text
-    )) and bool(re.search(r"(?m)^\s*containers\s*:\s*$", text))
-
-
-LATEST_IMAGE = re.compile(
-    r"^(\s*(?:-\s*)?image\s*:\s*)([\"']?[^\s\"']+:latest[\"']?)(?:\s+#.*)?$",
-    re.IGNORECASE,
+YAML_DOCUMENT_SEPARATOR = re.compile(r"^\s*---(?:\s+#.*)?\s*$")
+WORKLOAD_KIND = re.compile(
+    r"(?m)^\s*kind\s*:\s*(Deployment|StatefulSet|DaemonSet)\s*$"
 )
+CONTAINERS_KEY = re.compile(r"^(\s*)containers\s*:\s*(?:#.*)?$")
+CONTAINER_ITEM = re.compile(r"^(\s*)-\s+(?:name|image)\s*:")
+IMAGE_VALUE = re.compile(r"^\s*(?:-\s*)?image\s*:\s*([^#]+?)(?:\s+#.*)?$")
+DIGEST_PINNED_IMAGE = re.compile(r"^\S+@sha256:[0-9a-fA-F]{64}$")
 
 
-def rule_k8s_mutable_image_tag(file_path: Path, lines: List[str],
-                                ctx: Dict) -> List[Dict]:
-    if not _is_yaml(file_path) or not _is_k8s_workload(lines):
+def _indent(line: str) -> int:
+    return len(line) - len(line.lstrip(" "))
+
+
+def _yaml_documents(lines: List[str]) -> List[Tuple[int, List[str]]]:
+    documents = []
+    start = 0
+    for index, raw in enumerate(lines):
+        if not YAML_DOCUMENT_SEPARATOR.match(raw):
+            continue
+        if any(line.strip() for line in lines[start:index]):
+            documents.append((start, lines[start:index]))
+        start = index + 1
+    if any(line.strip() for line in lines[start:]):
+        documents.append((start, lines[start:]))
+    return documents
+
+
+def _workload_containers(lines: List[str]) -> List[Tuple[int, str, List[str]]]:
+    """Return (zero-based line, display name, block) per workload container."""
+    containers = []
+    for document_start, document in _yaml_documents(lines):
+        if not WORKLOAD_KIND.search("\n".join(document)):
+            continue
+        for section_index, raw in enumerate(document):
+            section_match = CONTAINERS_KEY.match(raw)
+            if not section_match:
+                continue
+            section_indent = len(section_match.group(1))
+            section_end = len(document)
+            for index in range(section_index + 1, len(document)):
+                candidate = document[index]
+                if not candidate.strip() or candidate.lstrip().startswith("#"):
+                    continue
+                if _indent(candidate) <= section_indent:
+                    section_end = index
+                    break
+
+            item_indent = None
+            item_starts = []
+            for index in range(section_index + 1, section_end):
+                item_match = CONTAINER_ITEM.match(document[index])
+                if not item_match:
+                    continue
+                indent = len(item_match.group(1))
+                if item_indent is None:
+                    item_indent = indent
+                if indent == item_indent:
+                    item_starts.append(index)
+
+            for position, item_start in enumerate(item_starts):
+                item_end = (item_starts[position + 1]
+                            if position + 1 < len(item_starts) else section_end)
+                block = document[item_start:item_end]
+                name = "<unnamed>"
+                for block_line in block:
+                    name_match = re.match(
+                        r"^\s*(?:-\s*)?name\s*:\s*[\"']?([^\s\"'#]+)",
+                        block_line,
+                    )
+                    if name_match:
+                        name = name_match.group(1)
+                        break
+                containers.append((document_start + item_start, name, block))
+    return containers
+
+
+def _has_resource_requests(block: List[str]) -> bool:
+    for index, raw in enumerate(block):
+        if not re.match(r"^\s*resources\s*:\s*(?:#.*)?$", raw):
+            continue
+        resources_indent = _indent(raw)
+        for nested in block[index + 1:]:
+            if not nested.strip() or nested.lstrip().startswith("#"):
+                continue
+            if _indent(nested) <= resources_indent:
+                break
+            if re.match(r"^\s*requests\s*:\s*(?:#.*)?$", nested):
+                return True
+    return False
+
+
+def rule_k8s_image_not_digest_pinned(file_path: Path, lines: List[str],
+                                     ctx: Dict) -> List[Dict]:
+    if not _is_yaml(file_path):
         return []
     out = []
-    for lineno, raw in enumerate(lines, 1):
-        if LATEST_IMAGE.match(raw):
+    for start, name, block in _workload_containers(lines):
+        for offset, raw in enumerate(block):
+            image_match = IMAGE_VALUE.match(raw)
+            if not image_match:
+                continue
+            image = image_match.group(1).strip().strip("\"'")
+            if DIGEST_PINNED_IMAGE.match(image):
+                continue
             out.append(_vio(
-                "pack-devops-iac-k8s-mutable-image-tag", "error",
-                file_path, lineno, raw,
-                "Kubernetes workload uses the mutable 'latest' image tag; use an immutable release tag or digest.",
+                "pack-devops-iac-k8s-image-not-digest-pinned", "error",
+                file_path, start + offset + 1, raw,
+                f"Kubernetes container '{name}' image is not pinned by sha256 digest.",
             ))
     return out
 
 
 def rule_k8s_missing_readiness_probe(file_path: Path, lines: List[str],
                                      ctx: Dict) -> List[Dict]:
-    if not _is_yaml(file_path) or not _is_k8s_workload(lines):
+    if not _is_yaml(file_path):
         return []
-    if re.search(r"(?m)^\s*readinessProbe\s*:\s*$", "\n".join(lines)):
-        return []
-    return [_vio(
-        "pack-devops-iac-k8s-missing-readiness-probe", "warn", file_path, 1,
-        lines[0] if lines else "",
-        "Kubernetes workload has containers but no readinessProbe.",
-    )]
+    out = []
+    for start, name, block in _workload_containers(lines):
+        if re.search(r"(?m)^\s*readinessProbe\s*:\s*$", "\n".join(block)):
+            continue
+        out.append(_vio(
+            "pack-devops-iac-k8s-missing-readiness-probe", "warn",
+            file_path, start + 1, block[0],
+            f"Kubernetes container '{name}' has no readinessProbe.",
+        ))
+    return out
 
 
 def rule_k8s_missing_resource_requests(file_path: Path, lines: List[str],
                                        ctx: Dict) -> List[Dict]:
-    if not _is_yaml(file_path) or not _is_k8s_workload(lines):
+    if not _is_yaml(file_path):
         return []
-    text = "\n".join(lines)
-    if re.search(r"(?m)^\s*requests\s*:\s*$", text):
-        return []
-    return [_vio(
-        "pack-devops-iac-k8s-missing-resource-requests", "warn", file_path, 1,
-        lines[0] if lines else "",
-        "Kubernetes workload has containers but no resource requests.",
-    )]
+    out = []
+    for start, name, block in _workload_containers(lines):
+        if _has_resource_requests(block):
+            continue
+        out.append(_vio(
+            "pack-devops-iac-k8s-missing-resource-requests", "warn",
+            file_path, start + 1, block[0],
+            f"Kubernetes container '{name}' has no resource requests.",
+        ))
+    return out
 
 
 def _is_ci_workflow(file_path: Path) -> bool:
@@ -177,26 +283,50 @@ def _is_ci_workflow(file_path: Path) -> bool:
     ))
 
 
-def rule_terraform_apply_without_plan(file_path: Path, lines: List[str],
-                                      ctx: Dict) -> List[Dict]:
+APPLY_COMMAND = re.compile(r"\b(terraform|tofu)\s+apply\b([^\n]*)")
+OPTIONS_WITH_SEPARATE_VALUE = {
+    "-backup", "-lock-timeout", "-parallelism", "-state", "-state-out",
+    "-var", "-var-file",
+}
+
+
+def _apply_consumes_saved_plan(arguments: str) -> bool:
+    try:
+        tokens = shlex.split(arguments, comments=True)
+    except ValueError:
+        return False
+    skip_value = False
+    for token in tokens:
+        if skip_value:
+            skip_value = False
+            continue
+        if token in {"&&", "||", ";", "|"}:
+            break
+        if token in OPTIONS_WITH_SEPARATE_VALUE:
+            skip_value = True
+            continue
+        if token.startswith("-"):
+            continue
+        return True
+    return False
+
+
+def rule_terraform_apply_without_saved_plan(file_path: Path, lines: List[str],
+                                            ctx: Dict) -> List[Dict]:
     if not _is_ci_workflow(file_path):
         return []
     text = "\n".join(lines)
-    apply_matches = list(re.finditer(r"\b(terraform|tofu)\s+apply\b([^\n]*)", text))
-    if not apply_matches:
-        return []
-    has_plan_command = bool(re.search(r"\b(terraform|tofu)\s+plan\b", text))
-    has_saved_plan = any(re.search(r"(?:^|\s)[^\s-]+\.tfplan(?:\s|$)", match.group(2))
-                         for match in apply_matches)
-    if has_plan_command or has_saved_plan:
-        return []
-    first = apply_matches[0]
-    lineno = text[:first.start()].count("\n") + 1
-    return [_vio(
-        "pack-devops-iac-terraform-apply-without-plan", "error", file_path,
-        lineno, lines[lineno - 1],
-        "CI workflow applies infrastructure without a plan command or saved plan input.",
-    )]
+    out = []
+    for match in APPLY_COMMAND.finditer(text):
+        if _apply_consumes_saved_plan(match.group(2)):
+            continue
+        lineno = text[:match.start()].count("\n") + 1
+        out.append(_vio(
+            "pack-devops-iac-terraform-apply-without-saved-plan", "error",
+            file_path, lineno, lines[lineno - 1],
+            "CI apply command does not consume an explicit saved plan argument.",
+        ))
+    return out
 
 
 def rule_deployment_no_rollback(file_path: Path, lines: List[str],
@@ -224,9 +354,9 @@ def rule_deployment_no_rollback(file_path: Path, lines: List[str],
 RULES = [
     rule_terraform_unpinned_provider,
     rule_terraform_unpinned_module,
-    rule_k8s_mutable_image_tag,
+    rule_k8s_image_not_digest_pinned,
     rule_k8s_missing_readiness_probe,
     rule_k8s_missing_resource_requests,
-    rule_terraform_apply_without_plan,
+    rule_terraform_apply_without_saved_plan,
     rule_deployment_no_rollback,
 ]

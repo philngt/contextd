@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Focused positive and negative tests for pack-devops-iac validators."""
+"""Focused regression tests for pack-devops-iac validators."""
 
 from __future__ import annotations
 
@@ -27,10 +27,12 @@ def _violations(rules, file_path: str, content: str) -> list[dict]:
     return out
 
 
-def test_pack_devops_iac_rules() -> None:
-    rules = _load_rules()
+def _by_rule(violations: list[dict], rule_id: str) -> list[dict]:
+    return [item for item in violations if item["rule"] == rule_id]
 
-    terraform_bad = _violations(rules, "/tmp/main.tf", '''
+
+def _test_terraform_dependency_pinning(rules) -> None:
+    bad = _violations(rules, "/tmp/main.tf", '''
 terraform {
   required_providers {
     aws = {
@@ -38,51 +40,25 @@ terraform {
     }
   }
 }
-module "network" {
-  source = "git::https://example.test/network.git"
+module "unversioned" {
+  source = "git::https://example.test/unversioned.git"
+}
+module "develop_branch" {
+  source = "git::https://example.test/develop.git?ref=develop"
+  version = "1.0.0"
+}
+module "feature_branch" {
+  source = "git::https://example.test/feature.git?ref=feature/foo"
 }
 ''')
-    terraform_rule_ids = {item["rule"] for item in terraform_bad}
-    assert "pack-devops-iac-terraform-unpinned-provider" in terraform_rule_ids
-    assert "pack-devops-iac-terraform-unpinned-module" in terraform_rule_ids
+    assert len(_by_rule(
+        bad, "pack-devops-iac-terraform-unpinned-provider"
+    )) == 1, bad
+    assert len(_by_rule(
+        bad, "pack-devops-iac-terraform-unpinned-module"
+    )) == 3, bad
 
-    workload_bad = _violations(rules, "/tmp/deployment.yaml", '''
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: api
-spec:
-  template:
-    spec:
-      containers:
-        - name: api
-          image: registry.example/api:latest
-''')
-    workload_rule_ids = {item["rule"] for item in workload_bad}
-    assert "pack-devops-iac-k8s-mutable-image-tag" in workload_rule_ids
-    assert "pack-devops-iac-k8s-missing-readiness-probe" in workload_rule_ids
-    assert "pack-devops-iac-k8s-missing-resource-requests" in workload_rule_ids
-
-    workflow_bad = _violations(rules, "/tmp/repo/.github/workflows/deploy.yml", '''
-name: deploy
-jobs:
-  apply:
-    steps:
-      - run: terraform apply -auto-approve
-''')
-    assert any(item["rule"] == "pack-devops-iac-terraform-apply-without-plan"
-               for item in workflow_bad)
-
-    runbook_bad = _violations(
-        rules, "/tmp/workspaces/default/runbooks/deploy-api.md", '''
-# API deployment
-Run the release workflow and verify the health dashboard.
-''')
-    assert any(item["rule"] == "pack-devops-iac-deployment-no-rollback"
-               for item in runbook_bad)
-
-    clean_cases = [
-        ("/tmp/main.tf", '''
+    clean = _violations(rules, "/tmp/main.tf", '''
 terraform {
   required_providers {
     aws = {
@@ -91,11 +67,81 @@ terraform {
     }
   }
 }
-module "network" {
-  source = "git::https://example.test/network.git?ref=v1.2.3"
+module "registry" {
+  source  = "hashicorp/consul/aws"
+  version = "0.11.0"
 }
-'''),
-        ("/tmp/deployment.yaml", '''
+module "git_commit" {
+  source = "git::https://example.test/network.git?ref=0123456789abcdef0123456789abcdef01234567"
+}
+module "local" {
+  source = "./modules/local"
+}
+''')
+    assert not clean, clean
+
+
+def _test_apply_consumes_saved_plan(rules) -> None:
+    plan_but_fresh_apply = _violations(
+        rules, "/tmp/repo/.github/workflows/deploy.yml", '''
+name: deploy
+jobs:
+  deploy:
+    steps:
+      - run: terraform plan -out=reviewed.tfplan
+      - run: terraform apply -auto-approve
+''')
+    assert len(_by_rule(
+        plan_but_fresh_apply,
+        "pack-devops-iac-terraform-apply-without-saved-plan",
+    )) == 1, plan_but_fresh_apply
+
+    unrelated_jobs = _violations(
+        rules, "/tmp/repo/.github/workflows/deploy.yml", '''
+name: deploy
+jobs:
+  preview:
+    steps:
+      - run: terraform plan -out=preview.tfplan
+  production:
+    steps:
+      - run: terraform apply -auto-approve
+''')
+    assert len(_by_rule(
+        unrelated_jobs,
+        "pack-devops-iac-terraform-apply-without-saved-plan",
+    )) == 1, unrelated_jobs
+
+    mixed_applies = _violations(
+        rules, "/tmp/repo/.github/workflows/deploy.yml", '''
+name: deploy
+jobs:
+  deploy:
+    steps:
+      - run: terraform apply reviewed.tfplan
+      - run: tofu apply -auto-approve
+''')
+    assert len(_by_rule(
+        mixed_applies,
+        "pack-devops-iac-terraform-apply-without-saved-plan",
+    )) == 1, mixed_applies
+
+    saved_plan = _violations(
+        rules, "/tmp/repo/.github/workflows/deploy.yml", '''
+name: deploy
+jobs:
+  deploy:
+    steps:
+      - run: terraform apply reviewed.tfplan
+      - run: tofu apply "$PLAN_FILE"
+''')
+    assert not _by_rule(
+        saved_plan, "pack-devops-iac-terraform-apply-without-saved-plan"
+    ), saved_plan
+
+
+def _test_k8s_per_document_and_container(rules) -> None:
+    multi_document = _violations(rules, "/tmp/workloads.yaml", '''
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -105,7 +151,7 @@ spec:
     spec:
       containers:
         - name: api
-          image: registry.example/api:v1.2.3
+          image: registry.example/api@sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
           readinessProbe:
             httpGet:
               path: /ready
@@ -114,22 +160,100 @@ spec:
             requests:
               cpu: 100m
               memory: 128Mi
-'''),
-        ("/tmp/repo/.github/workflows/deploy.yml", '''
-name: deploy
-jobs:
-  apply:
-    steps:
-      - run: terraform plan -out=reviewed.tfplan
-      - run: terraform apply reviewed.tfplan
-'''),
-        ("/tmp/workspaces/default/runbooks/deploy-api.md", '''
+        - name: sidecar
+          image: registry.example/sidecar@sha256:1123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: worker
+spec:
+  template:
+    spec:
+      containers:
+        - name: worker
+          image: registry.example/worker@sha256:2123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+''')
+    assert len(_by_rule(
+        multi_document, "pack-devops-iac-k8s-missing-readiness-probe"
+    )) == 2, multi_document
+    assert len(_by_rule(
+        multi_document, "pack-devops-iac-k8s-missing-resource-requests"
+    )) == 2, multi_document
+    assert not _by_rule(
+        multi_document, "pack-devops-iac-k8s-image-not-digest-pinned"
+    ), multi_document
+
+
+def _test_k8s_digest_pinning(rules) -> None:
+    images = _violations(rules, "/tmp/deployment.yaml", '''
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: image-cases
+spec:
+  template:
+    spec:
+      containers:
+        - name: untagged
+          image: registry.example/api
+          readinessProbe: {}
+          resources:
+            requests: {}
+        - name: stable
+          image: registry.example/api:stable
+          readinessProbe: {}
+          resources:
+            requests: {}
+        - name: semver
+          image: registry.example/api:v1.2.3
+          readinessProbe: {}
+          resources:
+            requests: {}
+        - name: digest
+          image: registry.example/api@sha256:3123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
+          readinessProbe: {}
+          resources:
+            requests: {}
+''')
+    image_violations = _by_rule(
+        images, "pack-devops-iac-k8s-image-not-digest-pinned"
+    )
+    assert len(image_violations) == 3, images
+    messages = "\n".join(item["message"] for item in image_violations)
+    assert "untagged" in messages
+    assert "stable" in messages
+    assert "semver" in messages
+    assert "container 'digest'" not in messages
+
+
+def _test_deployment_rollback(rules) -> None:
+    bad = _violations(
+        rules, "/tmp/workspaces/default/runbooks/deploy-api.md", '''
+# API deployment
+Run the release workflow and verify the health dashboard.
+''')
+    assert len(_by_rule(
+        bad, "pack-devops-iac-deployment-no-rollback"
+    )) == 1, bad
+
+    clean = _violations(
+        rules, "/tmp/workspaces/default/runbooks/deploy-api.md", '''
 # API deployment
 Deploy the release, verify readiness, and rollback with rollout undo on failure.
-'''),
-    ]
-    for file_path, content in clean_cases:
-        assert not _violations(rules, file_path, content), file_path
+''')
+    assert not _by_rule(
+        clean, "pack-devops-iac-deployment-no-rollback"
+    ), clean
+
+
+def test_pack_devops_iac_rules() -> None:
+    rules = _load_rules()
+    _test_terraform_dependency_pinning(rules)
+    _test_apply_consumes_saved_plan(rules)
+    _test_k8s_per_document_and_container(rules)
+    _test_k8s_digest_pinning(rules)
+    _test_deployment_rollback(rules)
 
 
 if __name__ == "__main__":

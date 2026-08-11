@@ -5,12 +5,12 @@ Hard DevOps and infrastructure-as-code rules. Additive on the engine constraints
 ## Terraform and OpenTofu
 
 - `pack-devops-iac-terraform-provider-pinned` — Every non-local provider dependency MUST declare a version constraint. Provider upgrades are reviewed changes, not ambient resolver behavior.
-- `pack-devops-iac-terraform-module-pinned` — Every remote module MUST use an immutable version or Git ref. Floating branches and unversioned registry modules are forbidden.
-- `pack-devops-iac-plan-before-apply` — Automated apply workflows MUST produce or consume a reviewed plan before changing infrastructure.
+- `pack-devops-iac-terraform-module-pinned` — Every remote module MUST use a registry version or full Git commit SHA. Branches, tags, short SHAs, and unversioned registry modules are forbidden.
+- `pack-devops-iac-plan-before-apply` — Every automated apply command MUST consume an explicit reviewed saved-plan argument before changing infrastructure.
 
 ## Kubernetes workloads
 
-- `pack-devops-iac-k8s-immutable-image` — Workload images MUST use an immutable tag or digest. `latest` is forbidden.
+- `pack-devops-iac-k8s-immutable-image` — Every long-running workload container image MUST be pinned by `sha256` digest. Untagged images and all tags are mutable references and are forbidden.
 - `pack-devops-iac-k8s-readiness-probe` — Long-running workload containers MUST define a readiness probe or document why an external readiness mechanism applies.
 - `pack-devops-iac-k8s-resource-requests` — Long-running workload containers MUST declare resource requests based on measured or explicitly provisional values.
 
