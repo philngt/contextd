@@ -136,7 +136,7 @@ WORKLOAD_KIND = re.compile(
     r"(?m)^\s*kind\s*:\s*(Deployment|StatefulSet|DaemonSet)\s*$"
 )
 CONTAINERS_KEY = re.compile(r"^(\s*)containers\s*:\s*(?:#.*)?$")
-CONTAINER_ITEM = re.compile(r"^(\s*)-\s+(?:name|image)\s*:")
+CONTAINER_ITEM = re.compile(r"^(\s*)-\s*(?:[^#].*)?$")
 IMAGE_VALUE = re.compile(r"^\s*(?:-\s*)?image\s*:\s*([^#]+?)(?:\s+#.*)?$")
 DIGEST_PINNED_IMAGE = re.compile(r"^\S+@sha256:[0-9a-fA-F]{64}$")
 
@@ -283,14 +283,19 @@ def _is_ci_workflow(file_path: Path) -> bool:
     ))
 
 
-APPLY_COMMAND = re.compile(r"\b(terraform|tofu)\s+apply\b([^\n]*)")
+APPLY_COMMAND = re.compile(
+    r"\b(terraform|tofu)\s+apply\b((?:\\\s*\n\s*|[^\n])*)"
+)
 OPTIONS_WITH_SEPARATE_VALUE = {
     "-backup", "-lock-timeout", "-parallelism", "-state", "-state-out",
     "-var", "-var-file",
 }
+REDIRECT_WITH_SEPARATE_TARGET = re.compile(r"^(?:\d*|&)(?:>>?|<<?)$")
+REDIRECT_WITH_INLINE_TARGET = re.compile(r"^(?:\d*|&)(?:>>?|<<?).+$")
 
 
 def _apply_consumes_saved_plan(arguments: str) -> bool:
+    arguments = re.sub(r"\\\s*\n\s*", " ", arguments)
     try:
         tokens = shlex.split(arguments, comments=True)
     except ValueError:
@@ -304,6 +309,11 @@ def _apply_consumes_saved_plan(arguments: str) -> bool:
             break
         if token in OPTIONS_WITH_SEPARATE_VALUE:
             skip_value = True
+            continue
+        if REDIRECT_WITH_SEPARATE_TARGET.match(token):
+            skip_value = True
+            continue
+        if REDIRECT_WITH_INLINE_TARGET.match(token):
             continue
         if token.startswith("-"):
             continue

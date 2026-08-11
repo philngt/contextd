@@ -26,6 +26,6 @@ Layer-1 static checks implemented in [`scripts/rules.py`](../../scripts/rules.py
 ## Heuristic limitations
 
 - HCL checks use brace-local text inspection and do not evaluate expressions.
-- Kubernetes checks split standard `---` documents and use indentation to scope `containers`; generated templates still require rendered-manifest validation.
-- CI checks inspect each apply independently. They verify an explicit positional plan argument, but cannot prove that an external artifact was reviewed.
+- Kubernetes checks split standard `---` documents and use indentation to scope every direct list item under `containers:`, independent of key order; generated templates still require rendered-manifest validation.
+- CI checks inspect each apply independently, join backslash-continued lines, and exclude shell redirection targets from plan detection. They verify an explicit positional plan argument, but cannot prove that an external artifact was reviewed.
 - Markdown rollback checks only target filenames or directories associated with deployments, releases, or runbooks.

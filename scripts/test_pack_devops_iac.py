@@ -140,6 +140,39 @@ jobs:
     ), saved_plan
 
 
+    redirection_only = _violations(
+        rules, "/tmp/repo/.github/workflows/deploy.yml", '''
+name: deploy
+jobs:
+  deploy:
+    steps:
+      - run: terraform apply > apply.log
+      - run: tofu apply 2>errors.log
+''')
+    assert len(_by_rule(
+        redirection_only,
+        "pack-devops-iac-terraform-apply-without-saved-plan",
+    )) == 2, redirection_only
+
+    multiline = _violations(
+        rules, "/tmp/repo/.github/workflows/deploy.yml", '''
+name: deploy
+jobs:
+  deploy:
+    steps:
+      - run: |
+          terraform apply \\
+            reviewed.tfplan
+      - run: |
+          tofu apply \\
+            -auto-approve > apply.log
+''')
+    assert len(_by_rule(
+        multiline,
+        "pack-devops-iac-terraform-apply-without-saved-plan",
+    )) == 1, multiline
+
+
 def _test_k8s_per_document_and_container(rules) -> None:
     multi_document = _violations(rules, "/tmp/workloads.yaml", '''
 apiVersion: apps/v1
@@ -183,6 +216,32 @@ spec:
     assert not _by_rule(
         multi_document, "pack-devops-iac-k8s-image-not-digest-pinned"
     ), multi_document
+
+
+    key_order = _violations(rules, "/tmp/security-first.yaml", '''
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: security-first
+spec:
+  template:
+    spec:
+      containers:
+        - securityContext:
+            runAsNonRoot: true
+          name: api
+          image: registry.example/api:latest
+''')
+    assert len(_by_rule(
+        key_order, "pack-devops-iac-k8s-image-not-digest-pinned"
+    )) == 1, key_order
+    assert len(_by_rule(
+        key_order, "pack-devops-iac-k8s-missing-readiness-probe"
+    )) == 1, key_order
+    assert len(_by_rule(
+        key_order, "pack-devops-iac-k8s-missing-resource-requests"
+    )) == 1, key_order
+    assert all("'api'" in item["message"] for item in key_order), key_order
 
 
 def _test_k8s_digest_pinning(rules) -> None:
