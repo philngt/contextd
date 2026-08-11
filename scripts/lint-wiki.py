@@ -66,6 +66,7 @@ LINK_RE = re.compile(
 OKF_KNOWN_TYPES = frozenset({
     "Contract", "Pattern", "Decision", "Evidence", "Runbook",
     "Report", "Tool", "Service", "Domain", "Reference", "Recipe",
+    "Brief", "Requirement", "Design",
 })
 OKF_STATUSES = frozenset({"draft", "stable", "deprecated"})
 # Filenames treated as index/config roles, not concept documents. OKF reserves

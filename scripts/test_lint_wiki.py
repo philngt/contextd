@@ -190,6 +190,11 @@ def test_okf_conformant_clean() -> None:
             "---\n# T\n\nClaim [^s1].\n",
             encoding="utf-8",
         )
+        (ws / "requirements").mkdir(parents=True)
+        (ws / "requirements" / "r.md").write_text(
+            "---\ntype: Requirement\ntitle: R\ndescription: D\n---\n# R\n",
+            encoding="utf-8",
+        )
         (ws / "workspace.md").write_text("# ws\n[c](platform/contracts/c.md)\n", encoding="utf-8")
         (ws / "patterns-index.md").write_text("# i\n[c](platform/contracts/c.md)\n", encoding="utf-8")
         rc, data, _err = run_lint(root, "ws")
