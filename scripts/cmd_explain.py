@@ -14,6 +14,7 @@ sys.path.insert(0, str(SCRIPT_DIR / "lib"))
 
 import cmd_resolve  # noqa: E402
 import task_context_engine  # noqa: E402
+from stdio import configure_stdio  # noqa: E402
 
 
 def _render_text(payload: dict) -> str:
@@ -25,6 +26,15 @@ def _render_text(payload: dict) -> str:
         "",
         f"Workspace: {summary['workspace']}",
         f"Intent: {summary['intent'].get('type')} / {summary['intent'].get('workstream')}",
+    ]
+    classification = summary["intent"].get("classification") or {}
+    for axis in ("intent", "workstream"):
+        info = classification.get(axis) or {}
+        if info.get("scores"):
+            scores_str = ", ".join(f"{k}={v}" for k, v in info["scores"].items())
+            tie_note = " (tie-broken by precedence)" if info.get("tie_broken") else ""
+            lines.append(f"  {axis} scores: {scores_str}{tie_note}")
+    lines += [
         f"Context Pack: {summary['context_pack_key']}",
         (
             "Budget: "
@@ -128,6 +138,7 @@ def run(
 
 
 def main() -> None:
+    configure_stdio()
     import argparse
     parser = argparse.ArgumentParser(description="Explain deterministic context selection.")
     parser.add_argument("task", help="Task description (quote if multi-word)")

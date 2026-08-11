@@ -10,6 +10,11 @@ import sys
 from pathlib import Path
 from typing import Dict, List, Optional
 
+SCRIPT_DIR = Path(__file__).resolve().parent
+sys.path.insert(0, str(SCRIPT_DIR))
+
+from lib.stdio import configure_stdio  # noqa: E402
+
 
 VALID_CLIENTS = {"claude", "cursor", "codex", "all"}
 
@@ -92,6 +97,7 @@ def run(client: str, knowledge_root: str, workspace: Optional[str] = None,
 
 
 def main() -> None:
+    configure_stdio()
     parser = argparse.ArgumentParser(description="Print contextd MCP client snippets.")
     parser.add_argument("--client", required=True, choices=sorted(VALID_CLIENTS),
                         help="Client snippet to print")

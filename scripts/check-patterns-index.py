@@ -25,6 +25,8 @@ import sys
 from pathlib import Path
 from typing import Dict, List, Tuple
 
+from lib.stdio import configure_stdio
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 WORKSPACES_DIR = REPO_ROOT / "workspaces"
 
@@ -99,6 +101,7 @@ def check_workspace(ws_dir: Path, print_hints: bool) -> int:
 
 
 def main() -> None:
+    configure_stdio()
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[1])
     ap.add_argument("--workspace", help="Check only this workspace")
     ap.add_argument("--fix-hint", action="store_true",

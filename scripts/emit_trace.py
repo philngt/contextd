@@ -31,6 +31,7 @@ from lib.atomic_write import (  # noqa: E402
     atomic_write_json,
     with_advisory_lock,
 )
+from lib.stdio import configure_stdio  # noqa: E402
 
 ALLOWED_SUBAGENTS = {
     "contextd-planner",
@@ -136,6 +137,7 @@ def stage_to_filename(stage: str) -> str:
 
 
 def main() -> int:
+    configure_stdio()
     raw = sys.stdin.read()
     if not raw.strip():
         return 0

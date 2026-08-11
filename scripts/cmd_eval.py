@@ -17,6 +17,7 @@ sys.path.insert(0, str(SCRIPT_DIR / "lib"))
 
 import cmd_resolve  # noqa: E402
 import task_context_engine  # noqa: E402
+from stdio import configure_stdio  # noqa: E402
 
 
 def _load_fixture(path: Path) -> Dict | None:
@@ -176,6 +177,7 @@ def run(golden: bool = False, workspace: str | None = None, fmt: str = "json",
 
 
 def main() -> None:
+    configure_stdio()
     import argparse
     parser = argparse.ArgumentParser(description="Evaluate contextd context selection.")
     parser.add_argument("--golden", action="store_true", help="Run golden task fixtures")

@@ -756,12 +756,75 @@ def test_pack_ui_ux_rules() -> None:
     print("  ok pack_ui_ux_rules")
 
 
+def test_stdio_utf8_under_legacy_codepage() -> None:
+    """CLI must not crash writing/reading non-ASCII under a legacy codepage.
+
+    Forces PYTHONIOENCODING=cp1252 (the historical Windows console default)
+    to prove lib/stdio.py's configure_stdio() reconfiguration — not an
+    environment variable the caller happens to set — is what makes this work.
+    """
+    env = os.environ.copy()
+    env["PYTHONIOENCODING"] = "cp1252"
+    env.pop("PYTHONUTF8", None)
+    task = "đánh giá context drift với kiểm tra"
+    for args in (
+        ["context", task, "--preview", "--format", "markdown"],
+        ["context", task, "--preview", "--format", "json"],
+        ["explain", task, "--format", "text"],
+        ["check"],
+    ):
+        proc = subprocess.run(
+            [sys.executable, "-m", "scripts.cli", *args],
+            cwd=str(ROOT), text=True, encoding="utf-8", capture_output=True, env=env,
+        )
+        assert proc.returncode == 0, (args, proc.stdout, proc.stderr)
+    print("  ok stdio_utf8_under_legacy_codepage")
+
+
+def test_intent_classification_word_boundaries() -> None:
+    """Keyword matching must respect word boundaries, not bare substrings."""
+    from lib import task_context_engine as tce
+
+    cases = [
+        ("build a new payment service", "implement_feature", "engineering"),
+        ("check why the consumer fails", "fix_bug", "engineering"),
+        ("add rapid api endpoint", "implement_feature", "engineering"),
+        ("fix the checkout crash", "fix_bug", "engineering"),
+        ("debug context quality", "fix_bug", None),
+    ]
+    for task, expected_intent, expected_workstream in cases:
+        intent = tce.detect_intent(task)
+        assert intent == expected_intent, (task, intent, expected_intent)
+        if expected_workstream is not None:
+            workstream = tce.detect_workstream(task, [], [])
+            assert workstream == expected_workstream, (task, workstream, expected_workstream)
+    print("  ok intent_classification_word_boundaries")
+
+
+def test_pack_keyword_special_chars() -> None:
+    """Punctuation-heavy keywords (.proto, @RestController) must still match."""
+    from lib import task_context_engine as tce
+
+    assert "grpc" in tce.detect_components(
+        "update service.proto stub", ROOT, ["pack-web-api"])
+    assert "rest" in tce.detect_components(
+        "add @RestController route", ROOT, ["pack-web-api"])
+    assert "drift-check" in tce.detect_components(
+        "drift-check accepted decisions", ROOT, ["pack-operator-steering"])
+    print("  ok pack_keyword_special_chars")
+
+
 def test_cli_ux_help_and_aliases() -> None:
     def run_cli(args: list[str]) -> subprocess.CompletedProcess:
+        # contextd forces UTF-8 on its own stdout (see lib/stdio.py) regardless
+        # of the OS console codepage, so decode captured output as UTF-8 too —
+        # otherwise a locale-default decode (e.g. cp1252 on Windows) breaks on
+        # the workspace's non-ASCII content.
         return subprocess.run(
             [sys.executable, "-m", "scripts.cli", *args],
             cwd=str(ROOT),
             text=True,
+            encoding="utf-8",
             capture_output=True,
         )
 
@@ -842,7 +905,10 @@ def test_cli_smoke() -> None:
                 "--runtime", runtime, "--output", str(out_dir),
             ])
         for cmd in commands:
-            proc = subprocess.run(cmd, cwd=str(ROOT), text=True, capture_output=True)
+            # See run_cli() note above: decode as UTF-8 to match contextd's
+            # forced-UTF-8 stdout, independent of the OS console codepage.
+            proc = subprocess.run(cmd, cwd=str(ROOT), text=True, encoding="utf-8",
+                                  capture_output=True)
             assert proc.returncode == 0, (cmd, proc.stdout, proc.stderr)
         for runtime, expected in expected_exports.items():
             for rel in expected:
@@ -874,6 +940,7 @@ def test_mcp_server_smoke() -> None:
             ],
             cwd=str(ROOT),
             text=True,
+            encoding="utf-8",
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
@@ -1275,6 +1342,9 @@ def run() -> int:
         test_doctor_and_adapter_drift_checks,
         test_codex_agents_use_json_canonical_artifact,
         test_pack_ui_ux_rules,
+        test_stdio_utf8_under_legacy_codepage,
+        test_intent_classification_word_boundaries,
+        test_pack_keyword_special_chars,
         test_cli_ux_help_and_aliases,
         test_cli_smoke,
         test_mcp_server_smoke,

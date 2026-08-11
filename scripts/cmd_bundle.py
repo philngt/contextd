@@ -18,6 +18,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 
 import cmd_resolve  # noqa: E402
+from lib.stdio import configure_stdio  # noqa: E402
 
 
 def _collect_workspace_files(ws_dir: Path) -> List[Path]:
@@ -172,6 +173,7 @@ def bundle(
 
 
 def main():
+    configure_stdio()
     import argparse
     parser = argparse.ArgumentParser(description="Bundle workspace knowledge into a single markdown file.")
     parser.add_argument("--workspace", default=None, help="Workspace name (default: resolved)")

@@ -14,6 +14,7 @@ sys.path.insert(0, str(SCRIPT_DIR / "lib"))
 
 import cmd_resolve  # noqa: E402
 import task_context_engine  # noqa: E402
+from stdio import configure_stdio  # noqa: E402
 
 
 def run(contract_id: str, workspace: str | None = None,
@@ -54,6 +55,7 @@ def run(contract_id: str, workspace: str | None = None,
 
 
 def main():
+    configure_stdio()
     import argparse
     parser = argparse.ArgumentParser(description="Resolve a contextd contract id.")
     parser.add_argument("contract_id", help="Contract id, e.g. citation-format")

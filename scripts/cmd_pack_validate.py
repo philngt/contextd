@@ -14,6 +14,7 @@ sys.path.insert(0, str(SCRIPT_DIR / "lib"))
 
 import cmd_resolve  # noqa: E402
 import pack_validation  # noqa: E402
+from stdio import configure_stdio  # noqa: E402
 
 
 def _render_text(report: dict) -> str:
@@ -65,6 +66,7 @@ def run(all_packs: bool = False, pack: str | None = None, fmt: str = "json",
 
 
 def main() -> None:
+    configure_stdio()
     import argparse
     parser = argparse.ArgumentParser(description="Validate contextd packs and retrieval maps.")
     group = parser.add_mutually_exclusive_group()

@@ -44,6 +44,7 @@ from typing import Any
 from urllib.parse import unquote, urlparse
 
 from lib import contextd_resolver
+from lib.stdio import configure_stdio
 
 # Markdown inline link: [text](target)
 # - Skips images (preceding '!') by using a negative lookbehind.
@@ -232,6 +233,7 @@ def print_human_summary(res: dict, stream) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
+    configure_stdio()
     ap = argparse.ArgumentParser(description="Lint wiki workspaces for broken links and orphans.")
     ap.add_argument("--workspace", help="Workspace name (under {wiki-root}/workspaces/)")
     ap.add_argument("--wiki-root", help="Override wiki root directory")

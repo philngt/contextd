@@ -31,6 +31,7 @@ from lib.atomic_write import (  # noqa: E402
     with_advisory_lock,
 )
 from lib import contextd_resolver  # noqa: E402
+from lib.stdio import configure_stdio  # noqa: E402
 from lib.repetition import (  # noqa: E402
     MIN_PROMPT_TOKENS,
     Cluster,
@@ -262,6 +263,7 @@ def emit_hint(text: str) -> None:
 # ---------------------------------------------------------------------------
 
 def main() -> int:
+    configure_stdio()
     started_ms = time.monotonic() * 1000.0
 
     raw = sys.stdin.read()

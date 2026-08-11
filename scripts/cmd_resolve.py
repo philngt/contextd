@@ -17,6 +17,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR / "lib"))
 
 import contextd_resolver  # noqa: E402
+from stdio import configure_stdio  # noqa: E402
 
 
 def find_wiki_json(start_dir: Path) -> Optional[Path]:
@@ -45,6 +46,7 @@ def resolve(cwd: Optional[Path] = None, require_workspace: bool = False) -> Dict
 
 
 def main():
+    configure_stdio()
     import argparse
     parser = argparse.ArgumentParser(description="Resolve contextd workspace context.")
     parser.add_argument("--cwd", default=None, help="Start directory (default: .)")

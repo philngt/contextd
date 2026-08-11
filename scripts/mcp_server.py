@@ -27,6 +27,7 @@ import contextd_resolver  # noqa: E402
 import context_security  # noqa: E402
 import find_engine  # noqa: E402
 import task_context_engine  # noqa: E402
+from stdio import configure_stdio  # noqa: E402
 
 
 LATEST_PROTOCOL_VERSION = "2025-11-25"
@@ -818,6 +819,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: Optional[List[str]] = None) -> int:
+    configure_stdio()
     parser = build_parser()
     args = parser.parse_args(argv)
     options = ServerOptions(

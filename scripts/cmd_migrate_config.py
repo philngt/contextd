@@ -12,6 +12,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR / "lib"))
 
 import contextd_resolver  # noqa: E402
+from stdio import configure_stdio  # noqa: E402
 
 
 def run(cwd: str | None = None, force: bool = False,
@@ -61,6 +62,7 @@ def run(cwd: str | None = None, force: bool = False,
 
 
 def main():
+    configure_stdio()
     import argparse
     parser = argparse.ArgumentParser(description="Migrate legacy config to .contextd/config.json.")
     parser.add_argument("--cwd", default=None, help="Start directory (default: current)")
