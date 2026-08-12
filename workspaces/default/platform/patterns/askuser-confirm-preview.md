@@ -1,3 +1,9 @@
+---
+type: Pattern
+title: "Pattern: askuser-confirm-preview"
+description: "Preview những gì sắp xảy ra trước khi command commit side effects filesystem — cancel luôn có exit lane."
+---
+
 # Pattern: askuser-confirm-preview
 
 ## Context

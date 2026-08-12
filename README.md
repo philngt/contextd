@@ -162,6 +162,28 @@ contextd/
 
 Legacy `<project>/.claude/wiki.json` and `<project>/.Codex/wiki.json` are read as adapters during the migration window. They are not the source of truth.
 
+## OKF (Open Knowledge Format)
+
+Knowledge files in `workspaces/{ws}/` follow [OKF v0.2](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md) — an open, human- and agent-friendly format for knowledge metadata. Every concept file (pattern, contract, decision, runbook, ...) carries a small YAML frontmatter with `type` (required) plus `title`/`description`/`status`/provenance (recommended).
+
+**Why OKF**:
+
+- Agents and tools can parse, filter, and route on `type` without bespoke SDKs or regex over headings.
+- Provenance is first-class: `generated: {by, at}`, `verified: [{by, at}]` record who produced and confirmed a concept — trust becomes traceable, not assumed.
+- Diffable in version control, portable across tools and organizations, with no registry or central authority.
+- Before OKF, frontmatter keys were ad-hoc (`name`, `slug`, `owner`, `source_type`, ...) — the same concept was described differently in every file.
+
+**Mental model when using it**:
+
+- **Frontmatter = metadata, body = knowledge.** The body stays plain markdown for humans; the frontmatter is the machine-readable handle.
+- **Every concept file answers three questions**: what kind of thing is this (`type`), what is it (`title`/`description`), and how trustworthy is it (`status` + provenance). If a file can't answer them, it isn't a concept file yet.
+- **Write new concepts from templates** in [templates/](templates/) — they already carry the OKF fields; just fill them in.
+- **Trust is derived, not claimed**: `status: draft | stable | deprecated`; `verified` by a `human:` actor outranks process-only confirmation.
+- **Index and config files are the exception** (`README.md`, `INDEX.md`, `_index.md`, `patterns-index.md`, `workspace.md`) — they are navigation, not concepts, so no frontmatter is required.
+- **The linter keeps you honest**: `python scripts/lint-wiki.py` warns on missing/unknown `type`, bad `status`, and unreferenced `sources[].id` — warnings never fail the run (exit 0), per OKF's "tolerate unknown" stance; pass `--strict` for warnings-as-errors.
+
+Full mapping, type set, and enforcement rules: [docs/wiki-reference.md#okf-open-knowledge-format](docs/wiki-reference.md).
+
 ## Packs (Stack-specific Knowledge)
 
 Packs are stack/use-case knowledge layers between engine and workspace:

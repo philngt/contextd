@@ -1,3 +1,9 @@
+---
+type: Pattern
+title: "Pattern: redaction-post-pass"
+description: "Post-build scan output để redact secrets lọt qua — re-scan post-replace, stop-on-secret, write-only-when-clean."
+---
+
 # Pattern: redaction-post-pass
 
 ## Context

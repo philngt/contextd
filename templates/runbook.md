@@ -1,3 +1,10 @@
+---
+type: Runbook
+title: "Runbook: {Incident Name}"
+description: "{1-line: sự cố nào, xử lý ra sao}"
+tags: [runbook]
+---
+
 # Runbook: {Incident Name}
 
 ## Symptom

@@ -1,3 +1,9 @@
+---
+type: Pattern
+title: "Pattern: citation-rule"
+description: "Mọi claim trong analysis output PHẢI cite source — format + path safety rules để traceable và parse được."
+---
+
 # Pattern: citation-rule
 
 > PAIR pattern của contract `../contracts/citation-format.md`. Pattern describes implementation skeleton (path format + variants); contract describes invariants + validator behavior.

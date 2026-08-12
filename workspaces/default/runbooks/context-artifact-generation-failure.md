@@ -1,3 +1,9 @@
+---
+type: Runbook
+title: "Runbook: Context Artifact Generation Failure"
+description: "contextd context fail / blocking gaps / omit contracts — artifact không satisfy contextd_task_context.v1."
+---
+
 # Runbook: Context Artifact Generation Failure
 
 ## Symptom

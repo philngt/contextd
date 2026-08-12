@@ -1,3 +1,10 @@
+---
+type: Service
+title: "{Service Name}"
+description: "{1-line: service này làm gì và vì sao tồn tại}"
+tags: [service]
+---
+
 # {Service Name}
 
 ## Purpose

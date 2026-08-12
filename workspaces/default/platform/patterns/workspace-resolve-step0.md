@@ -1,3 +1,9 @@
+---
+type: Pattern
+title: "Pattern: workspace-resolve-step0"
+description: "Mọi slash command wiki-aware resolve active workspace trước khi làm bất cứ gì — engine invariant chống cross-workspace pollution."
+---
+
 # Pattern: workspace-resolve-step0
 
 ## Context

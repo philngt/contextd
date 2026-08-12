@@ -1,3 +1,10 @@
+---
+type: Decision
+title: "ADR-004: Pattern–Contract Pairing Convention"
+description: "Convention layered information — implementation skeleton → pattern, invariant rule → contract, cả 2 → PAIR với cross-reference 2 chiều."
+status: stable
+---
+
 # ADR-004: Pattern–Contract Pairing Convention
 
 ## Scope

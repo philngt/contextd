@@ -1,3 +1,9 @@
+---
+type: Pattern
+title: "Pattern: secrets-blocklist-gate"
+description: "5-tier defense gate trước khi đọc file nhạy cảm — default block-all, opt-in qua --allow-configs, hard blocklist không bypass."
+---
+
 # Pattern: secrets-blocklist-gate
 
 ## Context

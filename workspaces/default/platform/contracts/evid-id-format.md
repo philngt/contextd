@@ -1,3 +1,9 @@
+---
+type: Contract
+title: "Contract: evid-id-format"
+description: "Mọi evidence ID PHẢI theo pattern {YYYY-MM-DD}-{src}-{slug}[-{n}] với src ∈ paste, api, mcp, code, engine, platform."
+---
+
 # Contract: evid-id-format
 
 ## Rule

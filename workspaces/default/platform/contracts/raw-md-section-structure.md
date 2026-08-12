@@ -1,3 +1,9 @@
+---
+type: Contract
+title: "Contract: raw-md-section-structure"
+description: "raw.md PHẢI có 10 sections theo thứ tự với anchor #section-N — schema variant-specific (code, agentic-engine, bundle)."
+---
+
 # Contract: raw-md-section-structure
 
 ## Rule

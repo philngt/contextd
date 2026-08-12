@@ -1,3 +1,10 @@
+---
+type: Evidence
+title: "Q&A Answers — Batch {N}"
+description: "Append-only answers cho batch {N} của evidence {evid-id}"
+generated: { by: process:evidence-qa, at: {ISO timestamp} }
+---
+
 # Q&A Answers — Batch {N}
 
 > Template — copy thành `{ws}/evidence/qa/{evid-id}/batch-{N}-answers.md`.

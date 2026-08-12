@@ -1,3 +1,9 @@
+---
+type: Requirement
+title: "Requirement: Build Reliable Agent Inputs"
+description: "Requirement — AI tooling maintainer cần repeatable task context cho product/design task, không chỉ coding-rule snippets."
+---
+
 # Requirement: Build Reliable Agent Inputs
 
 ## Actor

@@ -1,3 +1,10 @@
+---
+type: Recipe
+title: "Recipe: {Recipe Name}"
+description: "{1-2 dòng: kiểu task nào, stack gì, ai dùng}"
+tags: [recipe]
+---
+
 # Recipe: {Recipe Name}
 
 > 1-2 dòng mô tả: kiểu task này dùng stack gì, ai dùng cho mục đích gì.

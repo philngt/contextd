@@ -1,3 +1,10 @@
+---
+type: Decision
+title: "ADR-002: Keep code-analysis-prompts.md Monolithic (do NOT split)"
+description: "Giữ agents/pipeline/code-analysis-prompts.md monolithic thay vì split — revisit khi file > 1500 lines hoặc variant thứ 3."
+status: stable
+---
+
 # ADR-002: Keep code-analysis-prompts.md Monolithic (do NOT split)
 
 ## Scope

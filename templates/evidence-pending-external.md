@@ -1,3 +1,10 @@
+---
+type: Evidence
+title: "Pending External Q&A — Evidence {evid-id}"
+description: "Câu hỏi defer-to-expert của evidence {evid-id} — format copy-paste gửi expert"
+generated: { by: process:evidence-qa, at: {ISO timestamp} }
+---
+
 # Pending External Q&A — Evidence `{evid-id}`
 
 > Template — auto-generated tại `{ws}/evidence/qa/{evid-id}/pending-external.md` khi user mark câu hỏi `defer-to-expert`.

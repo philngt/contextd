@@ -1,3 +1,9 @@
+---
+type: Pattern
+title: "Pattern: variant-discriminated-dispatcher"
+description: "1 command phục vụ nhiều variant input — không fork command, discriminate qua field variant và dispatch internally."
+---
+
 # Pattern: variant-discriminated-dispatcher
 
 > **Version: v1 — single instance pattern.** Pattern shape may evolve khi variant thứ 3 được introduce.

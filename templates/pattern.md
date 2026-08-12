@@ -1,3 +1,10 @@
+---
+type: Pattern
+title: "{Pattern Name}"
+description: "{1-line: vấn đề pattern này giải quyết + trigger}"
+tags: [pattern]
+---
+
 # {Pattern Name}
 
 ## Context

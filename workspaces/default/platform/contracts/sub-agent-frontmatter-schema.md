@@ -1,3 +1,9 @@
+---
+type: Contract
+title: "Contract: sub-agent-frontmatter-schema"
+description: "Mọi file trong .claude/agents/ PHẢI có frontmatter với required fields name, description, tools, model."
+---
+
 # Contract: sub-agent-frontmatter-schema
 
 ## Rule

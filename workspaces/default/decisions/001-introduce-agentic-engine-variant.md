@@ -1,3 +1,10 @@
+---
+type: Decision
+title: "ADR-001: Introduce variant=agentic-engine cho /code-analyze"
+description: "Introduce code_variant: code | agentic-engine cho source.yaml — validation gate softened, Section 4-8 redefined, evid-id prefix engine."
+status: stable
+---
+
 # ADR-001: Introduce variant=agentic-engine cho /code-analyze
 
 ## Scope

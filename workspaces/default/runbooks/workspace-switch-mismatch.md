@@ -1,3 +1,9 @@
+---
+type: Runbook
+title: "Runbook: Workspace Switch Mismatch"
+description: "Sau switch-workspace, commands vẫn dùng workspace cũ — packs sai, context tham chiếu docs sai scope."
+---
+
 # Runbook: Workspace Switch Mismatch
 
 ## Symptom

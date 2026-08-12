@@ -1,3 +1,9 @@
+---
+type: Design
+title: "Design System: Agent Context Build Flow"
+description: "Design system cho agent context build flow — maintainer chọn workspace + packs, contextd build deterministic task artifact."
+---
+
 # Design System: Agent Context Build Flow
 
 ## Flow

@@ -1,0 +1,119 @@
+{
+  "_template_for": "{ws}/evidence/qa/{evid-id}/todo.json",
+  "_doc": "Authoritative state machine for Q&A loop. Updated by /evidence-qa each batch.",
+  "evid_id": "2026-08-11-paste-okf-qa-templates",
+  "workspace": "default",
+  "created_at": "2026-08-11T10:30:00+07:00",
+  "updated_at": "2026-08-11T10:33:00+07:00",
+  "state": "qa_done",
+  "_state_options": [
+    "analyzed",
+    "qa_in_progress",
+    "qa_awaiting_external",
+    "qa_done"
+  ],
+  "config": {
+    "batch_size": 4,
+    "stop_when_p0_p1_clear": true
+  },
+  "questions": [
+    {
+      "id": "q-001",
+      "text": "Evidence QA files do pipeline sinh ra (batch-N-answers.md, pending-external.md, recommendations.md) có bị OKF lint flag thiếu/unknown type không?",
+      "priority": "P0",
+      "_priority_options": [
+        "P0",
+        "P1",
+        "P2",
+        "P3"
+      ],
+      "reason": "blocks_apply: nếu evidence/ không được exclude khỏi OKF check → mọi evidence set warning, exit 2",
+      "source_prompt": "04-questions",
+      "batch": 1,
+      "status": "answered",
+      "_status_options": [
+        "pending",
+        "answered",
+        "skipped",
+        "deferred",
+        "awaiting_external"
+      ],
+      "answer_ref": "batch-1-answers.md#q-001",
+      "answered_at": "2026-08-11T10:32:00+07:00",
+      "answered_by": "self"
+    },
+    {
+      "id": "q-002",
+      "text": "Frontmatter chứa placeholder ({by: process:evidence-qa, at: {ISO timestamp}}) — khi render thay timestamp thật, YAML flow-mapping có còn hợp lệ không?",
+      "priority": "P0",
+      "_priority_options": [
+        "P0",
+        "P1",
+        "P2",
+        "P3"
+      ],
+      "reason": "blocks_apply: OKF conformance = frontmatter parseable; placeholder render hỏng → vỡ YAML",
+      "source_prompt": "04-questions",
+      "batch": 1,
+      "status": "answered",
+      "_status_options": [
+        "pending",
+        "answered",
+        "skipped",
+        "deferred",
+        "awaiting_external"
+      ],
+      "answer_ref": "batch-1-answers.md#q-002",
+      "answered_at": "2026-08-11T10:32:00+07:00",
+      "answered_by": "self"
+    },
+    {
+      "id": "q-003",
+      "text": "Frontmatter ở đầu file có phá append-only invariant I-6 không (entry mới append sau ## q-XXX, không sửa cũ)?",
+      "priority": "P1",
+      "_priority_options": [
+        "P0",
+        "P1",
+        "P2",
+        "P3"
+      ],
+      "reason": "append-only logs là invariant bắt buộc của evidence pipeline",
+      "source_prompt": "04-questions",
+      "batch": 2,
+      "status": "answered",
+      "_status_options": [
+        "pending",
+        "answered",
+        "skipped",
+        "deferred",
+        "awaiting_external"
+      ],
+      "answer_ref": "batch-2-answers.md#q-003",
+      "answered_at": "2026-08-11T10:32:30+07:00",
+      "answered_by": "self"
+    }
+  ],
+  "batches": [
+    {
+      "n": 1,
+      "priority": "P0",
+      "question_ids": [
+        "q-001",
+        "q-002"
+      ],
+      "asked_at": "2026-08-11T10:30:00+07:00",
+      "completed": true,
+      "_completed_when": "all questions answered|skipped (awaiting_external counts as in-flight, not completed)"
+    },
+    {
+      "n": 2,
+      "priority": "P1",
+      "question_ids": [
+        "q-003"
+      ],
+      "asked_at": "2026-08-11T10:30:00+07:00",
+      "completed": true
+    }
+  ],
+  "external_checkpoints": []
+}

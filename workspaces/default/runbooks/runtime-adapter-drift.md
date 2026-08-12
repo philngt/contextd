@@ -1,3 +1,9 @@
+---
+type: Runbook
+title: "Runbook: Runtime Adapter Drift"
+description: "Claude, Codex, Cursor hoặc markdown exports disagree về workspace resolution, context format, legacy paths."
+---
+
 # Runbook: Runtime Adapter Drift
 
 ## Symptom

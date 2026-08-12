@@ -8,7 +8,7 @@
 
 | evid-id | source | label | state | created | last_updated | blocked_on | applied_to |
 |---------|--------|-------|-------|---------|--------------|------------|------------|
-| _(empty)_ |  |  |  |  |  |  |  |
+| 2026-08-11-paste-okf-qa-templates | paste | OKF QA templates frontmatter verification | qa_done | 2026-08-11 | 2026-08-11 | — | — |
 
 ## Archived
 
