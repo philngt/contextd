@@ -125,10 +125,10 @@ Concept files trong workspace theo [OKF v0.2](https://github.com/GoogleCloudPlat
 
 - `status` ∈ `draft | stable | deprecated` (absent ⇒ `stable`). Tool-spec dùng lifecycle riêng (`draft|specced|building|done|shelved` — pack constraint, không đổi).
 - Provenance: `generated: { by: <actor>, at: <ISO> }`, `verified: [{ by, at }]`, actor convention `human:<id>` / `process:<id>` / `<agent>/<version>`.
-- Per-claim attribution: footnote `[^id]` trong body, `id` join vào `sources[].id`.
+- Per-claim attribution: footnote `[^id]` trong body, `id` join vào `sources[].id`; `resource` bắt buộc mỗi entry, `id` optional (entry chỉ có `resource`, hoặc id không được cite trong body, đều hợp lệ).
 - Consumers KHÔNG reject unknown keys/types — OKF "tolerate unknown" (lint chỉ warning).
 
-**Enforcement**: `scripts/lint-wiki.py` check frontmatter parseable, `type` non-empty, type ∈ set, `status` ∈ enum, `sources[].id` có footnote tương ứng — tất cả warning, **exit 0 mặc định** (CI-friendly; `--strict` → exit 2 nếu muốn warnings-as-errors). File ngoài concept (index/config) và `.claude/**` (harness schema riêng) không bị check.
+**Enforcement**: `scripts/lint-wiki.py` check frontmatter parseable, `type` non-empty, type ∈ set, `status` ∈ enum, mỗi `sources[]` entry có `resource`, footnote `[^id]` khớp `sources[].id` (id không cite trong body là hợp lệ) — tất cả warning, **exit 0 mặc định** (CI-friendly; `--strict` → exit 2 nếu muốn warnings-as-errors). File ngoài concept (index/config) và `.claude/**` (harness schema riêng) không bị check.
 
 ## Detailed References
 

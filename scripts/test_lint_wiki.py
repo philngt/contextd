@@ -159,7 +159,7 @@ def test_okf_unknown_type_and_bad_status() -> None:
         assert rc == 0, rc
 
 
-def test_okf_source_id_unreferenced() -> None:
+def test_okf_sources_semantics() -> None:
     with tempfile.TemporaryDirectory() as td:
         root = Path(td)
         ws = root / "workspaces" / "ws"
@@ -168,14 +168,23 @@ def test_okf_source_id_unreferenced() -> None:
             "---\ntype: Contract\ntitle: T\ndescription: D\nsources:\n"
             "  - id: used-source\n    resource: https://example.com/a\n"
             "  - id: orphan-source\n    resource: https://example.com/b\n"
-            "---\n# T\n\nClaim [^used-source].\n",
+            "  - id: no-resource-source\n"
+            "  - resource: https://example.com/c\n"
+            "---\n# T\n\nClaim [^used-source] and [^ghost].\n",
             encoding="utf-8",
         )
         (ws / "workspace.md").write_text("# ws\n[c](platform/contracts/c.md)\n", encoding="utf-8")
         (ws / "patterns-index.md").write_text("# i\n[c](platform/contracts/c.md)\n", encoding="utf-8")
         rc, data, _err = run_lint(root, "ws")
         kinds = [(f["kind"], f["detail"]) for f in data["okf"]]
-        assert any("orphan-source" in d for k, d in kinds if k == "okf_source_id_unreferenced"), kinds
+        # OKF v0.2: a source id not cited in the body is valid
+        assert not any("orphan-source" in d for k, d in kinds), kinds
+        # source entry missing required `resource` -> warning
+        assert any(k == "okf_source_missing_resource" for k, d in kinds), kinds
+        # body footnote with no matching sources[].id -> warning
+        assert any("ghost" in d for k, d in kinds if k == "okf_footnote_unresolved"), kinds
+        # resource-only entry (no id) and cited source are not flagged
+        assert not any("example.com/c" in d or "used-source" in d for k, d in kinds), kinds
         assert rc == 0, rc
 
 
@@ -262,7 +271,7 @@ def main() -> int:
     test_orphan_only_exit_code()
     test_okf_missing_type_warns()
     test_okf_unknown_type_and_bad_status()
-    test_okf_source_id_unreferenced()
+    test_okf_sources_semantics()
     test_okf_conformant_clean()
     test_okf_skips_index_config_files()
     test_okf_skips_evidence_runtime_artifacts()

@@ -24,8 +24,9 @@ Checks per workspace:
   is referenced by patterns-index.md (warn-only orphan).
 - OKF v0.2 conformance (warn-only) on every concept .md file:
   frontmatter parseable, `type` present & non-empty, type in known set,
-  `status` in {draft, stable, deprecated}, `sources[].id` referenced by a
-  body footnote `[^id]`. Index/config files (README.md, INDEX.md,
+  `status` in {draft, stable, deprecated}, each `sources[]` entry has a
+  `resource`, and every body footnote `[^id]` matches a `sources[].id`
+  (an uncited id is valid). Index/config files (README.md, INDEX.md,
   _index.md, patterns-index.md, workspace.md, knowledge-map.md) are skipped.
 
 Output:
@@ -249,16 +250,28 @@ def check_okf_file(file: Path, findings: list[dict]) -> None:
         })
     sources = fm.get("sources")
     if isinstance(sources, list):
-        footnote_ids = set(FOOTNOTE_RE.findall(body))
+        # OKF v0.2: `resource` is required per source entry; `id` is optional
+        # and only the join key for per-claim footnotes — an uncited id is valid.
+        source_ids: set[str] = set()
         for src in sources:
             if not isinstance(src, dict):
                 continue
-            sid = src.get("id")
-            if isinstance(sid, str) and sid not in footnote_ids:
+            resource = src.get("resource")
+            if not isinstance(resource, str) or not resource.strip():
                 findings.append({
                     "file": str(file),
-                    "kind": "okf_source_id_unreferenced",
-                    "detail": f"sources[].id {sid!r} has no body footnote [^{sid}]",
+                    "kind": "okf_source_missing_resource",
+                    "detail": "sources[] entry has no non-empty `resource`",
+                })
+            sid = src.get("id")
+            if isinstance(sid, str):
+                source_ids.add(sid)
+        for fid in set(FOOTNOTE_RE.findall(body)):
+            if fid not in source_ids:
+                findings.append({
+                    "file": str(file),
+                    "kind": "okf_footnote_unresolved",
+                    "detail": f"body footnote [^{fid}] has no matching sources[].id",
                 })
 
 
