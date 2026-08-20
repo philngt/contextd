@@ -101,34 +101,28 @@ Use is provided under the repository license ([MIT](LICENSE)) and is offered **"
 
 ## Support & Compatibility
 
-| Capability | Status |
-|---|---|
-| Claude Code slash commands | Stable |
-| Claude Code subagents | Stable |
-| Workspace/packs markdown engine | Stable |
-| CLI: starter UX | Available (`contextd init`, `contextd check`, `contextd context`, `contextd explain`, `contextd find`) |
-| CLI: advanced utilities | Available (`contextd resolve`, `contextd bundle`, `contextd export`) |
-| CLI: deterministic task context | Available (`contextd context`) |
-| CLI: diagnostics and selection explain | Available (`contextd doctor`, `contextd explain`) |
-| CLI: governance and evaluation | Available (`contextd policy-check`, `contextd pack-validate`, `contextd eval --golden`) |
-| CLI: lifecycle graph | Available (`contextd synapse`) |
-| Plain markdown bundle export | Available |
-| Codex skill/plugin export | Available |
-| Cursor rules export | Available |
-| MCP stdio tools adapter | Available (`contextd mcp-server`) |
+contextd is local-first: it requires no hosted service, API key, vector database,
+or remote memory service. For the complete command inventory, run
+`contextd help --all`.
 
-**System requirements**
-- macOS/Linux: `bash` required.
-- Windows: PowerShell + Git Bash or WSL recommended for shell installer execution.
-- Write access to `~/.contextd/` for global config. Claude Code adapters still write to `~/.claude/`.
-- Release binary installer prerequisites: `curl` or `wget` on macOS/Linux; PowerShell `Invoke-WebRequest` on Windows.
-- Source/developer installs require Python >= 3.10 and Git.
+| Surface | Level | Notes |
+|---|---|---|
+| Core CLI and deterministic context artifacts | Stable | Primary, release-validated runtime |
+| Workspace and pack engine | Stable | Workspace isolation plus manifest-v2/v3 pack support |
+| Claude Code adapter | Stable | Slash commands and subagents |
+| Markdown, Codex, and Cursor exports | Supported | Generated from the canonical context runtime |
+| MCP stdio adapter | Supported | Local stdio transport; no remote MCP service required |
+| Legacy `.claude/wiki.json` and `.Codex/wiki.json` | Migration only | Compatibility adapters; `.contextd/config.json` is canonical |
 
-**Trust and runtime model**
-- Local-first: contextd reads local workspace knowledge and writes local context artifacts.
-- No hosted service, API key, remote MCP transport, vector DB, or memory DB is required.
-- Runtime remains stdlib-only; MCP support is a local stdio adapter, not an SDK dependency.
-- Release binaries and installer scripts are published through GitHub Releases with `SHA256SUMS.txt`.
+**Support levels**
+
+- **Stable** — primary surfaces covered by release validation.
+- **Supported** — shipped and tested, but adapter details may continue to evolve.
+- **Migration only** — retained temporarily for existing installations.
+
+For operating-system support, prerequisites, and binary availability, see the
+[Install Matrix](#install-matrix). For maintenance expectations, see
+[Project Status](#project-status).
 
 ## Mental Model: Build Agent Context
 
@@ -177,10 +171,6 @@ contextd/
 
 # Active workspace is per-codebase, stored in <project>/.contextd/config.json.
 ```
-
-### Compatibility: Legacy Adapters
-
-Legacy `<project>/.claude/wiki.json` and `<project>/.Codex/wiki.json` are read as adapters during the migration window. They are not the source of truth.
 
 ## OKF (Open Knowledge Format)
 
@@ -281,7 +271,12 @@ These install prebuilt `contextd` binaries from GitHub Releases. Users do not ne
 | Linux x86_64 | Installs `contextd-linux-x86_64`. |
 | Linux arm64 | No prebuilt binary yet; installer exits with source-install guidance. |
 | Windows x86_64 | Installs `contextd-windows-x86_64.exe` via PowerShell. |
-| Source checkout | `pip install -e .` works anywhere Python >= 3.10 is available. |
+| Source checkout | `pip install -e .` works anywhere Python >= 3.10 and Git are available. |
+
+The macOS/Linux installer requires `bash` plus `curl` or `wget`. The Windows
+installer requires PowerShell and `Invoke-WebRequest`; use Git Bash or WSL only
+when running the shell installer. Global config is written to `~/.contextd/`,
+while optional Claude Code adapters write to `~/.claude/`.
 
 ### Try the default demo in 2 minutes
 
