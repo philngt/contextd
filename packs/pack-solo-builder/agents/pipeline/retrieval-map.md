@@ -2,14 +2,16 @@
 
 | Component | Docs to Retrieve |
 |-----------|------------------|
-| `tool-design`    | `packs/pack-solo-builder/recipes/*.md` (toàn bộ — chọn match best); `tools/*.md` (catalog scan); `domains/*/glossary.md` (term reference); `templates/tool-spec.md` |
-| `tool-extend`    | `tools/*-spec.md`; `tools/README.md` (catalog index) |
-| `recipe`         | `packs/pack-solo-builder/recipes/*.md`; `templates/tool-recipe.md` |
-| `tool-catalog`   | `tools/*.md` (full scan); `tools/README.md` (index nếu có) |
+| `tool-design`    | `packs/pack-solo-builder/recipes/README.md`, `tools/README.md`, `domains/{domain}/glossary.md`, `templates/tool-spec.md` |
+| `tool-extend`    | `tools/README.md` |
+| `recipe`         | `packs/pack-solo-builder/recipes/README.md`, `templates/tool-recipe.md` |
+| `tool-catalog`   | `tools/README.md` |
+
+Các row trên là **initial context**. Sau khi index/signal chọn candidate, workflow mới load đúng `recipes/{candidate}.md` hoặc `tools/{candidate}-spec.md`. Full glob chỉ là fallback khi index thiếu, stale hoặc ambiguous; không materialize toàn bộ catalog mặc định.
 
 ## Recipe Match Algorithm (cho `/tool-design`)
 
-Sau Bước 2 (discovery questions xong), match recipe theo signal:
+Sau discovery, đọc recipe index và match theo signal trước; chỉ mở recipe candidate + alternative có trade-off thực sự khác:
 
 | Signal từ user trả lời | Recipe ưu tiên |
 |------------------------|----------------|
@@ -24,16 +26,16 @@ Sau Bước 2 (discovery questions xong), match recipe theo signal:
 | "pull data từ API/website" | `api-data-fetcher` |
 | "quản lý records" / "CRUD" | `local-database-manager` |
 
-Nhiều signal khớp → spec sẽ mix recipes. Cite cả 2.
+Nhiều signal khớp → chọn owner recipe cho core purpose; mix recipe chỉ khi mỗi recipe sở hữu một phần rõ và cite phần đó.
 
-Không signal nào khớp → STOP và hỏi user mô tả khác. KHÔNG được tự sáng tạo stack.
+Không signal nào khớp → ghi explicit recipe gap và đề xuất tạo/review recipe mới. KHÔNG được tự sáng tạo stack hoặc ép user đổi wording để làm heuristic pass.
 
 ## Tool Catalog Scan (cho dedup)
 
-Trước khi propose tool mới, scan `{ws}/tools/*-spec.md`. So sánh:
+Trước khi propose tool mới, đọc `{ws}/tools/README.md`, shortlist candidate rồi load candidate specs. Nếu index thiếu/stale/ambiguous mới scan `{ws}/tools/*-spec.md`. So sánh:
 
-- **Title** (case-insensitive, strip diacritics) — fuzzy match ≥ 70% similarity
-- **Problem section** — keyword overlap ≥ 3 từ chính (loại bỏ stopwords)
+- **Title** — normalized case/diacritics + semantic similarity
+- **Problem section** — core outcome/entity overlap, không dùng một threshold keyword chung
 - **System Map Input/Output** — input/output type giống
 
 Nếu match → STOP, hỏi user "có vẻ giống `{slug}` đã có, extend hay tạo mới?" với option:
@@ -50,5 +52,5 @@ Khi user trả lời discovery questions có term ngành (regex match danh sách
 
 ## Limitations
 
-- Recipe match dựa keyword + signal — không hiểu sâu domain. User nên review proposed recipe trước khi accept.
-- Catalog scan dùng fuzzy text — false negative nếu user dùng synonym khác. Manual confirm vẫn cần.
+- Recipe match dựa index signal — không hiểu sâu domain. User review proposed recipe trước khi accept.
+- Catalog shortlist là heuristic; synonym hoặc index stale có thể tạo false negative nên workflow có fallback scan và manual confirm.

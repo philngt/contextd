@@ -34,6 +34,7 @@ PACKS_SECTION_RE = re.compile(
     re.MULTILINE | re.DOTALL | re.IGNORECASE,
 )
 PACK_LIST_ITEM_RE = re.compile(r"^\s*[-*]\s+([a-z0-9][\w\-]*)\s*$", re.MULTILINE)
+WORKSPACE_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 
 
 @dataclass
@@ -119,6 +120,22 @@ def _resolve_root(raw_value: Optional[str], base_dir: Path) -> Optional[Path]:
     if p.is_absolute():
         return p.resolve()
     return (base_dir / p).resolve()
+
+
+def is_valid_workspace_name(workspace: object) -> bool:
+    return isinstance(workspace, str) and bool(WORKSPACE_NAME_RE.fullmatch(workspace))
+
+
+def resolve_workspace_dir(knowledge_root: Path, workspace: object) -> Optional[Path]:
+    """Resolve a direct child workspace without traversal or symlink escape."""
+    if not is_valid_workspace_name(workspace):
+        return None
+    workspaces_root = (knowledge_root.resolve() / "workspaces").resolve()
+    unresolved = workspaces_root / workspace
+    if unresolved.is_symlink():
+        return None
+    candidate = unresolved.resolve()
+    return candidate if candidate.parent == workspaces_root else None
 
 
 def parse_workspace_packs(workspace_md_path: Path) -> List[str]:
@@ -213,7 +230,11 @@ def resolve(cwd: Optional[Path] = None, require_workspace: bool = False) -> Dict
     result["knowledge_root"] = str(root)
     result["wiki_root"] = str(root)
 
-    ws_dir = root / "workspaces" / workspace
+    ws_dir = resolve_workspace_dir(root, workspace)
+    if ws_dir is None:
+        warnings.append(f"Invalid workspace name or path: {workspace!r}")
+        result["error"] = "invalid-workspace"
+        return result
     if ws_dir.is_dir():
         result["workspace_dir"] = str(ws_dir)
     else:
@@ -241,4 +262,4 @@ def available_workspaces(knowledge_root: Path) -> List[str]:
     root = knowledge_root / "workspaces"
     if not root.is_dir():
         return []
-    return sorted(p.name for p in root.iterdir() if p.is_dir())
+    return sorted(p.name for p in root.iterdir() if p.is_dir() and not p.is_symlink())

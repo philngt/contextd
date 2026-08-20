@@ -12,10 +12,9 @@ from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
-sys.path.insert(0, str(SCRIPT_DIR / "lib"))
 
-from contextd_version import get_version  # noqa: E402
-from stdio import configure_stdio  # noqa: E402
+from lib.contextd_version import get_version  # noqa: E402
+from lib.stdio import configure_stdio  # noqa: E402
 
 __version__ = get_version(start_path=SCRIPT_DIR.parent)
 
@@ -23,6 +22,7 @@ import cmd_resolve  # noqa: E402
 import cmd_find  # noqa: E402
 import cmd_bundle  # noqa: E402
 import cmd_task_context  # noqa: E402
+import cmd_synapse  # noqa: E402
 import cmd_contract_path  # noqa: E402
 import cmd_migrate_config  # noqa: E402
 import cmd_doctor  # noqa: E402
@@ -31,7 +31,7 @@ import cmd_pack_validate  # noqa: E402
 import cmd_policy_check  # noqa: E402
 import cmd_eval  # noqa: E402
 import cmd_mcp_config  # noqa: E402
-import contextd_resolver  # noqa: E402
+from lib import contextd_resolver  # noqa: E402
 import mcp_server  # noqa: E402
 import render_runtime  # noqa: E402
 
@@ -137,6 +137,13 @@ COMMANDS = {
     "eval": CommandMeta(
         "eval",
         "Evaluate context selection with golden tasks",
+        "admin",
+        "maintainer",
+        advanced=True,
+    ),
+    "synapse": CommandMeta(
+        "synapse",
+        "Build the workspace lifecycle graph used by context compilation",
         "admin",
         "maintainer",
         advanced=True,
@@ -256,6 +263,9 @@ def _render_recipes() -> str:
         "Debug wrong or missing docs:",
         '  contextd explain "your task" --text',
         '  contextd find "keyword" --limit 5',
+        "",
+        "Inspect knowledge lifecycle:",
+        "  contextd synapse --preview --text",
         "",
         "Connect an MCP client:",
         "  contextd connect --client codex",
@@ -581,6 +591,19 @@ def _eval_cmd(args) -> int:
         cwd=args.cwd,
         fmt=args.format,
         output=args.output,
+        as_of=args.as_of,
+    )
+
+
+def _synapse_cmd(args) -> int:
+    return cmd_synapse.run(
+        workspace=args.workspace,
+        cwd=args.cwd,
+        fmt=args.format,
+        materialize=not args.no_materialize,
+        output_dir=args.output_dir,
+        output=args.output,
+        as_of=args.as_of,
     )
 
 
@@ -768,7 +791,25 @@ def main() -> int:
     p_eval.add_argument("--cwd", default=None, help="Start directory (default: current)")
     _add_format_arg(p_eval, ["text", "json"], "json")
     p_eval.add_argument("--output", default=None, help="Output report path")
+    p_eval.add_argument("--as-of", default=None,
+                        help="Fallback freshness evaluation date in YYYY-MM-DD format")
     p_eval.set_defaults(func=_eval_cmd)
+
+    # synapse
+    p_synapse = sub.add_parser("synapse", help="Build workspace lifecycle graph")
+    p_synapse.add_argument("--workspace", default=None, help="Workspace name (default: resolved)")
+    p_synapse.add_argument("--cwd", default=None, help="Start directory (default: current)")
+    p_synapse.add_argument("--as-of", default=None,
+                           help="Freshness evaluation date in YYYY-MM-DD format")
+    _add_format_arg(p_synapse, ["json", "text"], "json")
+    p_synapse.add_argument("--output", default=None, help="Output file path (default: stdout)")
+    p_synapse.add_argument("--output-dir", default=None,
+                           help="Project directory for .contextd/context/synapse.json")
+    p_synapse.add_argument("--no-materialize", action="store_true",
+                           help="Do not write .contextd/context/synapse.json")
+    p_synapse.add_argument("--preview", dest="no_materialize", action="store_true",
+                           help="Preview stdout only; alias for --no-materialize")
+    p_synapse.set_defaults(func=_synapse_cmd)
 
     # mcp-server
     p_mcp_server = sub.add_parser("mcp-server", help="Run contextd as a stdio MCP tools server")

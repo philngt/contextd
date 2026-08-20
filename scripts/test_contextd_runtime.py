@@ -8,8 +8,10 @@ Run:
 
 from __future__ import annotations
 
+from collections import Counter
 import json
 import contextlib
+import hashlib
 import io
 import importlib.util
 import os
@@ -17,22 +19,28 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from datetime import date
 from pathlib import Path
+from unittest import mock
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 sys.path.insert(0, str(HERE))
-sys.path.insert(0, str(HERE / "lib"))
 
 import cmd_doctor  # noqa: E402
 import cmd_eval  # noqa: E402
 import cmd_migrate_config  # noqa: E402
-import contextd_version  # noqa: E402
 import generate_manifest  # noqa: E402
 import cmd_resolve  # noqa: E402
 import render_runtime  # noqa: E402
 import test_pack_devops_iac  # noqa: E402
-from lib import contextd_resolver, pack_validation, task_context_engine  # noqa: E402
+from lib import (  # noqa: E402
+    contextd_resolver,
+    contextd_version,
+    pack_validation,
+    synapse_engine,
+    task_context_engine,
+)
 
 
 def _write(path: Path, text: str) -> None:
@@ -65,6 +73,62 @@ def _pack(root: Path) -> None:
            "# Common Pitfalls\n\n## Rules\n\nDo not guess.\n")
     _write(root / "packs" / "pack-demo" / "agents" / "pipeline" / "retrieval-map.md",
            "# Retrieval Map\n\n| Component | Docs to retrieve |\n|---|---|\n| `demo` | platform/contracts/, platform/patterns/ |\n")
+
+
+def _pack_v3(root: Path, name: str = "pack-demo-v3") -> None:
+    pack = root / "packs" / name
+    _write(
+        pack / "pack.yaml",
+        "manifest_version: 3\n"
+        f"name: {name}\n"
+        "version: 0.1.0\n"
+        "description: Canonical component-scoped guidance for deterministic runtime tests.\n"
+        "status: experimental\n"
+        "category: engineering\n"
+        "reviewed_on: 2025-01-01\n"
+        "audiences: [engineering]\n"
+        "task_types: [implement_feature, review]\n"
+        "scope_includes: [demo component guidance]\n"
+        "scope_excludes: [unrelated production guidance]\n"
+        "components:\n  - demo-v3\n  - unused-v3\n"
+        "keywords:\n"
+        "  demo-v3: [demo-v3, demo canonical, scoped demo]\n"
+        "  unused-v3: [unused-v3, dormant canonical, unrelated scoped demo]\n"
+        "retrieval:\n"
+        "  demo-v3: [platform/contracts/, platform/patterns/]\n"
+        "  unused-v3: [platform/architecture/]\n"
+        "files:\n"
+        "  knowledge: knowledge.md\n"
+        "  validator_script: scripts/rules.py\n"
+        "conflicts_with: []\n",
+    )
+    _write(
+        pack / "knowledge.md",
+        f"# {name} — Canonical Knowledge\n\n"
+        "## Global Principles\n\n"
+        f"- `{name}-evidence-first` — Use inspected evidence.\n\n"
+        "## Component: demo-v3\n\n"
+        "### Mental Model\n\nRoute only demo knowledge.\n\n"
+        "### Standards\n\n"
+        f"- `{name}-demo-standard` — Keep the demo bounded.\n\n"
+        "### Failure Signals\n\n- Unbounded demo context.\n\n"
+        "### Evidence And Stop Conditions\n\nStop when evidence is missing.\n\n"
+        "## Component: unused-v3\n\n"
+        "### Mental Model\n\nThis section must stay unloaded.\n\n"
+        "### Standards\n\n"
+        f"- `{name}-unused-standard` — Never leak dormant guidance.\n\n"
+        "### Failure Signals\n\n- Unrelated context was loaded.\n\n"
+        "### Evidence And Stop Conditions\n\nStop when routing is unrelated.\n",
+    )
+    _write(
+        pack / "README.md",
+        f"# {name}\n\n"
+        "## When to enable\n\n- Demo-v3 tasks.\n\n"
+        "## When not to enable\n\n- Unrelated tasks.\n\n"
+        "## Retrieval behavior\n\nRoutes by component.\n\n"
+        "## Verification\n\nRun pack-validate.\n",
+    )
+    _write(pack / "scripts" / "rules.py", "RULES = []\n")
 
 
 def _pack_with_retrieval(root: Path, name: str, keywords: dict, rows: dict) -> None:
@@ -141,13 +205,33 @@ def test_context_artifact_and_materialized_pack() -> None:
         root = Path(td)
         _workspace(root)
         _pack(root)
-        artifact = task_context_engine.build_context_artifact(
-            task="Implement demo feature",
-            wiki_root=root,
-            workspace="default",
-            packs=["pack-demo"],
-            project_dir=root,
+        _write(
+            root / "agents" / "coding-rules.md",
+            "# Engine Coding Rules\n\nKeep demo code deterministic.\n",
         )
+        _write(
+            root / "workspaces" / "default" / "agents" / "constraints.md",
+            "# Workspace Constraints\n\n- `ws-demo-rule` — Keep demo local.\n",
+        )
+        original_builder = task_context_engine.synapse_engine.build_synapse_snapshot
+        with mock.patch.object(
+            task_context_engine.synapse_engine,
+            "build_synapse_snapshot",
+            wraps=original_builder,
+        ) as build_spy:
+            artifact, synapse_snapshot = task_context_engine.build_context_snapshot(
+                task="Implement demo feature",
+                wiki_root=root,
+                workspace="default",
+                packs=["pack-demo"],
+                project_dir=root,
+            )
+            materialized = task_context_engine.materialize_context(
+                artifact,
+                root,
+                synapse_snapshot=synapse_snapshot,
+            )
+            assert build_spy.call_count == 1, "materialization rescanned the workspace"
         assert artifact["artifact_type"] == "contextd_task_context.v1"
         assert artifact["intent"]["components"] == ["demo"]
         assert artifact["referenced_docs"], artifact
@@ -157,17 +241,95 @@ def test_context_artifact_and_materialized_pack() -> None:
                    for doc in artifact["static_context"])
         assert any(doc["path"] == "packs/pack-demo/pack.yaml"
                    for doc in artifact["static_context"])
+        assert any(doc["path"] == "agents/coding-rules.md"
+                   for doc in artifact["static_context"])
+        assert any(
+            doc["path"] == "workspaces/default/agents/constraints.md"
+            and doc["category"] == "workspace-rule"
+            for doc in artifact["static_context"]
+        )
         assert any(doc["path"].endswith("demo.contract.json")
                    for doc in artifact["referenced_docs"])
         first_key = artifact["contextPack"]["packKey"]
-        materialized = task_context_engine.materialize_context(artifact, root)
         assert materialized["contextPack"]["status"] == "materialized"
         assert (root / ".contextd" / "context" / "current-task.json").is_file()
+        assert (root / ".contextd" / "context" / "synapse.json").is_file()
+        assert materialized["synapse"]["status"] == "materialized"
+        assert materialized["context_projection"]["memory_class"] == "context"
+        persisted = json.loads(
+            (root / ".contextd" / "context" / "current-task.json").read_text(
+                encoding="utf-8",
+            )
+        )
+        assert persisted == materialized, "returned and canonical persisted artifacts diverged"
         assert (root / materialized["contextPack"]["compiledRef"]).is_file()
         assert not list((root / ".contextd" / "context").rglob("*.tmp.*"))
         pack_text = (root / materialized["contextPack"]["compiledRef"]).read_text(encoding="utf-8")
         assert "workspaces/default/workspace.md" in pack_text
         assert "packs/pack-demo/pack.yaml" in pack_text
+
+        no_snapshot_dir = root / "no-snapshot-output"
+        with mock.patch.object(
+            task_context_engine.synapse_engine,
+            "build_synapse_snapshot",
+            side_effect=AssertionError("materialization must not build synapse"),
+        ):
+            without_synapse = task_context_engine.materialize_context(
+                artifact,
+                no_snapshot_dir,
+            )
+        assert without_synapse["synapse"]["status"] == "not_materialized"
+        assert without_synapse["synapse"]["ref"] is None
+        assert not (no_snapshot_dir / ".contextd" / "context" / "synapse.json").exists()
+
+        rematerialized_dir = root / "rematerialized-without-snapshot"
+        rematerialized = task_context_engine.materialize_context(
+            materialized,
+            rematerialized_dir,
+        )
+        assert rematerialized["synapse"]["status"] == "not_materialized"
+        assert rematerialized["synapse"]["ref"] is None
+        assert not (
+            rematerialized_dir / ".contextd" / "context" / "synapse.json"
+        ).exists()
+
+        mismatched_snapshot = json.loads(json.dumps(synapse_snapshot))
+        mismatched_snapshot["synapse_hash"] = "0" * 64
+        mismatch_dir = root / "mismatch-output"
+        mismatch = task_context_engine.materialize_context(
+            artifact,
+            mismatch_dir,
+            synapse_snapshot=mismatched_snapshot,
+        )
+        assert mismatch["synapse"]["status"] == "drifted"
+        assert mismatch["synapse"]["ref"] is None
+        assert not (mismatch_dir / ".contextd" / "context" / "synapse.json").exists()
+        assert any("snapshot does not match" in warning for warning in mismatch["warnings"])
+
+        mutated_snapshot = json.loads(json.dumps(synapse_snapshot))
+        mutated_snapshot["nodes"][0]["title"] = "Mutated after build"
+        mutation_dir = root / "mutation-output"
+        mutation = task_context_engine.materialize_context(
+            artifact,
+            mutation_dir,
+            synapse_snapshot=mutated_snapshot,
+        )
+        assert mutation["synapse"]["status"] == "drifted"
+        assert not (mutation_dir / ".contextd" / "context" / "synapse.json").exists()
+
+        inconsistent_artifact = json.loads(json.dumps(artifact))
+        selected_path = inconsistent_artifact["referenced_docs"][0]["path"]
+        inconsistent_artifact["source_hashes"][selected_path] = "f" * 64
+        inconsistent_dir = root / "inconsistent-output"
+        inconsistent = task_context_engine.materialize_context(
+            inconsistent_artifact,
+            inconsistent_dir,
+            synapse_snapshot=synapse_snapshot,
+        )
+        assert inconsistent["synapse"]["status"] == "drifted"
+        assert not (
+            inconsistent_dir / ".contextd" / "context" / "synapse.json"
+        ).exists()
 
         artifact_again = task_context_engine.build_context_artifact(
             task="Implement demo feature",
@@ -189,6 +351,387 @@ def test_context_artifact_and_materialized_pack() -> None:
         )
         assert changed["contextPack"]["packKey"] != first_key
         print("  ok context_artifact_and_materialized_pack")
+
+
+def test_context_snapshot_source_coherence_and_raw_hashes() -> None:
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        ws = _workspace(root)
+        target = ws / "platform" / "patterns" / "racy.md"
+        late = ws / "platform" / "patterns" / "late.md"
+        old_text = "# Racy\n\nOld unique-race guidance.\n"
+        new_text = "# Racy\n\nNew unique-race guidance changed during build.\n"
+        _write(target, old_text)
+
+        original_builder = task_context_engine.synapse_engine.build_synapse_snapshot
+
+        def build_then_change(*args, **kwargs):
+            build = original_builder(*args, **kwargs)
+            target.write_text(new_text, encoding="utf-8")
+            late.write_text(
+                "# Late\n\nNew unique-late guidance created after the scan.\n",
+                encoding="utf-8",
+            )
+            return build
+
+        with mock.patch.object(
+            task_context_engine.synapse_engine,
+            "build_synapse_snapshot",
+            side_effect=build_then_change,
+        ):
+            artifact, snapshot = task_context_engine.build_context_snapshot(
+                task="review unique-race and unique-late guidance",
+                wiki_root=root,
+                workspace="default",
+                packs=[],
+                project_dir=root,
+                synapse_as_of=date(2026, 8, 20),
+            )
+
+        rel = "workspaces/default/platform/patterns/racy.md"
+        node = synapse_engine.nodes_by_path(snapshot)[rel]
+        selected = next(doc for doc in artifact["referenced_docs"] if doc["path"] == rel)
+        assert selected["source_hash"] == node["source_hash"]
+        assert selected["content"] == old_text.strip()
+        assert not any(
+            doc["path"] == "workspaces/default/platform/patterns/late.md"
+            for doc in artifact["referenced_docs"]
+        )
+        assert target.read_text(encoding="utf-8") == new_text
+        coherent = task_context_engine.materialize_context(
+            artifact,
+            root / "coherent-output",
+            synapse_snapshot=snapshot,
+        )
+        assert coherent["synapse"]["status"] == "materialized"
+
+        crlf = ws / "platform" / "patterns" / "crlf.md"
+        raw = (
+            b"---\r\n"
+            b"type: Pattern\r\n"
+            b"node_id: pattern.crlf\r\n"
+            b"---\r\n"
+            b"# CRLF\r\n"
+        )
+        crlf.write_bytes(raw)
+        graph = synapse_engine.build_synapse_index(
+            root,
+            "default",
+            as_of=date(2026, 8, 20),
+        )
+        crlf_node = synapse_engine.nodes_by_id(graph)["pattern.crlf"]
+        assert crlf_node["source_hash"] == hashlib.sha256(raw).hexdigest()
+
+        reads: list[Path] = []
+        original_read_bytes = Path.read_bytes
+        original_read_text = Path.read_text
+
+        def count_bytes(path: Path, *args, **kwargs):
+            reads.append(path.resolve())
+            return original_read_bytes(path, *args, **kwargs)
+
+        def count_text(path: Path, *args, **kwargs):
+            reads.append(path.resolve())
+            return original_read_text(path, *args, **kwargs)
+
+        with mock.patch.object(Path, "read_bytes", count_bytes), mock.patch.object(
+            Path,
+            "read_text",
+            count_text,
+        ):
+            task_context_engine.build_context_snapshot(
+                task="review workspace knowledge",
+                wiki_root=root,
+                workspace="default",
+                packs=[],
+                project_dir=root,
+                synapse_as_of=date(2026, 8, 20),
+            )
+        workspace_reads = [path for path in reads if path.is_relative_to(ws.resolve())]
+        counts = Counter(workspace_reads)
+        assert counts and max(counts.values()) == 1, counts
+        print("  ok context_snapshot_source_coherence_and_raw_hashes")
+
+
+def test_materialization_rejects_foreign_knowledge_root() -> None:
+    with tempfile.TemporaryDirectory() as td:
+        base = Path(td)
+        roots = [base / "company-a", base / "company-b"]
+        for root in roots:
+            _workspace(root)
+
+        artifact, snapshot_a = task_context_engine.build_context_snapshot(
+            task="review demo pattern",
+            wiki_root=roots[0],
+            workspace="default",
+            packs=[],
+            project_dir=roots[0],
+            synapse_as_of=date(2026, 8, 20),
+        )
+        snapshot_b = synapse_engine.build_synapse_index(
+            roots[1],
+            "default",
+            as_of=date(2026, 8, 20),
+        )
+        assert snapshot_a["synapse_hash"] == snapshot_b["synapse_hash"]
+
+        output = base / "foreign-output"
+        materialized = task_context_engine.materialize_context(
+            artifact,
+            output,
+            synapse_snapshot=snapshot_b,
+        )
+        assert materialized["synapse"]["status"] == "drifted"
+        assert not (output / ".contextd" / "context" / "synapse.json").exists()
+        print("  ok materialization_rejects_foreign_knowledge_root")
+
+
+def test_synapse_lookups_are_reused_for_replacement_expansion() -> None:
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        ws = _workspace(root)
+        _write(
+            ws / "platform" / "patterns" / "old.md",
+            """---
+type: Pattern
+lifecycle: superseded
+node_id: pattern.old
+---
+# Old
+""",
+        )
+        _write(
+            ws / "platform" / "patterns" / "new.md",
+            """---
+type: Pattern
+status: stable
+node_id: pattern.new
+relations:
+  - type: supersedes
+    target: pattern.old
+---
+# New
+""",
+        )
+
+        original_lookups = synapse_engine.build_synapse_lookups
+        with mock.patch.object(
+            synapse_engine,
+            "build_synapse_lookups",
+            wraps=original_lookups,
+        ) as lookup_spy, mock.patch.object(
+            synapse_engine,
+            "replacement_node_ids",
+            side_effect=AssertionError("context expansion rebuilt replacement indexes"),
+        ):
+            artifact = task_context_engine.build_context_artifact(
+                task="review old pattern",
+                wiki_root=root,
+                workspace="default",
+                packs=[],
+                project_dir=root,
+                synapse_as_of=date(2026, 8, 20),
+            )
+        assert lookup_spy.call_count == 1
+        selected = {doc["path"] for doc in artifact["referenced_docs"]}
+        assert "workspaces/default/platform/patterns/new.md" in selected
+        print("  ok synapse_lookups_are_reused_for_replacement_expansion")
+
+
+def test_lib_modules_have_one_canonical_identity() -> None:
+    assert task_context_engine.synapse_engine is synapse_engine
+    assert task_context_engine.context_policy.__name__ == "lib.context_policy"
+    assert "synapse_engine" not in sys.modules
+    assert "task_context_engine" not in sys.modules
+    print("  ok lib_modules_have_one_canonical_identity")
+
+
+def test_synapse_lifecycle_graph() -> None:
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        ws = _workspace(root)
+        _write(
+            ws / "platform" / "patterns" / "old-timeout.md",
+            """---
+type: Pattern
+title: Old timeout
+status: deprecated
+lifecycle: superseded
+node_id: pattern.timeout.v1
+review_by: 2025-01-01
+---
+# Old timeout
+""",
+        )
+        _write(
+            ws / "platform" / "patterns" / "new-timeout.md",
+            """---
+type: Pattern
+title: New timeout
+status: stable
+node_id: pattern.timeout.v2
+freshness: fresh
+relations:
+  - type: supersedes
+    target: pattern.timeout.v1
+---
+# New timeout
+""",
+        )
+        _write(ws / ".observations" / "prompts.jsonl", '{"prompt":"secret runtime state"}\n')
+        _write(ws / "evidence" / "sources" / "raw" / "raw.md", "# Raw payload\n")
+        _write(ws / "notes" / "a b.md", "# Space path\n")
+        _write(ws / "notes" / "a.b.md", "# Dot path\n")
+
+        first = synapse_engine.build_synapse_index(
+            root, "default", as_of=date(2026, 1, 1),
+        )
+        second = synapse_engine.build_synapse_index(
+            root, "default", as_of=date(2026, 1, 1),
+        )
+        assert first["synapse_hash"] == second["synapse_hash"]
+        nodes = synapse_engine.nodes_by_id(first)
+        assert len(nodes) == len(first["nodes"]), "path-derived node IDs must be unique"
+        assert nodes["pattern.timeout.v1"]["lifecycle"] == "superseded"
+        assert nodes["pattern.timeout.v1"]["freshness"] == "stale"
+        assert nodes["pattern.timeout.v2"]["freshness"] == "fresh"
+        assert all(".observations" not in node["path"] for node in first["nodes"])
+        assert all("evidence/sources" not in node["path"] for node in first["nodes"])
+        assert {
+            (edge["type"], edge["source"], edge["target"])
+            for edge in first["edges"]
+        } >= {("supersedes", "pattern.timeout.v2", "pattern.timeout.v1")}
+        output = synapse_engine.materialize_synapse(first, root)
+        assert output == root / ".contextd" / "context" / "synapse.json"
+        assert json.loads(output.read_text(encoding="utf-8"))["synapse_hash"] == first["synapse_hash"]
+        print("  ok synapse_lifecycle_graph")
+
+
+def test_synapse_rejects_invalid_edges_and_workspace_escape() -> None:
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        ws = _workspace(root)
+        _write(
+            ws / "platform" / "patterns" / "a.md",
+            """---
+type: Pattern
+node_id: pattern.a
+relations:
+  - type: supersedes
+    target: pattern.b
+  - type: supports
+    target: workspace://other/pattern.foreign
+  - type: supports
+    target: pattern.missing
+---
+# A
+""",
+        )
+        _write(
+            ws / "platform" / "patterns" / "b.md",
+            """---
+type: Pattern
+node_id: pattern.b
+relations:
+  - type: supersedes
+    target: pattern.a
+---
+# B
+""",
+        )
+        graph = synapse_engine.build_synapse_index(
+            root, "default", as_of=date(2026, 1, 1),
+        )
+        codes = {item["code"] for item in graph["diagnostics"]}
+        assert "cross-workspace-edge" in codes, graph["diagnostics"]
+        assert "dangling-edge" in codes, graph["diagnostics"]
+        assert "supersede-cycle" in codes, graph["diagnostics"]
+        assert not [edge for edge in graph["edges"] if edge["type"] == "supersedes"]
+
+        escaped = synapse_engine.build_synapse_index(
+            root, "../other", as_of=date(2026, 1, 1),
+        )
+        assert escaped["nodes"] == []
+        assert any(item["code"] == "invalid-workspace" for item in escaped["diagnostics"])
+        _write(
+            root / ".contextd" / "config.json",
+            json.dumps({"workspace": "../other", "knowledge_root": "."}),
+        )
+        resolved = contextd_resolver.resolve(root, require_workspace=True)
+        assert resolved["error"] == "invalid-workspace", resolved
+        assert resolved["workspace_dir"] is None, resolved
+        try:
+            task_context_engine.build_context_artifact(
+                task="implement escape",
+                wiki_root=root,
+                workspace="../other",
+                packs=[],
+            )
+            raise AssertionError("context build accepted workspace traversal")
+        except ValueError as exc:
+            assert "context build refused" in str(exc), exc
+        print("  ok synapse_rejects_invalid_edges_and_workspace_escape")
+
+
+def test_context_projection_expands_replacement_and_warns_stale() -> None:
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        ws = _workspace(root)
+        _write(
+            ws / "platform" / "contracts" / "legacy-timeout.md",
+            """---
+type: Contract
+status: deprecated
+lifecycle: superseded
+node_id: contract.timeout.v1
+freshness: stale
+---
+# Legacy timeout
+
+Legacy timeout behavior.
+""",
+        )
+        _write(
+            ws / "platform" / "contracts" / "replacements" / "current-timeout.md",
+            """---
+type: Contract
+status: stable
+node_id: contract.timeout.v2
+freshness: fresh
+relations:
+  - type: supersedes
+    target: contract.timeout.v1
+---
+# Current timeout
+
+Current timeout behavior replaces legacy timeout.
+""",
+        )
+        artifact = task_context_engine.build_context_artifact(
+            task="implement legacy timeout behavior",
+            wiki_root=root,
+            workspace="default",
+            packs=[],
+            project_dir=root,
+            include_selection_trace=True,
+            synapse_as_of=date(2026, 1, 1),
+        )
+        selected = {doc["path"]: doc for doc in artifact["referenced_docs"]}
+        replacement_path = (
+            "workspaces/default/platform/contracts/replacements/current-timeout.md"
+        )
+        legacy_path = "workspaces/default/platform/contracts/legacy-timeout.md"
+        assert replacement_path in selected, selected
+        assert selected[replacement_path]["synapse_expansion"]["reason"] == "active_replacement"
+        assert legacy_path in selected, selected
+        assert any("Selected stale knowledge node contract.timeout.v1" in warning
+                   for warning in artifact["warnings"]), artifact["warnings"]
+        assert artifact["synapse"]["artifact_type"] == "contextd_synapse_ref.v1"
+        assert artifact["context_projection"]["source_synapse_hash"] == artifact["synapse"]["synapse_hash"]
+        trace = artifact["_selection_trace"]["selected_docs"]
+        legacy_trace = next(item for item in trace if item["path"] == legacy_path)
+        assert legacy_trace["state_score_adjustment"] == -20, legacy_trace
+        print("  ok context_projection_expands_replacement_and_warns_stale")
 
 
 def test_budget_report_and_explain_trace() -> None:
@@ -214,6 +757,14 @@ def test_budget_report_and_explain_trace() -> None:
         assert "_selection_trace" not in artifact, artifact
         assert artifact["budget_report"] == again["budget_report"]
         assert artifact["budget_report"]["selected_docs"] == len(artifact["referenced_docs"])
+        assert artifact["budget_report"]["static_docs"] == len(artifact["static_context"])
+        assert artifact["budget_report"]["estimated_tokens_referenced"] == (
+            artifact["budget_report"]["estimated_tokens_selected"]
+        )
+        assert artifact["budget_report"]["estimated_tokens_static"] > 0
+        assert artifact["budget_report"]["estimated_tokens_total"] >= (
+            artifact["budget_report"]["estimated_tokens_referenced"]
+        )
 
         explanation = task_context_engine.build_context_explanation(
             task="Implement demo feature",
@@ -226,6 +777,48 @@ def test_budget_report_and_explain_trace() -> None:
         assert explanation["selection_trace"]["selected_docs"], explanation
         assert explanation["summary"]["budget_report"] == artifact["budget_report"]
         print("  ok budget_report_and_explain_trace")
+
+
+def test_manifest_v3_scopes_pack_knowledge_and_budget() -> None:
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        _workspace(root)
+        _pack_v3(root)
+        artifact = task_context_engine.build_context_artifact(
+            task="Implement demo-v3 feature with canonical guidance",
+            wiki_root=root,
+            workspace="default",
+            packs=["pack-demo-v3"],
+            project_dir=root,
+        )
+
+        static_by_path = {
+            doc["path"]: doc for doc in artifact["static_context"]
+        }
+        metadata = static_by_path["packs/pack-demo-v3/pack.yaml"]
+        knowledge = static_by_path["packs/pack-demo-v3/knowledge.md"]
+        assert metadata["category"] == "pack-metadata", metadata
+        assert "`demo-v3`" in metadata["content"], metadata
+        assert knowledge["category"] == "pack-knowledge", knowledge
+        assert "## Global Principles" in knowledge["content"], knowledge
+        assert "## Component: demo-v3" in knowledge["content"], knowledge
+        assert "## Component: unused-v3" not in knowledge["content"], knowledge
+        assert knowledge["sections"] == [
+            "Global Principles",
+            "Component: demo-v3",
+        ], knowledge
+
+        budget = artifact["budget_report"]
+        assert budget["static_docs"] == len(artifact["static_context"]), budget
+        assert budget["estimated_tokens_static_by_category"]["pack-knowledge"] > 0
+        assert budget["estimated_tokens_total"] <= (
+            budget["estimated_tokens_referenced"]
+            + budget["estimated_tokens_static"]
+        ), budget
+
+        report = pack_validation.validate_packs(root, ["pack-demo-v3"])
+        assert report["status"] == "ok", report
+    print("  ok manifest_v3_scopes_pack_knowledge_and_budget")
 
 
 def test_policy_check_pass_and_failures() -> None:
@@ -303,7 +896,9 @@ def test_pack_validation_catches_bad_pack_api() -> None:
         _write(root / "packs" / "pack-other" / "pack.yaml",
                "name: pack-other\nversion: 1.0.0\ndescription: Other\ncomponents:\n  - other\nkeywords:\n  other: [other]\n")
         _write(root / "packs" / "pack-bad" / "pack.yaml",
-               "name: pack-bad\nversion: 1.0.0\ndescription: Bad\ncomponents:\n  - known\nkeywords:\n  unknown: [bad]\nfiles:\n  missing: missing.md\n")
+               "name: pack-bad\nversion: 1.0.0\ndescription: Bad\ncomponents:\n  - known\n"
+               "keywords:\n  known: [other]\n  unknown: [bad]\n"
+               "files:\n  missing: missing.md\n")
         _write(root / "packs" / "pack-bad" / "agents" / "pipeline" / "retrieval-map.md",
                "# Retrieval Map\n\n| Component | Docs to retrieve |\n|---|---|\n"
                "| `unknown` | ../outside.md |\n"
@@ -315,6 +910,7 @@ def test_pack_validation_catches_bad_pack_api() -> None:
         assert "retrieval-map.components" in checks, report
         assert "retrieval-map.path" in checks, report
         assert "retrieval-map.cross-pack" in checks, report
+        assert "pack.keywords.cross_pack_ambiguous" in checks, report
     print("  ok pack_validation_catches_bad_pack_api")
 
 
@@ -336,6 +932,110 @@ def test_pack_validation_warns_on_documented_rules_without_script() -> None:
     print("  ok pack_validation_warns_on_documented_rules_without_script")
 
 
+def test_pack_validation_v2_quality_contract() -> None:
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        _workspace(root)
+        pack = root / "packs" / "pack-quality"
+        _write(
+            pack / "pack.yaml",
+            "manifest_version: 2\n"
+            "name: pack-quality\n"
+            "version: 1\n"
+            "description: too short\n"
+            "status: unknown\n"
+            "category: unknown\n"
+            "reviewed_on: yesterday\n"
+            "audiences: [unknown]\n"
+            "task_types: [unknown]\n"
+            "scope_includes: [same scope]\n"
+            "scope_excludes: [same scope]\n"
+            "components:\n  - demo\n"
+            "keywords:\n  demo: [same, same]\n"
+            "files:\n"
+            "  constraints: agents/constraints.md\n"
+            "  validator_rules: agents/pipeline/validator-rules.md\n"
+            "  validator_script: scripts/rules.py\n"
+            "  retrieval_map: agents/pipeline/retrieval-map.md\n"
+            "conflicts_with: []\n",
+        )
+        _write(pack / "README.md", "# Incomplete pack\n")
+        _write(pack / "agents" / "constraints.md", "# Constraints\n\nNo stable IDs.\n")
+        _write(
+            pack / "agents" / "common-pitfalls.md",
+            "# Pitfalls\n\n## P01 — One\n\n"
+            "See `pack-quality-missing-rule`.\n",
+        )
+        _write(
+            pack / "agents" / "pipeline" / "retrieval-map.md",
+            "# Retrieval Map\n\n| Component | Docs to retrieve |\n|---|---|\n"
+            "| `demo` | platform/contracts/ |\n",
+        )
+        _write(
+            pack / "agents" / "pipeline" / "validator-rules.md",
+            "# Rules\n\n| Rule ID | Severity | Check |\n|---|---|---|\n"
+            "| `pack-quality-missing-rule` | error | Missing. |\n",
+        )
+        _write(pack / "scripts" / "rules.py", "RULES = []\n")
+
+        report = pack_validation.validate_packs(root, ["pack-quality"])
+        checks = {issue["check"] for issue in report["issues"]}
+        assert report["status"] == "error", report
+        assert {
+            "pack.version",
+            "pack.status",
+            "pack.category",
+            "pack.reviewed_on",
+            "pack.audiences",
+            "pack.task_types",
+            "pack.scope",
+            "pack.files",
+            "pack.readme",
+            "pack.constraints.ids",
+            "pack.pitfalls",
+            "pack.validator.parity",
+            "pack.pitfalls.rule_ref",
+        }.issubset(checks), report
+    print("  ok pack_validation_v2_quality_contract")
+
+
+def test_pack_validation_v3_catches_knowledge_and_adapter_drift() -> None:
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        _workspace(root)
+        _pack_v3(root)
+        pack = root / "packs" / "pack-demo-v3"
+        knowledge_path = pack / "knowledge.md"
+        knowledge = knowledge_path.read_text(encoding="utf-8").replace(
+            "### Failure Signals\n\n- Unbounded demo context.",
+            "### Missing Failure Heading\n\n- Unbounded demo context.",
+        )
+        _write(knowledge_path, knowledge)
+        _write(
+            pack / "agents" / "pipeline" / "retrieval-map.md",
+            "# Retrieval Map\n\n| Component | Docs to retrieve |\n|---|---|\n"
+            "| `demo-v3` | platform/contracts/ |\n"
+            "| `unused-v3` | platform/architecture/ |\n",
+        )
+        _write(
+            pack / "agents" / "constraints.md",
+            "# Legacy Adapter\n\n- `pack-demo-v3-legacy-only` — stale rule.\n",
+        )
+        _write(
+            pack / "scripts" / "rules.py",
+            "RULE_ID = 'pack-demo-v3-undocumented-rule'\nRULES = []\n",
+        )
+
+        report = pack_validation.validate_packs(root, ["pack-demo-v3"])
+        checks = {issue["check"] for issue in report["issues"]}
+        assert report["status"] == "error", report
+        assert "pack.knowledge.component" in checks, report
+        assert "pack.knowledge.adapter-drift" in checks, report
+        assert "pack.validator.parity" in checks, report
+        assert "retrieval-map.compatibility-drift" in checks, report
+    print("  ok pack_validation_v3_catches_knowledge_and_adapter_drift")
+
+
 def test_golden_eval_passes_and_fails_deterministically() -> None:
     with tempfile.TemporaryDirectory() as td:
         root = Path(td)
@@ -348,6 +1048,7 @@ def test_golden_eval_passes_and_fails_deterministically() -> None:
             "id": "pass-demo-contract",
             "task": "Implement demo feature",
             "workspace": "default",
+            "as_of": "2026-08-20",
             "packs": ["pack-demo"],
             "expected_docs": ["*demo.contract.json"],
             "expected_categories": ["contract"],
@@ -361,11 +1062,13 @@ def test_golden_eval_passes_and_fails_deterministically() -> None:
         report = json.loads(report_path.read_text(encoding="utf-8"))
         assert report["status"] == "ok", report
         assert report["summary"]["passed"] == 1, report
+        assert report["results"][0]["as_of"] == "2026-08-20", report
 
         _write(fixture_dir / "fail.json", json.dumps({
             "id": "fail-missing-doc",
             "task": "Implement demo feature",
             "workspace": "default",
+            "as_of": "2026-08-20",
             "packs": ["pack-demo"],
             "expected_docs": ["workspaces/default/missing.md"],
         }))
@@ -375,6 +1078,39 @@ def test_golden_eval_passes_and_fails_deterministically() -> None:
         failed = json.loads(fail_path.read_text(encoding="utf-8"))
         assert failed["status"] == "error", failed
         assert failed["summary"]["failed"] == 1, failed
+
+        (fixture_dir / "fail.json").unlink()
+        undated_fixture = {
+            "id": "undated-demo-contract",
+            "task": "Implement demo feature",
+            "workspace": "default",
+            "packs": ["pack-demo"],
+            "expected_docs": ["*demo.contract.json"],
+        }
+        _write(fixture_dir / "pass.json", json.dumps(undated_fixture))
+        missing_date_path = root / ".contextd" / "runs" / "eval-missing-date.json"
+        assert cmd_eval.run(
+            golden=True,
+            workspace="default",
+            cwd=str(root),
+            fmt="json",
+            output=str(missing_date_path),
+        ) == 1
+        missing_date = json.loads(missing_date_path.read_text(encoding="utf-8"))
+        assert missing_date["summary"]["load_errors"] == 1, missing_date
+        assert missing_date["load_errors"][0]["error"] == "missing-or-invalid-as-of"
+
+        fallback_path = root / ".contextd" / "runs" / "eval-fallback-date.json"
+        assert cmd_eval.run(
+            golden=True,
+            workspace="default",
+            cwd=str(root),
+            fmt="json",
+            output=str(fallback_path),
+            as_of="2026-08-20",
+        ) == 0
+        fallback = json.loads(fallback_path.read_text(encoding="utf-8"))
+        assert fallback["results"][0]["as_of"] == "2026-08-20", fallback
     print("  ok golden_eval_passes_and_fails_deterministically")
 
 
@@ -612,6 +1348,7 @@ def test_thesis_hardening_docs_and_release_mapping() -> None:
     quickstart = (ROOT / "QUICKSTART.md").read_text(encoding="utf-8")
     release = (ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
     pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    spec = (ROOT / "contextd.spec").read_text(encoding="utf-8")
 
     assert "Resolve workspace from `<cwd>/.contextd/config.json#workspace`" in claude, claude
     assert "Resolve workspace from `<cwd>/.claude/wiki.json#workspace`" not in claude, claude
@@ -628,9 +1365,117 @@ def test_thesis_hardening_docs_and_release_mapping() -> None:
     assert "Linux arm64 prebuilt binary is not available" in release, release
     assert "contextd-linux-arm64" not in release, release
     assert 'version = "1.3.2"' in pyproject, pyproject
+    for module in ("cmd_synapse", "lib.synapse_engine", "lib.frontmatter"):
+        assert f"'{module}'" in spec, (module, spec)
+    assert "'synapse_engine'" not in spec, "top-level lib module would create duplicate state"
+    assert "'scripts/lib'" not in spec, "PyInstaller path exposes duplicate top-level modules"
+    assert "needs: [release-metadata, verify, package-source, build-binaries]" in release
+    assert "python-version: ['3.10', '3.12']" in release
     actual_version = contextd_version.get_version(start_path=ROOT)
     assert actual_version == "1.3.2", actual_version
     print("  ok thesis_hardening_docs_and_release_mapping")
+
+
+def test_onboarding_and_readme_docs_consistency() -> None:
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    quickstart = (ROOT / "QUICKSTART.md").read_text(encoding="utf-8")
+    pack_catalog = (ROOT / "packs" / "README.md").read_text(encoding="utf-8")
+    install_docs = [
+        (ROOT / "onboarding" / "install.en.html").read_text(encoding="utf-8"),
+        (ROOT / "onboarding" / "install.html").read_text(encoding="utf-8"),
+    ]
+    onboarding_docs = [
+        (ROOT / "onboarding" / "index.en.html").read_text(encoding="utf-8"),
+        (ROOT / "onboarding" / "index.html").read_text(encoding="utf-8"),
+    ]
+
+    # Source installs and public onboarding must agree with pyproject.toml.
+    for content in [quickstart, *install_docs]:
+        assert "Python ≥ 3.9" not in content, "stale Python 3.9 requirement"
+    for content in install_docs:
+        assert "Python ≥ 3.10" in content, "source prerequisite missing"
+        assert "python3 -m pip install -e ." in content, "source path does not install CLI"
+        assert "contextd synapse --preview --text" in content, "synapse smoke step missing"
+        assert "templates\\contextd-config.json" not in content, "project config used as global config"
+        assert "%USERPROFILE%\\.claude\\config.json" not in content, "wrong Windows verify path"
+        assert "default_workspace" in content, "global config shape missing"
+
+    # Do not freeze example selection output that changes with governed knowledge.
+    assert "Intent: review / product" not in readme, "README contains stale golden output"
+    assert "<synapse-hash>" in readme, "README example must remain schematic"
+    assert "abbreviated output shape" in readme, "README example stability note missing"
+
+    # The source directories are the pack inventory; both locale summaries must track it.
+    pack_names = sorted(
+        path.name for path in (ROOT / "packs").iterdir()
+        if path.is_dir() and (path / "pack.yaml").is_file()
+    )
+    assert pack_names, "pack inventory unexpectedly empty"
+    for pack_name in pack_names:
+        manifest = (ROOT / "packs" / pack_name / "pack.yaml").read_text(
+            encoding="utf-8",
+        )
+        manifest_version = int(next(
+            line.split(":", 1)[1].strip()
+            for line in manifest.splitlines()
+            if line.startswith("manifest_version:")
+        ))
+        assert manifest_version in (2, 3), (pack_name, "unsupported manifest")
+        if manifest_version == 3:
+            assert "retrieval:" in manifest, (pack_name, "v3 retrieval missing")
+            assert (ROOT / "packs" / pack_name / "knowledge.md").is_file(), (
+                pack_name,
+                "v3 canonical knowledge missing",
+            )
+        assert "reviewed_on:" in manifest, (pack_name, "missing evidence review date")
+        version = next(
+            line.split(":", 1)[1].strip()
+            for line in manifest.splitlines()
+            if line.startswith("version:")
+        )
+        status = next(
+            line.split(":", 1)[1].strip()
+            for line in manifest.splitlines()
+            if line.startswith("status:")
+        )
+        catalog_row = next(
+            (line for line in pack_catalog.splitlines() if f"[{pack_name}]" in line),
+            "",
+        )
+        assert catalog_row, (pack_name, "missing from canonical pack catalog")
+        assert f"| {status} {version} |" in catalog_row, (
+            pack_name,
+            "catalog maturity/version drift",
+        )
+    for content in onboarding_docs:
+        assert "13 packs" not in content, "hard-coded stale pack count"
+        assert "manifest-v3" in content, "pack scaffold guidance is stale"
+        for pack_name in pack_names:
+            assert pack_name in content, (pack_name, "missing from onboarding catalog")
+        for command in ("contextd synapse", "contextd doctor", "contextd policy-check"):
+            assert command in content, (command, "missing from runtime CLI onboarding")
+        for concept in ("Context artifact", "runtime memory", "long-term memory"):
+            assert concept in content, (concept, "missing from context-memory model")
+
+    # Tool templates must not recreate the legacy Compose/runtime-install pattern
+    # that first-party recipes explicitly reject.
+    for template_name in ("tool-recipe.md", "tool-spec.md"):
+        content = (ROOT / "templates" / template_name).read_text(encoding="utf-8")
+        assert "docker-compose.yml" not in content, (template_name, "legacy Compose name")
+        assert "pip install -q" not in content, (template_name, "runtime dependency install")
+        assert "Windows + Docker (recommend" not in content, (
+            template_name,
+            "container must be target/rationale driven",
+        )
+
+    # A separate knowledge root must contain a scaffolded workspace before init.
+    scaffold_pos = quickstart.index("/new-workspace shared")
+    init_pos = quickstart.index(
+        "contextd init --knowledge-root ~/company-wiki --workspace shared"
+    )
+    assert scaffold_pos < init_pos, "team quickstart initializes before workspace scaffold"
+    assert "workspaces/shared/workspace.md" in quickstart
+    print("  ok onboarding_and_readme_docs_consistency")
 
 
 def test_default_contract_index_and_demo_golden_fixture() -> None:
@@ -757,6 +1602,64 @@ def test_pack_ui_ux_rules() -> None:
     print("  ok pack_ui_ux_rules")
 
 
+def test_pack_operator_steering_wayfinding_rules() -> None:
+    path = ROOT / "packs" / "pack-operator-steering" / "scripts" / "rules.py"
+    spec = importlib.util.spec_from_file_location(
+        "pack_operator_steering_rules_test",
+        path,
+    )
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    wayfinding_path = Path(
+        "/tmp/ws/workspaces/default/reports/operator-wayfinding-checkpoint.md"
+    )
+    violations = []
+    for rule in module.RULES:
+        violations.extend(rule(wayfinding_path, [
+            "# Operator Wayfinding Checkpoint",
+            "## Evidence & Gap Check",
+            "- Proven: task exists",
+        ], {}))
+    assert any(
+        item["rule"] == "pack-operator-steering-wayfinding-missing-control-fields"
+        for item in violations
+    ), violations
+
+    template = (
+        ROOT
+        / "packs"
+        / "pack-operator-steering"
+        / "templates"
+        / "wayfinding-checkpoint.md"
+    )
+    clean = []
+    lines = template.read_text(encoding="utf-8").splitlines()
+    for rule in module.RULES:
+        clean.extend(rule(template, lines, {}))
+    assert not clean, clean
+
+    # Mentioning a decision frontier in an audit must not turn that report into
+    # a decision-ledger document and demand unrelated ADR fields.
+    audit_path = Path("/tmp/ws/workspaces/default/reports/context-audit.md")
+    audit_lines = [
+        "# Context Audit Report",
+        "## Evidence",
+        "- Inspected: current artifact",
+        "## Findings",
+        "- Decision frontier is incomplete.",
+    ]
+    audit_violations = []
+    for rule in module.RULES:
+        audit_violations.extend(rule(audit_path, audit_lines, {}))
+    assert not any(
+        item["rule"] == "pack-operator-steering-decision-missing-ledger-fields"
+        for item in audit_violations
+    ), audit_violations
+    print("  ok pack_operator_steering_wayfinding_rules")
+
+
 def test_stdio_utf8_under_legacy_codepage() -> None:
     """CLI must not crash writing/reading non-ASCII under a legacy codepage.
 
@@ -834,12 +1737,12 @@ def test_cli_ux_help_and_aliases() -> None:
     assert "Start here:" in starter.stdout, starter.stdout
     for name in ["init", "check", "context", "explain", "find", "recipes"]:
         assert f"  {name}" in starter.stdout, starter.stdout
-    for hidden in ["pack-validate", "mcp-server", "task-context", "policy-check"]:
+    for hidden in ["pack-validate", "mcp-server", "task-context", "policy-check", "synapse"]:
         assert hidden not in starter.stdout, starter.stdout
 
     full = run_cli(["help", "--all"])
     assert full.returncode == 0, (full.stdout, full.stderr)
-    for name in ["pack-validate", "mcp-server", "task-context", "policy-check", "eval"]:
+    for name in ["pack-validate", "mcp-server", "task-context", "policy-check", "eval", "synapse"]:
         assert name in full.stdout, full.stdout
 
     doctor = run_cli(["doctor", "--format", "text"])
@@ -861,6 +1764,18 @@ def test_cli_ux_help_and_aliases() -> None:
     assert legacy.returncode == 0, (legacy.stdout, legacy.stderr)
     assert json.loads(legacy.stdout)["artifact_type"] == "contextd_task_context.v1"
 
+    synapse = run_cli(["synapse", "--preview", "--as-of", "2026-08-17", "--format", "json"])
+    assert synapse.returncode == 0, (synapse.stdout, synapse.stderr)
+    assert json.loads(synapse.stdout)["artifact_type"] == "contextd_synapse.v1"
+
+    invalid_workspace = run_cli([
+        "context", "design context", "--workspace", "../other", "--preview",
+    ])
+    assert invalid_workspace.returncode == 1, (
+        invalid_workspace.stdout, invalid_workspace.stderr,
+    )
+    assert "context build refused" in invalid_workspace.stderr
+
     with tempfile.TemporaryDirectory() as td:
         root = Path(td)
         _workspace(root)
@@ -880,6 +1795,7 @@ def test_cli_smoke() -> None:
         [sys.executable, "-m", "scripts.cli", "resolve", "--format", "json"],
         [sys.executable, "-m", "scripts.cli", "find", "citation", "--limit", "1", "--format", "json"],
         [sys.executable, "-m", "scripts.cli", "context", "design context", "--format", "json", "--no-materialize"],
+        [sys.executable, "-m", "scripts.cli", "synapse", "--preview", "--format", "json"],
         [sys.executable, "-m", "scripts.cli", "connect", "--client", "codex",
          "--knowledge-root", str(ROOT), "--workspace", "default"],
         [sys.executable, "-m", "scripts.cli", "doctor", "--format", "json"],
@@ -1291,8 +2207,7 @@ def test_package_release_dry_run_shape() -> None:
                     "import sys; from pathlib import Path; "
                     "root=Path.cwd(); "
                     "sys.path.insert(0, str(root/'scripts')); "
-                    "sys.path.insert(0, str(root/'scripts'/'lib')); "
-                    "import contextd_version; "
+                    "from lib import contextd_version; "
                     "print(contextd_version.get_version("
                     "package_name='contextd-missing-for-test', start_path=root))"
                 ),
@@ -1325,10 +2240,20 @@ def run() -> int:
         test_pack_override_replace_semantics,
         test_missing_workspace_lists_available,
         test_context_artifact_and_materialized_pack,
+        test_context_snapshot_source_coherence_and_raw_hashes,
+        test_materialization_rejects_foreign_knowledge_root,
+        test_synapse_lookups_are_reused_for_replacement_expansion,
+        test_lib_modules_have_one_canonical_identity,
+        test_synapse_lifecycle_graph,
+        test_synapse_rejects_invalid_edges_and_workspace_escape,
+        test_context_projection_expands_replacement_and_warns_stale,
         test_budget_report_and_explain_trace,
+        test_manifest_v3_scopes_pack_knowledge_and_budget,
         test_policy_check_pass_and_failures,
         test_pack_validation_catches_bad_pack_api,
         test_pack_validation_warns_on_documented_rules_without_script,
+        test_pack_validation_v2_quality_contract,
+        test_pack_validation_v3_catches_knowledge_and_adapter_drift,
         test_golden_eval_passes_and_fails_deterministically,
         test_non_code_product_pack_retrieval,
         test_ba_unknown_domain_becomes_gap,
@@ -1339,10 +2264,12 @@ def run() -> int:
         test_contract_index_missing_target_is_gap,
         test_contract_path_index_and_fallback,
         test_thesis_hardening_docs_and_release_mapping,
+        test_onboarding_and_readme_docs_consistency,
         test_default_contract_index_and_demo_golden_fixture,
         test_doctor_and_adapter_drift_checks,
         test_codex_agents_use_json_canonical_artifact,
         test_pack_ui_ux_rules,
+        test_pack_operator_steering_wayfinding_rules,
         test_pack_devops_iac.test_pack_devops_iac_rules,
         test_stdio_utf8_under_legacy_codepage,
         test_intent_classification_word_boundaries,

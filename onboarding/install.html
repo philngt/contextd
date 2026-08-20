@@ -2,13 +2,13 @@
 <!--
   contextd Install Guide (formerly Workspace Wiki) — single-file HTML, self-contained.
   KHÔNG external CSS/JS/font/CDN. Mở trực tiếp trong browser.
-  Mục tiêu: 5 phút cài contextd vào ~/.claude/ + 1 codebase đầu tiên.
+  Mục tiêu: tách rõ runtime-neutral CLI, source checkout và host adapters tuỳ chọn.
 -->
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>contextd — Cài đặt 5 phút (Claude Code)</title>
+<title>contextd — Cài CLI và runtime adapters</title>
 <style>
   *,*::before,*::after{box-sizing:border-box}
   html,body{margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#1f2328;background:#f6f8fa;line-height:1.55}
@@ -104,8 +104,8 @@
 <body>
 
 <header class="hero">
-  <h1>⚙️ Cài đặt contextd cho Claude Code</h1>
-  <p class="tagline">Làm một lần (~5 phút), sau đó dùng được cho mọi dự án</p>
+  <h1>⚙️ Cài đặt contextd</h1>
+  <p class="tagline">Cài runtime-neutral CLI trước, sau đó chỉ thêm adapter cho host bạn thực sự dùng.</p>
   <div class="meta">Chạy được trên: Linux · macOS · Windows</div>
   <p style="margin-top:12px;font-size:13px;opacity:.95">Cần xem source đầy đủ? Mở trên <a href="https://github.com/philngt/contextd" style="color:#fff;text-decoration:underline;text-underline-offset:2px">GitHub</a></p>
 </header>
@@ -139,27 +139,26 @@
 
     <div class="callout info">
       <ul>
-        <li>✅ <a href="https://claude.com/claude-code">Claude Code CLI</a> hoặc IDE extension đã cài + login (verify: gõ <code>claude --version</code> trong terminal hoặc thấy icon Claude trong VS Code/JetBrains)</li>
-        <li>✅ <strong>Bash shell</strong>:
+        <li>✅ <strong>Đường release CLI:</strong> <code>curl</code> hoặc <code>wget</code> trên Linux/macOS; PowerShell trên Windows.</li>
+        <li>✅ <strong>Đường source/developer:</strong> Git và Python ≥ 3.10.</li>
+        <li>⚪ <strong>Chỉ đường Claude adapter:</strong> <a href="https://claude.com/claude-code">Claude Code</a> cùng Bash shell:
           <ul style="margin-top:4px">
             <li>Linux/macOS: có sẵn (terminal default)</li>
             <li>Windows: cài <a href="https://git-scm.com/download/win">Git for Windows</a> (bao gồm Git Bash) hoặc enable WSL</li>
           </ul>
         </li>
-        <li>✅ <strong>Git</strong> (verify: <code>git --version</code>)</li>
-        <li>⚪ <em>Optional</em>: Python ≥ 3.9 (chỉ cần khi dùng <code>scripts/validate.py</code> + trace tools)</li>
       </ul>
     </div>
 
     <p style="margin-top:16px;font-size:13px;color:#57606a">
-      Nếu KHÔNG có Bash trên Windows → xem phần <a href="#troubleshoot">Khi gặp lỗi thường gặp</a> phần "Windows native (không Bash)".
+      CLI, source checkout và Claude adapters là ba bề mặt cài đặt riêng. Chỉ chọn những đường bạn cần.
     </p>
   </section>
 
   <!-- ============ DOWNLOAD ZIP ============ -->
   <section class="block" id="download">
-    <h2>📥 Cách dễ nhất: Cài one-command từ latest release</h2>
-    <p class="lead">Bạn chỉ cần 1 lệnh để tải + giải nén + cài tự động từ bản phát hành mới nhất trên GitHub.</p>
+    <h2>📥 Đường A: Cài runtime-neutral CLI</h2>
+    <p class="lead">Chạy một lệnh để cài CLI binary dựng sẵn mới nhất từ GitHub Releases.</p>
 
     <div class="callout tip">
       <strong>Linux / macOS one-liner</strong>
@@ -169,10 +168,17 @@
       <p style="margin-top:8px">Các URL này luôn trỏ tới installer mới nhất đã publish.</p>
     </div>
 
-    <p class="lead">Hoặc tải zip thủ công nếu cần, rồi chạy installer như cũ.</p>
+    <div class="callout warn">
+      <strong>Lưu ý:</strong> các one-liner này chỉ cài binary
+      <code>contextd</code>. Chúng không cài Claude slash commands và không cung
+      cấp knowledge root. Verify bằng <code>contextd --version</code>, sau đó dùng
+      knowledge root của team hoặc theo đường source bên dưới.
+    </div>
+
+    <p class="lead">Cần default workspace, packs hoặc Claude adapters đi kèm? Tải source zip bên dưới hoặc dùng đường Git clone.</p>
 
     <div style="text-align:center;margin:24px 0">
-      <a href="../release/contextd-latest.zip" download
+      <a href="https://github.com/philngt/contextd/releases/latest/download/contextd-latest.zip"
          style="display:inline-block;padding:14px 28px;background:#1a7f37;color:#fff;border-radius:8px;font-weight:600;font-size:16px;text-decoration:none">
         ⬇️ Download contextd-latest.zip
       </a>
@@ -214,10 +220,13 @@ unzip contextd-latest.zip -d /d/tool</code></pre>
     <div class="step-row">
       <div class="step-num-bubble">2</div>
       <div class="step-content">
-        <h4>Chạy trình cài đặt</h4>
-        <p>Giống Step 2 cách Git clone — file <code>scripts/install-to-claude.sh</code> đã có trong zip:</p>
-        <pre><code>bash scripts/install-to-claude.sh --knowledge-root "$(pwd)"</code></pre>
-        <p>Verify giống cách Git: <code>cat ~/.contextd/config.json</code> phải thấy <code>"knowledge_root"</code> đúng path bạn vừa extract.</p>
+        <h4>Cài CLI từ source và thêm Claude adapters nếu cần</h4>
+        <pre><code>python3 -m pip install -e .
+contextd --version
+
+# Optional: chỉ dành cho Claude Code slash commands và subagents
+bash scripts/install-to-claude.sh --knowledge-root "$(pwd)"</code></pre>
+        <p>Lệnh Python cài CLI. Bash script là installer Claude adapter riêng và không bắt buộc.</p>
       </div>
     </div>
 
@@ -225,7 +234,7 @@ unzip contextd-latest.zip -d /d/tool</code></pre>
       <div class="step-num-bubble">3</div>
       <div class="step-content">
         <h4>Setup codebase</h4>
-        <p>Giống <a href="#step3">Step 3</a> bên dưới — gõ <code>/contextd-setup</code> trong codebase.</p>
+        <p>Tiếp tục tới <a href="#step3">Kết nối project đầu tiên</a>. Dùng <code>contextd init</code> cho CLI hoặc <code>/contextd-setup</code> sau khi cài Claude adapters.</p>
       </div>
     </div>
 
@@ -240,8 +249,8 @@ unzip contextd-latest.zip -d /d/tool</code></pre>
 
   <!-- ============ STEP 1 ============ -->
   <section class="block" id="step1">
-    <h2>🔧 Cách ổn định cho người dùng kỹ thuật: Git clone</h2>
-    <p class="lead">Nếu bạn có Git và muốn cập nhật dễ hơn về sau, dùng cách này.</p>
+    <h2>🔧 Đường B: Source/developer install</h2>
+    <p class="lead">Dùng đường này khi sửa contextd, cần default workspace đi kèm hoặc muốn cài host adapters.</p>
 
     <div class="step-row">
       <div class="step-num-bubble">1</div>
@@ -266,7 +275,7 @@ cd /d/tool/contextd</code></pre>
         </div>
 
         <p style="font-size:13px;color:#57606a;margin-top:12px">
-          Repo này KHÔNG cần build, KHÔNG cần install dependency — chỉ là markdown + bash scripts.
+          Source checkout chứa Python CLI, workspace knowledge, packs, schemas, docs và host adapter installers. CLI yêu cầu Python ≥ 3.10.
         </p>
       </div>
     </div>
@@ -277,11 +286,14 @@ cd /d/tool/contextd</code></pre>
     <div class="step-row">
       <div class="step-num-bubble">2</div>
       <div class="step-content">
-        <h2 style="margin-top:4px">Chạy trình cài đặt</h2>
-        <p>Chạy 1 lệnh sau (có thể chạy lại nhiều lần, vẫn an toàn):</p>
-        <pre><code>bash scripts/install-to-claude.sh --knowledge-root "$(pwd)"</code></pre>
+        <h2 style="margin-top:4px">Cài CLI, sau đó cài Claude adapters nếu cần</h2>
+        <pre><code>python3 -m pip install -e .
+contextd --version
 
-        <p>Lệnh này sẽ tự làm 3 việc:</p>
+# Optional và an toàn khi chạy lại nhiều lần:
+bash scripts/install-to-claude.sh --knowledge-root "$(pwd)"</code></pre>
+
+        <p>Lệnh Bash optional làm 3 việc riêng cho Claude:</p>
         <ul>
           <li>Sync <strong>slash commands</strong> + <strong>subagents</strong> vào <code>~/.claude/commands/</code> và <code>~/.claude/agents/</code> — Claude Code tự đọc folder này</li>
           <li>Tạo <code>~/.contextd/config.json</code> với <code>knowledge_root</code> trỏ về repo bạn vừa clone</li>
@@ -311,14 +323,13 @@ cat ~/.contextd/config.json</code></pre>
         <p>Phải thấy field <code>"knowledge_root"</code> với absolute path đúng repo bạn vừa clone. Vd:</p>
         <pre><code>{
   "knowledge_root": "/home/user/contextd",
-  "default_workspace": null,
-  "obsidian": { ... }
+  "default_workspace": null
 }</code></pre>
 
-        <p>Mở Claude Code, gõ <code>/contextd-setup</code> → nếu slash command hiện ra trong autocomplete = OK.</p>
+        <p>Nếu đã cài Claude adapters, mở Claude Code và gõ <code>/contextd-setup</code>. Autocomplete xuất hiện nghĩa là adapter đã được cài.</p>
         <div class="callout info">
           <strong>Setup MCP tuỳ chọn:</strong> sinh snippet cho client bằng
-          <code>contextd mcp-config --client codex --knowledge-root "$(pwd)" --workspace default</code>.
+          <code>contextd connect --client codex --knowledge-root "$(pwd)" --workspace default</code>.
           Xem <a href="../docs/mcp.md">docs/mcp.md</a> cho ví dụ Claude, Cursor, và Codex.
         </div>
       </div>
@@ -331,7 +342,14 @@ cat ~/.contextd/config.json</code></pre>
       <div class="step-num-bubble">3</div>
       <div class="step-content">
         <h2 style="margin-top:4px">Kết nối vào dự án đầu tiên</h2>
-        <p>Vào thư mục codebase bạn muốn dùng contextd, mở Claude Code (hoặc IDE extension) tại đó, gõ:</p>
+        <p>Với runtime-neutral CLI, vào codebase và chạy:</p>
+        <pre><code>cd /path/to/your-codebase
+contextd init --knowledge-root /path/to/contextd-or-team-knowledge-root --workspace default
+contextd check
+contextd synapse --preview --text
+contextd context "mô tả task đầu tiên" --preview</code></pre>
+
+        <p>Nếu đã cài Claude adapters, setup có hướng dẫn tương đương là:</p>
         <pre><code>/contextd-setup</code></pre>
 
         <p>Hệ thống sẽ hướng dẫn bạn từng bước:</p>
@@ -357,20 +375,25 @@ cat ~/.contextd/config.json</code></pre>
 
     <h3 id="troubleshoot-windows" style="margin-top:20px;font-size:17px">Windows không có Bash</h3>
     <div class="callout warn">
-      <p>Nếu bạn chưa có Git Bash hoặc WSL, làm thủ công 4 bước sau:</p>
+      <p>Windows release installer không cần Bash. Nếu bạn muốn cài riêng Claude adapters mà không có Git Bash hoặc WSL, dùng PowerShell từ source checkout:</p>
       <ol style="margin-top:8px">
-        <li>Copy <code>templates\contextd-config.json</code> → <code>%USERPROFILE%\.contextd\config.json</code></li>
-        <li>Mở file vừa copy bằng Notepad, sửa <code>"knowledge_root"</code> thành absolute path tới repo. Nhớ dùng \\ thay cho \:
-          <pre style="margin:8px 0">{
+        <li>Tạo thư mục global config chuẩn:
+          <pre style="margin:8px 0">New-Item -ItemType Directory -Force "$env:USERPROFILE\.contextd"</pre>
+        </li>
+        <li>Ghi đúng global config shape; thay path và workspace khi cần:
+          <pre style="margin:8px 0">@'
+{
   "knowledge_root": "D:\\tool\\contextd",
-  ...
-}</pre>
+  "default_workspace": "default"
+}
+'@ | Set-Content "$env:USERPROFILE\.contextd\config.json" -Encoding utf8</pre>
         </li>
-        <li>Copy folder <code>.claude\commands\</code> và <code>.claude\agents\</code> sang <code>%USERPROFILE%\.claude\</code>:
-          <pre style="margin:8px 0">xcopy /E /I /Y .claude\commands %USERPROFILE%\.claude\commands
-xcopy /E /I /Y .claude\agents %USERPROFILE%\.claude\agents</pre>
+        <li>Copy các folder adapter:
+          <pre style="margin:8px 0">New-Item -ItemType Directory -Force "$env:USERPROFILE\.claude"
+Copy-Item -Recurse -Force .claude\commands "$env:USERPROFILE\.claude\commands"
+Copy-Item -Recurse -Force .claude\agents "$env:USERPROFILE\.claude\agents"</pre>
         </li>
-        <li>Verify: <code>type %USERPROFILE%\.claude\config.json</code></li>
+        <li>Verify: <code>Get-Content "$env:USERPROFILE\.contextd\config.json"</code></li>
       </ol>
       <p style="margin-top:8px"><strong>Khuyên dùng</strong>: cài <a href="https://git-scm.com/download/win">Git for Windows</a> (free) để có Git Bash → installer chạy 1 lệnh đơn giản hơn nhiều.</p>
     </div>
@@ -386,7 +409,7 @@ xcopy /E /I /Y .claude\agents %USERPROFILE%\.claude\agents</pre>
     <h3 id="troubleshoot-knowledge-root" style="margin-top:24px;font-size:17px">Lỗi <code>knowledge_root not found</code> khi gõ slash</h3>
     <ul>
       <li>Mở <code>~/.contextd/config.json</code>, confirm <code>"knowledge_root"</code> là absolute path (KHÔNG dùng <code>~</code>, KHÔNG dùng relative)</li>
-      <li>Path phải tới folder gốc của repo contextd (folder chứa <code>CLAUDE.md</code>, <code>packs/</code>, <code>workspaces/</code>)</li>
+      <li>Knowledge root phải chứa <code>workspaces/</code>. Nó có thể là contextd source checkout hoặc team knowledge repo riêng.</li>
       <li>Verify path tồn tại: <code>ls "$(jq -r .knowledge_root ~/.contextd/config.json)"</code></li>
     </ul>
 
@@ -406,15 +429,16 @@ xcopy /E /I /Y .claude\agents %USERPROFILE%\.claude\agents</pre>
   <!-- ============ UPDATE ============ -->
   <section class="block" id="update">
     <h2>🔄 Cập nhật sau này</h2>
-    <p>Sau mỗi <code>git pull</code> trên repo contextd, re-run installer để sync slash commands mới:</p>
+    <p>Với release binary, chạy lại release installer. Với source checkout, pull rồi refresh CLI; chỉ chạy lại adapter installer nếu bạn dùng Claude:</p>
     <pre><code>cd ~/contextd
 git pull
-bash scripts/install-to-claude.sh --knowledge-root "$(pwd)"   # idempotent — cập nhật tất cả</code></pre>
+python3 -m pip install -e .
+bash scripts/install-to-claude.sh --knowledge-root "$(pwd)"   # optional refresh Claude adapter</code></pre>
 
     <div class="callout tip">
       <strong>💡 Khi nào cần cập nhật?</strong>
       <ul>
-        <li>Wiki-template repo có slash command mới (vd <code>/tool-design</code> mới ship)</li>
+        <li>Repo contextd có slash command mới (vd <code>/tool-design</code> mới ship)</li>
         <li>Có pack mới được thêm vào <code>packs/</code></li>
         <li>Engine constraints / coding-rules update (validator rules mới)</li>
       </ul>

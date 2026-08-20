@@ -41,3 +41,20 @@ REST/GraphQL/gRPC API patterns. Bật khi service cung cấp HTTP endpoint, Grap
 
 - pack-web-api
 ```
+
+## When not to enable
+
+- Event broker consumer/producer không expose synchronous API; dùng `pack-event-driven`.
+- Frontend data-fetching state hoặc internal function không tạo network boundary.
+
+## Retrieval behavior
+
+REST, GraphQL, gRPC và shared API controls route riêng. Keyword GraphQL được namespaced (`graphql query`, `graphql schema`) thay vì các từ rộng `query`/`schema`, giảm false-positive và context noise.
+
+## Verification
+
+```bash
+contextd pack-validate --pack pack-web-api --format text
+contextd context "Review retry-safe REST endpoint and error contract" --preview --format json
+python scripts/validate.py --file <api-fixture> --workspace <workspace-with-pack>
+```

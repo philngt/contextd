@@ -10,6 +10,7 @@ contextd is a governed build layer for AI agent inputs. It is designed to coexis
 | Code graph / code intelligence tools | Fast structural answers about code: symbols, calls, routes, dependencies, impact. | contextd decides which team knowledge, contracts, policies, and workspace docs should guide the task. |
 | Cursor rules / Claude memory | Client-native persistent instructions. | contextd exports adapter-specific surfaces from one canonical workspace model. |
 | Vector DB / knowledge base | Broad retrieval over large corpora. | contextd builds deterministic context artifacts with explicit gaps, budgets, and source hashes. |
+| Knowledge graph / memory DB | Persistent graph storage, recall, and broad relationship traversal. | contextd builds a disposable workspace-scoped synapse index only to govern lifecycle-aware context compilation. |
 
 ## contextd vs MCP
 
@@ -47,6 +48,9 @@ Client-native rules are convenient, but they tend to become client-specific inst
 
 The build source remains the workspace and pack model, not a single client memory file.
 
+Runtime observations and checkpoints remain runtime state. They become durable
+knowledge only through an explicit reviewed write into the active workspace.
+
 ## contextd vs Vector DBs and Knowledge Bases
 
 Vector search is useful for discovery, especially when users do not know what exists. contextd keeps search advisory because governed agent inputs need stricter properties:
@@ -62,4 +66,4 @@ The goal is not to retrieve the most text. The goal is to build the right task i
 
 ## Product Boundary
 
-contextd should not become a code graph indexer, memory database, hosted control plane, agent orchestrator, or vector retrieval system. Its durable role is the build system that turns maintained team knowledge into reliable, inspectable agent inputs.
+contextd should not become a code graph indexer, memory database, hosted control plane, agent orchestrator, or vector retrieval system. Its synapse is a rebuildable lifecycle index over canonical files, not a new store. The durable product role remains the build system that turns maintained team knowledge into reliable, inspectable agent inputs.

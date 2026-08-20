@@ -14,7 +14,7 @@ Anti-pattern lặp lại trong UI/UX documentation. Additive trên [constraints.
 
 - **NG**: spec chỉ mô tả mouse interaction; dropdown không có keyboard dismiss.
 - **OK**: mỗi interactive component có bảng keyboard: `Tab`, `Enter`, `Space`, `Escape`, `Arrow`.
-- **Why**: 26% người dùng dùng keyboard-only hoặc assistive tech; WCAG 2.1.1 requirement.
+- **Why**: keyboard operability là requirement của WCAG 2.2 Success Criterion 2.1.1 và cần thiết cho nhiều assistive workflows.
 - **Detect**: Layer-1 `pack-ui-ux-missing-a11y-note` — component spec thiếu blockquote `A11y:`.
 - **Severity**: warn
 
@@ -69,7 +69,7 @@ Anti-pattern lặp lại trong UI/UX documentation. Additive trên [constraints.
 ## P09 — Component spec thiếu responsive breakpoint
 
 - **NG**: chỉ spec desktop layout; mobile không được mention.
-- **OK**: bảng breakpoint: `xs (<576px)`, `sm (576–768px)`, `md (768–992px)`, `lg (992px+)` với behavior từng breakpoint.
+- **OK**: dùng workspace token/content-driven breakpoint và mô tả behavior khi space/zoom/text size thay đổi.
 - **Why**: dev implement desktop-only → mobile UI vỡ.
 - **Detect**: Layer-2 — component spec có layout/sizing nhưng không nêu breakpoint.
 - **Severity**: warn

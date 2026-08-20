@@ -5,16 +5,15 @@
 ## Tool Spec Writing
 
 - **Lead with the problem, not the tool**. Section đầu là `## Problem` mô tả pain point đời thực, không phải `## Tool features`.
-- **System Map dùng plain text + mermaid**:
-  - Plain text trước (cho người không quen mermaid): `Input: file Excel ABC.xlsx → Process: filter rows where Status=Open → Output: file Excel filtered.xlsx + summary terminal`
-  - Mermaid sau (cho người quen):
+- **System Map bắt đầu bằng plain text**: `Input: file Excel ABC.xlsx → Process: filter rows where Status=Open → Output: file Excel filtered.xlsx + summary terminal`.
+- Chỉ thêm Mermaid khi có nhiều branch/integration cần nhìn quan hệ; plain text đủ cho flow tuyến tính:
     ```mermaid
     flowchart LR
       A[Excel input] --> B[Filter logic]
       B --> C[Excel output]
       B --> D[Summary terminal]
     ```
-- **Tech Stack section** dùng table format:
+- **Tech Stack section** dùng table; chỉ so sánh alternative có thể làm thay đổi quyết định:
   | Component | Chọn | Vì sao | Vì sao KHÔNG alternative |
   |-----------|------|--------|--------------------------|
   | Language | Python | Có sẵn library xử lý Excel (pandas) | Không chọn JS vì cần Node + thêm setup |
@@ -37,17 +36,18 @@ source .venv/bin/activate
 pip install pandas openpyxl
 \`\`\`
 
-### Windows (recommend: Docker)
-Vì sao Docker: pandas + openpyxl trên Windows native đôi khi vỡ do thiếu Visual C++ build tools. Docker tránh hết.
+### Container option (only when the recipe requires it)
+Vì sao container: pin dependency/runtime khi native setup hoặc sharing đã được chứng minh là vấn đề; không mặc định Docker cho mọi tool.
 
 \`\`\`yaml
-# docker-compose.yml
+# compose.yaml
 services:
   tool:
-    image: python:3.11-slim
+    build:
+      context: .
+      args:
+        PYTHON_BASE: ${PYTHON_IMAGE:?set a workspace-tested Python image tag or digest}
     working_dir: /app
-    volumes:
-      - .:/app
     command: python tool.py
 \`\`\`
 
@@ -55,7 +55,7 @@ services:
 docker compose run --rm tool input.xlsx
 \`\`\`
 
-### Windows (native, nếu không muốn Docker)
+### Windows native
 \`\`\`powershell
 python -m venv .venv
 .venv\Scripts\Activate.ps1
@@ -75,7 +75,7 @@ Nếu spec mix 2 recipes → list cả 2 + ghi rõ phần nào lấy từ recipe
 
 ## Discovery Question Style (cho `/tool-design` Bước 2)
 
-- **1-2 câu/lần**, không dồn 8 câu cùng lúc — non-tech sẽ nản.
+- Hỏi theo nhóm nhỏ, mặc định 1-2 câu/lần; điều chỉnh theo phản hồi thay vì dồn toàn bộ discovery.
 - **Mỗi câu PHẢI có ví dụ cụ thể** trong description, ngay cả nếu là câu đơn giản.
 - **Cho phép "tôi không biết"** option — Claude tự đề xuất default, ghi vào spec dưới `## Open Questions` để user revisit sau.
 - **Câu thứ tự**:
@@ -100,13 +100,14 @@ Nếu spec mix 2 recipes → list cả 2 + ghi rõ phần nào lấy từ recipe
 
 ## Tool Naming
 
-- Slug = kebab-case, ASCII only, max 60 chars. Strip Vietnamese diacritics.
-- Title = plain Vietnamese OK, mô tả mục đích, ≤ 80 chars.
+- Slug = kebab-case, ASCII; tuân host/path limit và giữ đủ ngắn để dùng trên CLI. Strip Vietnamese diacritics.
+- Title = plain Vietnamese OK, mô tả mục đích và phân biệt được trong catalog; không đặt quota ký tự nếu host không yêu cầu.
 - Folder convention: `{ws}/tools/{slug}-spec.md`. Nếu tool đã build, folder phụ `{ws}/tools/{slug}/` chứa code thực + link tới spec.
 
 ## Domain Term Handling
 
 - Khi spec mention term ngành (vd "moment uốn", "VAT", "ICD-10"):
   1. Check `{ws}/domains/{field}/glossary.md` có chưa
-  2. Có → link tới entry: `[moment uốn](../../domains/co-khi/glossary.md#moment-uon)`
-  3. Chưa → spec đề cập, đồng thời notify user "term này nên add vào glossary để Claude future-proof"
+  2. Có → link entry + source/version/units/assumptions liên quan
+  3. Chưa hoặc provenance thiếu → ghi Knowledge Gap, giữ spec `draft`, không tự suy diễn
+  4. High-impact use case → ghi qualified reviewer, human checkpoint và verification fixtures trước build

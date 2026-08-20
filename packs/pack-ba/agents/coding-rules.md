@@ -4,11 +4,11 @@ Idioms cho BA writing — requirement, acceptance criteria, process map, stakeho
 
 ## Requirement Format
 
-- Cấu trúc 1 requirement: **Actor → Trigger → Action → Business Outcome** (4 element bắt buộc).
-- Ưu tiên bullet ngắn (≤ 2 dòng/bullet) cho assumptions, dependencies, out-of-scope.
-- 1 requirement = 1 testable outcome; chia khi gặp "and"/"or" composite.
-- Tag mỗi requirement với ID stable (`R-{epic}-{nn}`) để trace xuyên acceptance/test.
-- Source attribution: link interview ID / ticket / Slack thread; KHÔNG "user wants" mơ hồ.
+- Cấu trúc ưu tiên: **Actor → Trigger → Action → Business Outcome**; format khác được phép nếu vẫn traceable và testable.
+- Viết assumptions, dependencies và out-of-scope đủ ngắn để scan nhưng không cắt mất điều kiện/rationale quan trọng.
+- Một requirement nên có một outcome có thể accept/version độc lập; conjunction chỉ là tín hiệu để review, không phải rule split tự động.
+- Tag mỗi requirement với ID stable theo workspace convention để trace xuyên acceptance/test.
+- Source attribution dùng evidence/ticket/interview ID; private conversation link phải theo access/redaction policy, không chỉ dán URL.
 
 ## Acceptance Criteria Format
 
@@ -19,14 +19,14 @@ Idioms cho BA writing — requirement, acceptance criteria, process map, stakeho
 
 ## Non-Functional Requirement (NFR)
 
-- Section **NFR bắt buộc** trong mọi epic: performance (số), security (level), accessibility (WCAG level), i18n (locale list), compliance (regulation list).
+- Mỗi epic có **NFR/risk review** theo domain: performance, security, accessibility, localization, compliance hoặc `N/A` + rationale.
 - Mỗi NFR có metric đo được + verification method (load test, audit, manual check).
 - KHÔNG "fast/easy/user-friendly" không kèm số.
 
 ## Persona & User Story
 
-- Format `As a {persona}, I want {capability}, so that {business outcome}` — bắt buộc 3 element.
-- Persona named + linked tới persona doc; KHÔNG generic "user".
+- User-story format là một option; artifact phải nêu role/context, capability và outcome dù dùng format khác.
+- Link persona/role evidence khi có; không invent tên hoặc demographic để tránh từ generic "user".
 - Permission/role được nêu rõ cho mọi capability (admin / standard / read-only / guest).
 
 ## Process Map (As-Is / To-Be)
@@ -38,10 +38,9 @@ Idioms cho BA writing — requirement, acceptance criteria, process map, stakeho
 
 ## Stakeholder Doc
 
-- RACI (Responsible/Accountable/Consulted/Informed) cho mọi major decision.
-- DRI (single Directly Responsible Individual) named, không "team X" tập thể.
-- Communication cadence: scheduled (weekly sync) vs on-demand (escalation path).
-- Sign-off log: ai approve, khi nào, version nào.
+- Chọn DRI/RACI/decision owner theo governance và mức độ handoff; không tạo matrix khi một owner rõ là đủ.
+- Owner có thể là role/team theo policy, nhưng escalation/approval boundary phải xác định được.
+- Communication cadence và sign-off log chỉ bắt buộc khi risk/dependency/policy cần; ghi actor, artifact version và date.
 
 ## Glossary & Term Hygiene
 

@@ -2,33 +2,33 @@
 
 Hard rules cho database administration (schema/query/backup/operational). Additive trên engine constraints. Strict-only direction.
 
-## Schema Change
+## Schema Change (`pack-dba-schema-change`)
 
 - **Mọi thay đổi schema PHẢI có rollback plan hoặc forward-fix strategy rõ ràng** — không chấp nhận "deploy rồi xử lý sau".
-- **Migration PHẢI immutable + versioned** — dùng migration tool (Flyway/Alembic/Prisma); KHÔNG edit migration đã merge.
-- **DDL có khả năng lock lớn PHẢI nêu maintenance strategy** + impact scope (rows affected, lock duration estimate). Online schema change (gh-ost/pt-osc) cho table > 1M rows.
-- **Foreign key PHẢI có index trên child column** (MySQL không auto-index như Postgres) — declare cùng FK.
+- **Applied migration PHẢI immutable + versioned** theo workspace migration ledger/tool; pre-apply drafts may be revised, executed history is superseded by a new migration/repair process.
+- **DDL có khả năng lock/rewrite lớn PHẢI nêu execution strategy** + impact scope dựa trên engine/version, plan, table shape, write rate và rehearsal. Không chọn online-schema tool chỉ từ row count.
+- **Foreign-key access path PHẢI được verify** trên cả referencing/referenced side theo engine và column order. MySQL/InnoDB có thể tự tạo index cần thiết; vẫn review index redundancy và query/lock behavior thay vì ghi giả định sai về engine.
 
-## Query & Index
+## Query & Index (`pack-dba-query-index`)
 
-- **Query tuning recommendation PHẢI dựa trên evidence** — EXPLAIN plan, p95 latency, slow log entry. KHÔNG tối ưu cảm tính.
+- **Query tuning recommendation PHẢI dựa trên evidence** — actual/estimated plan, representative latency/distribution, waits/slow capture or equivalent chosen for the engine/workload. KHÔNG tối ưu cảm tính.
 - **Index proposal PHẢI nêu trade-off** — read benefit vs write cost vs storage; verify by EXPLAIN before/after.
-- **KHÔNG `SELECT *` trong application query** — list column explicitly. Migration/admin script được miễn.
+- **Application query has an explicit projection contract** on stable/hot/public paths; broad projection is allowed only when schema coupling and measured cost are intentionally accepted (for example controlled admin/exploration).
 - **Transaction PHẢI ngắn + chỉ bao DB ops** — KHÔNG gọi HTTP / external service / sleep trong open transaction.
 
-## Backup & DR
+## Backup & DR (`pack-dba-backup-restore`)
 
 - **Backup policy PHẢI nêu RPO + RTO** với số cụ thể; KHÔNG "best effort".
-- **Backup PHẢI có restore verification định kỳ** (monthly drill tối thiểu) — backup không verify = không có backup.
-- **Cross-region/offsite copy PHẢI có** cho production data; air-gapped backup cho ransomware protection.
+- **Backup PHẢI có restore verification theo risk policy** — cadence xuất phát từ RPO/RTO, change rate, data criticality và evidence lần drill gần nhất; backup chưa từng restore-test không được coi là proven.
+- **Backup copies span the failure domains in the threat/RPO model** and comply with residency/sovereignty policy. Offsite/cross-region/immutable/offline controls are selected from that model, not mandated identically for every production dataset.
 
-## Operational
+## Operational (`pack-dba-operations`)
 
-- **Slow query log PHẢI bật + alert threshold** ở production; weekly review top-N query.
-- **Connection pool size PHẢI từ config**, không hardcode; alert khi saturation > 80%.
+- **Query telemetry PHẢI bật với sampling/redaction phù hợp**; alert threshold và review cadence thuộc workload SLO/config, không hardcode trong pack.
+- **Connection pool size PHẢI từ config**, không hardcode; saturation alert dựa trên measured queueing/timeout headroom.
 - **Incident DB PHẢI nêu blast radius** + recovery checkpoints + data-loss estimate.
 
-## Knowledge
+## Knowledge (`pack-dba-knowledge`)
 
 - **KHÔNG đoán schema** — đọc actual `\d table` / migration history; rebase wiki nếu drift.
 - **KHÔNG copy query pattern từ workspace khác** — local data shape có thể khác.

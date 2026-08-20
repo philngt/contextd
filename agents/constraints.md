@@ -4,7 +4,10 @@ Hard rules. No exceptions. If a constraint conflicts with a user request, state 
 
 > Engine constraints in this file are **stack-agnostic** — they apply to every workspace regardless of language, framework, or messaging stack.
 >
-> Stack-specific rules (Kafka/MQTT, REST, frontend, mobile, AI/agentic, ...) live in **packs** under `packs/{pack-name}/agents/constraints.md` and are loaded only when the workspace opts into them.
+> Stack-specific rules (Kafka/MQTT, REST, frontend, mobile, AI/agentic, ...)
+> live in active **packs**. Manifest-v3 packs use component-scoped
+> `packs/{pack-name}/knowledge.md`; manifest-v2 packs use
+> `packs/{pack-name}/agents/constraints.md` during migration.
 >
 > **Single source of truth.** This file defines the canonical rule text + stable IDs. Other files (CLAUDE.md, validator-rules.md, packs, workspaces) MUST reference rules by ID (e.g. `engine-no-hardcoded-config`) and MUST NOT restate the rule prose — restating creates drift. To add an engine-baseline rule, edit this file only.
 
@@ -12,7 +15,7 @@ Hard rules. No exceptions. If a constraint conflicts with a user request, state 
 
 ```
 engine constraints (this file, immutable)
-  → pack constraints  (additive, alphabetical, per workspace.md `## Packs`)
+  → pack standards  (additive, alphabetical, per effective pack config)
     → workspace constraints (additive, `workspaces/{ws}/agents/constraints.md`)
 ```
 

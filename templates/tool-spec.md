@@ -18,7 +18,7 @@ os: "linux | windows | macos | cross-platform"
 - Vấn đề chính là gì? (chậm? dễ sai? lặp lại nhàm chán? cần share?)
 - Quantify nếu được: "30 phút mỗi lần × 5 lần/tuần = 2.5h/tuần"}
 
-## System Map
+## System Map (include a diagram only when it clarifies a real boundary)
 
 ### Plain text
 
@@ -44,12 +44,16 @@ flowchart LR
 
 **Recipe used**: [{recipe-name}](packs/pack-solo-builder/recipes/{recipe-name}.md)
 
-| Component | Chọn | Vì sao chọn | Vì sao KHÔNG alternative |
-|-----------|------|-------------|--------------------------|
-| Language | {Python/Node/...} | {1 câu plain language} | {1 câu lý do} |
-| Framework / Library | {tên + 1-line explain} | {lý do} | {lý do} |
-| Storage | {SQLite / file / API / ...} | {lý do} | {lý do} |
-| UI | {CLI / GUI / web} | {lý do} | {lý do} |
+| Component | Chọn | Vì sao phù hợp target hiện tại |
+|-----------|------|-------------------------------|
+| Language/runtime | {runtime + tested version/profile} | {1 câu plain language} |
+| Framework / Library | {tên + 1-line explain} | {lý do} |
+| Storage | {SQLite / file / API / ...} | {lý do} |
+| UI | {CLI / GUI / web} | {lý do} |
+
+### Material alternatives (omit nếu trade-off không thể đổi quyết định)
+
+- **{Alternative}**: {trade-off hoặc lý do không chọn cho target hiện tại}
 
 ## Setup
 
@@ -59,16 +63,16 @@ flowchart LR
 {commands cụ thể}
 ```
 
-### Windows native (nếu áp dụng được)
+### Windows native (only when it is a selected target)
 
 ```powershell
 {commands cụ thể}
 ```
 
-### Windows + Docker (recommend nếu deps phức tạp)
+### Container target (only when selected and justified)
 
 ```yaml
-# docker-compose.yml
+# compose.yaml
 {config}
 ```
 
@@ -81,8 +85,8 @@ docker compose run --rm tool
 - [ ] {When user runs `python tool.py input.xlsx`, output file `input-filtered.xlsx` is created}
 - [ ] {Output file contains exactly N rows where N = số dòng có Status="Open"}
 - [ ] {Terminal prints summary: "Filtered N rows from M total"}
-- [ ] {Setup instructions work on Windows with Docker (đã test thực tế)}
-- [ ] {Setup instructions work on Linux native (đã test thực tế)}
+- [ ] {Setup instructions work on every selected target and record the tested runtime/version}
+- [ ] {Failure, retry/idempotency, data-safety, and recovery behavior are testable where applicable}
 
 > KHÔNG dùng "hoạt động tốt" / "dễ dùng" — phải testable.
 

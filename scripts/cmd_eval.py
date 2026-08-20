@@ -7,23 +7,31 @@ from __future__ import annotations
 import fnmatch
 import json
 import sys
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Dict, List
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
-sys.path.insert(0, str(SCRIPT_DIR / "lib"))
 
 import cmd_resolve  # noqa: E402
-import task_context_engine  # noqa: E402
-from stdio import configure_stdio  # noqa: E402
+from lib import task_context_engine  # noqa: E402
+from lib.stdio import configure_stdio  # noqa: E402
 
 
 def _load_fixture(path: Path) -> Dict | None:
     try:
         return json.loads(path.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError):
+        return None
+
+
+def _parse_evaluation_date(value: object) -> date | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    try:
+        return date.fromisoformat(value.strip())
+    except ValueError:
         return None
 
 
@@ -102,7 +110,8 @@ def _render_text(report: Dict) -> str:
 
 
 def run(golden: bool = False, workspace: str | None = None, fmt: str = "json",
-        output: str | None = None, cwd: str | None = None) -> int:
+        output: str | None = None, cwd: str | None = None,
+        as_of: str | None = None) -> int:
     if not golden:
         print("Error: only --golden evaluation is supported.", file=sys.stderr)
         return 1
@@ -121,6 +130,10 @@ def run(golden: bool = False, workspace: str | None = None, fmt: str = "json",
         print("Error: No workspace resolved.", file=sys.stderr)
         return 1
     default_packs = resolved.get("packs") or []
+    default_evaluation_date = _parse_evaluation_date(as_of)
+    if as_of is not None and default_evaluation_date is None:
+        print("Error: --as-of must be an ISO date (YYYY-MM-DD).", file=sys.stderr)
+        return 2
     results: List[Dict] = []
     load_errors: List[Dict] = []
     for path in _fixture_paths(wiki_root, ws):
@@ -130,6 +143,22 @@ def run(golden: bool = False, workspace: str | None = None, fmt: str = "json",
             continue
         task = str(fixture.get("task") or "")
         packs = [str(pack) for pack in fixture.get("packs") or default_packs]
+        fixture_as_of = fixture.get("as_of")
+        evaluation_date = (
+            _parse_evaluation_date(fixture_as_of)
+            if fixture_as_of is not None
+            else default_evaluation_date
+        )
+        if evaluation_date is None:
+            load_errors.append({
+                "path": path.relative_to(wiki_root).as_posix(),
+                "error": "missing-or-invalid-as-of",
+                "message": (
+                    "Set fixture `as_of` or pass --as-of YYYY-MM-DD so golden "
+                    "freshness evaluation is deterministic."
+                ),
+            })
+            continue
         artifact = task_context_engine.build_context_artifact(
             task=task,
             wiki_root=wiki_root,
@@ -137,9 +166,11 @@ def run(golden: bool = False, workspace: str | None = None, fmt: str = "json",
             packs=packs,
             project_dir=Path(resolved.get("project_dir") or ".").resolve(),
             warnings=resolved.get("warnings") or [],
+            synapse_as_of=evaluation_date,
         )
         scored = _score_fixture(fixture, artifact)
         scored["fixture_path"] = path.relative_to(wiki_root).as_posix()
+        scored["as_of"] = evaluation_date.isoformat()
         results.append(scored)
 
     failed = sum(1 for result in results if result["status"] == "fail")
@@ -150,6 +181,7 @@ def run(golden: bool = False, workspace: str | None = None, fmt: str = "json",
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "workspace": ws,
         "mode": "golden",
+        "evaluation_dates": sorted({result["as_of"] for result in results}),
         "status": status,
         "summary": {
             "tasks": len(results),
@@ -185,6 +217,8 @@ def main() -> None:
     parser.add_argument("--cwd", default=None, help="Start directory (default: current)")
     parser.add_argument("--format", choices=["text", "json"], default="json")
     parser.add_argument("--output", default=None, help="Output file path")
+    parser.add_argument("--as-of", default=None,
+                        help="Fallback freshness evaluation date in YYYY-MM-DD format")
     args = parser.parse_args()
     sys.exit(run(
         golden=args.golden,
@@ -192,6 +226,7 @@ def main() -> None:
         cwd=args.cwd,
         fmt=args.format,
         output=args.output,
+        as_of=args.as_of,
     ))
 
 

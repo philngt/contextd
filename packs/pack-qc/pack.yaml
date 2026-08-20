@@ -1,6 +1,14 @@
 name: pack-qc
-version: 0.2.0
+manifest_version: 2
+version: 0.3.0
 description: Quality control + performance optimization pack — test design/execution, defect triage, regression coverage, release quality gates, baseline metrics, bottleneck profiling, safe optimization, regression guarding.
+status: beta
+category: quality
+reviewed_on: 2026-08-20
+audiences: [qc, engineering, ops]
+task_types: [fix_bug, incident, review]
+scope_includes: [test design and execution, defect triage, release regression evidence, measured performance optimization]
+scope_excludes: [security penetration testing, unmeasured speculative optimization]
 
 components:
   - test-case-design

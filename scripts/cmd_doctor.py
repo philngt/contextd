@@ -12,14 +12,12 @@ from typing import Dict, List
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent
 sys.path.insert(0, str(SCRIPT_DIR))
-sys.path.insert(0, str(SCRIPT_DIR / "lib"))
 
 import cmd_resolve  # noqa: E402
-import pack_validation  # noqa: E402
 import render_runtime  # noqa: E402
-import task_context_engine  # noqa: E402
-from context_security import block_reason, reject_unsafe_entry  # noqa: E402
-from stdio import configure_stdio  # noqa: E402
+from lib import pack_validation, synapse_engine, task_context_engine  # noqa: E402
+from lib.context_security import block_reason, reject_unsafe_entry  # noqa: E402
+from lib.stdio import configure_stdio  # noqa: E402
 
 
 Issue = Dict[str, str]
@@ -40,6 +38,7 @@ def _validate_schema_files(issues: List[Issue]) -> None:
     required = [
         "templates/contextd-config.schema.json",
         "templates/task-context.schema.json",
+        "templates/synapse.schema.json",
         "templates/context-policy.schema.json",
         "templates/pack.schema.json",
         "templates/retrieval-map.schema.json",
@@ -113,6 +112,20 @@ def _scan_blocked_paths(root: Path, workspace: str, packs: List[str],
                 f"Secret-like path will be blocked by runtime reads: {reason}",
                 rel,
             ))
+
+
+def _validate_synapse(root: Path, workspace: str, issues: List[Issue]) -> None:
+    graph = synapse_engine.build_synapse_index(root, workspace)
+    for diagnostic in graph.get("diagnostics", []):
+        severity = diagnostic.get("severity", "warning")
+        if severity == "info":
+            continue
+        issues.append(_issue(
+            "error" if severity == "error" else "warning",
+            f"synapse-{diagnostic.get('code', 'diagnostic')}",
+            diagnostic.get("message", "Synapse diagnostic"),
+            diagnostic.get("path"),
+        ))
 
 
 def _append_pack_validation(root: Path, packs: List[str], issues: List[Issue],
@@ -257,6 +270,7 @@ def diagnose(cwd: str | None = None) -> Dict:
         _validate_pack_retrieval_maps(root, workspace, packs, issues)
         _append_pack_validation(root, packs, issues, infos)
         _scan_blocked_paths(root, workspace, packs, issues)
+        _validate_synapse(root, workspace, issues)
         _validate_generated_adapters(root, workspace, packs, issues)
         _validate_checked_in_codex_agents(issues)
 

@@ -64,12 +64,14 @@ Run the demo task against the bundled default workspace:
 ```bash
 contextd context "prepare agent context for product requirements" --preview
 contextd explain "prepare agent context for product requirements" --text
+contextd synapse --preview --text
 ```
 
 What to look for:
 
 - `context` emits `artifact_type=contextd_task_context.v1`.
 - `explain` shows selected docs, dropped docs, gaps, warnings, source hashes, and a lightweight budget estimate.
+- `synapse` shows lifecycle/freshness counts for the active workspace without creating a second knowledge store.
 
 This is the first aha moment: team knowledge becomes an auditable agent input, not a hidden prompt blob.
 
@@ -143,8 +145,9 @@ Use this only when editing contextd or running scripts from a checkout:
 ```bash
 git clone https://github.com/philngt/contextd.git ~/contextd
 cd ~/contextd
-pip install -e .
+pip install -e ".[test]"
 python3 scripts/test_contextd_runtime.py
+python3 scripts/test_artifact_schemas.py
 ```
 
 The source checkout also contains the default workspace, templates, packs, docs, and Claude adapter installer scripts.
@@ -155,9 +158,22 @@ The source checkout also contains the default workspace, templates, packs, docs,
 
 If your team wants workspaces separate from the engine repo:
 
+First create the workspace while the engine checkout is still the active
+`knowledge_root`. The `/new-workspace` command is a Claude adapter workflow; it
+is not part of the runtime-neutral CLI.
+
 ```bash
-# Team lead creates a private knowledge repo from the template.
+# In Claude Code opened at ~/contextd:
+/new-workspace shared
+```
+
+Then create the private knowledge repository and copy the reviewed workspace
+into it:
+
+```bash
 cp -r templates/team-knowledge-repo ~/company-wiki
+mkdir -p ~/company-wiki/workspaces
+cp -r workspaces/shared ~/company-wiki/workspaces/shared
 cd ~/company-wiki
 git init
 git add .
@@ -168,6 +184,10 @@ git clone YOUR_TEAM_KNOWLEDGE_REPO_URL ~/company-wiki
 contextd init --knowledge-root ~/company-wiki --workspace shared
 contextd connect --client all --knowledge-root ~/company-wiki --workspace shared
 ```
+
+`contextd init --workspace shared` requires
+`workspaces/shared/workspace.md` to exist. It validates an existing workspace;
+it does not scaffold one.
 
 Daily team flow:
 

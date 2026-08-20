@@ -52,3 +52,20 @@ Trong `workspaces/{your-ws}/workspace.md`:
 ## Customize per-workspace
 
 Thêm rule chặt hơn tại `workspaces/{ws}/agents/pipeline/validator-rules.md` với prefix `ws-`. Pack rule luôn chạy trước, workspace rule chạy thêm — không thể tắt pack rule (strict-only direction).
+
+## When not to enable
+
+- Synchronous HTTP/GraphQL/gRPC API không có broker; dùng `pack-web-api`.
+- Cron/job định kỳ không dùng message delivery semantics, offset, retry hoặc DLQ.
+
+## Retrieval behavior
+
+Pack chỉ route `kafka`, `mqtt`, hoặc `batch` khi task có broker/protocol signal cụ thể. Retrieval map phải giữ component và docs đồng bộ; context build báo gap khi workspace chưa định nghĩa topic/event contract.
+
+## Verification
+
+```bash
+contextd pack-validate --pack pack-event-driven --format text
+contextd context "Fix Kafka consumer retry and DLQ" --preview --format json
+python scripts/validate.py --file <consumer-fixture> --workspace <workspace-with-pack>
+```

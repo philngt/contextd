@@ -88,8 +88,8 @@ Bạn muốn extend tool này như thế nào?
 
 ### Nhánh 3: Đổi tech stack
 
-- Re-run recipe match logic (đọc `packs/pack-solo-builder/recipes/`).
-- Show top-3 alternatives dựa input/output hiện tại.
+- Re-run recipe match index-first: đọc `recipes/README.md`, rồi chỉ load owner candidate + alternative có trade-off material.
+- Show các alternative có thể đổi quyết định; không quota số lượng.
 - User pick → update Tech Stack table, Setup section, recipe_used frontmatter.
 - Add Build Log: `YYYY-MM-DD: Changed stack from {old recipe} to {new recipe} because {reason}`
 

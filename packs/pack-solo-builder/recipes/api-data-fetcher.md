@@ -18,11 +18,11 @@ Không phải:
 
 | Component | Chọn | Note |
 |-----------|------|------|
-| Language | Python 3.11+ | |
-| HTTP client | `requests` (sync) hoặc `httpx` (async) | requests đủ cho 99% case |
+| Language | Workspace-supported Python, pinned | Pin cùng HTTP/parser dependencies đã test |
+| HTTP client | `requests` (sync) hoặc `httpx` (async) | Chọn theo concurrency/cancellation/runtime contract, không theo popularity claim |
 | HTML scraping | `beautifulsoup4` + `lxml` | Nếu API không có, scrape web |
 | Cache | SQLite hoặc JSON file | Tránh hit API lặp lại |
-| Retry | `tenacity` | Auto retry khi network fail |
+| Retry | `urllib3.Retry` through `requests` adapter | Scope retry to idempotent/transient failures and respect `Retry-After` |
 | Schedule | Recipe `scheduled-recurring-task` | Wrap recipe này nếu cần auto |
 
 ### Linux/macOS/Windows native
@@ -31,33 +31,36 @@ Không phải:
 python3 -m venv .venv
 source .venv/bin/activate     # Linux/macOS
 .venv\Scripts\Activate.ps1    # Windows PowerShell
-pip install requests beautifulsoup4 tenacity
+pip install requests beautifulsoup4
 ```
 
-Recipe này không cần Docker — `requests` không có system deps.
+Native setup is the default for this small client. Add a container only when scheduling, isolation or deployment ownership justifies it.
 
-### Windows + Docker (nếu pair với scheduled-recurring-task)
+### Container option (nếu schedule/dependency isolation có rationale)
 
 ```yaml
 services:
   fetcher:
-    image: python:3.11-slim
+    build:
+      context: .
+      args:
+        PYTHON_BASE: ${PYTHON_IMAGE:?set a tested Python image tag or digest}
     working_dir: /app
-    volumes: [".:/app", "./cache:/app/cache"]
-    command: bash -c "pip install -q -r requirements.txt && python fetch.py"
+    volumes: ["./cache:/app/cache"]
+    command: python fetch.py
 ```
 
 ## Trade-offs
 
 **Vì sao Python + requests**:
-- `requests` API rất sạch, code ngắn
-- Có thư viện cho mọi format response (JSON, XML, HTML scraping)
-- Cache với SQLite/JSON đơn giản
+- `requests` fits a small synchronous GET workflow and exposes explicit timeout/status handling.
+- Python parsers can cover the response formats selected for this tool; validate schema and fixtures rather than assuming every format.
+- SQLite/JSON can implement a local cache when freshness/data policy allows.
 
 **Vì sao KHÔNG**:
 - **curl + bash**: OK cho 1 lệnh, khó parse JSON / handle retry / cache.
 - **Postman**: GUI manual, không automate được.
-- **Node.js + axios**: được, nhưng hệ Python tích hợp phần process data (pandas) tốt hơn.
+- **Node.js client**: hợp nếu target runtime/team already owns Node; compare cancellation, schema validation and downstream processing needs.
 - **Selenium/Playwright cho mọi scrape**: overkill — chỉ dùng khi site có JS heavy. Tĩnh thì BeautifulSoup đủ.
 
 ## Skeleton
@@ -65,19 +68,33 @@ services:
 ```python
 # fetch.py — Pull tỷ giá USD/VND từ API
 import json
+import os
 from pathlib import Path
 from datetime import datetime, date
 import requests
-from tenacity import retry, stop_after_attempt, wait_exponential
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 CACHE = Path("cache/usd-vnd.json")
 CACHE.parent.mkdir(exist_ok=True)
+TIMEOUT = (
+    float(os.environ.get("FETCH_CONNECT_TIMEOUT_SECONDS", "5")),
+    float(os.environ.get("FETCH_READ_TIMEOUT_SECONDS", "20")),
+)
 
-@retry(stop=stop_after_attempt(3), wait=wait_exponential(min=1, max=10))
+SESSION = requests.Session()
+SESSION.mount("https://", HTTPAdapter(max_retries=Retry(
+    total=int(os.environ.get("FETCH_RETRY_TOTAL", "3")),
+    backoff_factor=float(os.environ.get("FETCH_RETRY_BACKOFF", "0.5")),
+    status_forcelist=(429, 500, 502, 503, 504),
+    allowed_methods={"GET"},
+    respect_retry_after_header=True,
+)))
+
 def fetch_rate() -> dict:
-    """Pull from a public FX API. Replace URL with real one."""
+    """Example GET. Replace URL and defaults with the provider contract."""
     url = "https://api.example.com/fx/usd-vnd"
-    r = requests.get(url, timeout=10)
+    r = SESSION.get(url, timeout=TIMEOUT)
     r.raise_for_status()
     return r.json()
 
@@ -107,11 +124,16 @@ if __name__ == "__main__":
 
 ```python
 import requests
+import os
 from bs4 import BeautifulSoup
 
 def scrape_steel_price():
     url = "https://example-supplier.vn/gia-thep"
-    r = requests.get(url, timeout=10, headers={"User-Agent": "Mozilla/5.0"})
+    r = requests.get(
+        url,
+        timeout=(5, 20),  # replace with configured provider/SLO values
+        headers={"User-Agent": os.environ["FETCHER_USER_AGENT"]},
+    )
     r.raise_for_status()
     soup = BeautifulSoup(r.text, "lxml")
     prices = []
@@ -124,11 +146,10 @@ def scrape_steel_price():
 
 ## Best practices
 
-- **LUÔN có cache** — đừng hit API mỗi lần script chạy. Tốn quota + chậm.
-- **LUÔN có timeout** trên `requests.get` — 10-30 giây. Không để treo vô tận.
-- **LUÔN retry với backoff** — network fail là chuyện bình thường, không crash script.
-- **LUÔN có User-Agent** khi scrape — server từ chối request không có UA.
-- **LUÔN respect robots.txt** + rate limit khi scrape — 1 request / 2-5 giây.
+- Cache chỉ khi freshness/data policy cho phép; key, TTL/revalidation và stale behavior theo provider contract.
+- Mọi request có configured connect/read deadline + cancellation; giá trị dựa trên upstream SLO và task frequency.
+- Retry chỉ operation idempotent/transient failure, có backoff/jitter và tôn trọng `Retry-After`/provider limit.
+- Scraping chỉ khi terms/permission cho phép; dùng identifying User-Agent/contact thay vì giả browser và tuân robots/rate policy được publish.
 - **KHÔNG hardcode API key** — đặt trong env var hoặc file `.env` (không commit).
 
 ## Decision tree

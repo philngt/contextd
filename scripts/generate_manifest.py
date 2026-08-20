@@ -122,10 +122,26 @@ def _parse_pack(pack_dir: Path) -> Optional[Dict]:
     if isinstance(components, str):
         components = [components]
 
+    def as_list(key: str) -> List[str]:
+        value = manifest.get(key, [])
+        if isinstance(value, list):
+            return [str(item) for item in value]
+        if value in (None, ""):
+            return []
+        return [str(value)]
+
     return {
         "name": name,
+        "manifest_version": manifest.get("manifest_version", 1),
         "description": description,
         "version": version,
+        "status": manifest.get("status", "legacy"),
+        "category": manifest.get("category", ""),
+        "reviewed_on": manifest.get("reviewed_on", ""),
+        "audiences": as_list("audiences"),
+        "task_types": as_list("task_types"),
+        "scope_includes": as_list("scope_includes"),
+        "scope_excludes": as_list("scope_excludes"),
         "components": components,
         "template_file": str(manifest_path.relative_to(REPO_ROOT)),
     }

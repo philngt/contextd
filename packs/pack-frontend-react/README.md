@@ -4,8 +4,8 @@ React + Next.js frontend patterns. Bật khi codebase có React component (`.jsx
 
 ## Khi nào bật
 
-- React 17+, React 18 (Suspense, Server Components)
-- Next.js (Pages Router hoặc App Router)
+- React codebase following the current Rules of React
+- Next.js Pages Router hoặc App Router (không giả định migration chỉ vì App Router mới hơn)
 - React Native (sub-pack riêng — `pack-mobile-react-native`)
 
 ## Components
@@ -39,3 +39,22 @@ React + Next.js frontend patterns. Bật khi codebase có React component (`.jsx
 
 - pack-frontend-react
 ```
+
+## When not to enable
+
+- UI/design artifact không triển khai React/Next.js; dùng `pack-ui-ux`.
+- React Native/mobile-specific implementation; dùng mobile pack tương ứng khi có.
+
+## Retrieval behavior
+
+Routing tách React component, Hooks, JSX/a11y và Next.js. Keyword không dùng các từ chung như `component`, `render`, `element`, nên task backend không vô tình kéo frontend context.
+
+## Verification
+
+```bash
+contextd pack-validate --pack pack-frontend-react --format text
+contextd context "Review Next.js client boundary and effect cleanup" --preview --format json
+python scripts/validate.py --file <component-fixture> --workspace <workspace-with-pack>
+```
+
+Standards baseline được review ngày `2026-08-20`: [React Rules](https://react.dev/reference/rules), [React Hooks](https://react.dev/reference/react/hooks), và [Next.js documentation](https://nextjs.org/docs). Workspace phải pin framework version/router và đọc migration guide tương ứng trước khi áp guidance mới.

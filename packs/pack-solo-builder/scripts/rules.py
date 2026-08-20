@@ -102,7 +102,7 @@ def rule_spec_missing_setup(file_path: Path, lines: List[str], ctx: Dict) -> Lis
     return [_vio(
         "pack-solo-builder-spec-missing-setup", "warn", file_path, 1,
         lines[0] if lines else "",
-        "Tool spec missing 'Setup' section — must include per-OS instructions (Linux + Windows)."
+        "Tool spec missing 'Setup' section — document instructions for each selected target environment."
     )]
 
 
@@ -142,6 +142,7 @@ def rule_recipe_not_in_library(file_path: Path, lines: List[str], ctx: Dict) -> 
 JARGON_TERMS = {
     "venv": "thư mục riêng cho thư viện Python",
     "docker": "container chạy app cô lập với hệ thống",
+    "docker compose": "tool quản lý nhiều container bằng một file cấu hình",
     "docker-compose": "tool chạy nhiều container cùng lúc bằng 1 file config",
     "cron": "scheduler Linux chạy lệnh định kỳ",
     "sqlite": "database file đơn lẻ, không cần server",
@@ -155,7 +156,12 @@ JARGON_TERMS = {
     "weasyprint": "library Python render HTML thành PDF",
     "reportlab": "library Python tạo PDF từ code",
 }
-JARGON_RE = re.compile(r"\b(" + "|".join(re.escape(k) for k in JARGON_TERMS) + r")\b", re.IGNORECASE)
+JARGON_RE = re.compile(
+    r"\b(" + "|".join(
+        re.escape(key) for key in sorted(JARGON_TERMS, key=len, reverse=True)
+    ) + r")\b",
+    re.IGNORECASE,
+)
 EXPLAIN_HINT = re.compile(r"\(.{6,}\)|—|–|:.{8,}|=.{8,}|nghĩa là|tức là|tức|là gì")
 
 

@@ -6,40 +6,40 @@ Anti-pattern lặp lại với product brief / OKR / roadmap / PRD. Additive tr�
 - **NG**: brief chỉ mô tả feature, không nêu vấn đề + cách đo thành công.
 - **OK**: Problem statement → Metric (baseline + target) → Acceptance criteria.
 - **Why**: build xong không biết thành/bại.
-- **Detect**: Layer-1 `pack-product-brief-incomplete` (new) — md có heading `# Problem`, `# Metric`/`# Success`, `# Acceptance`.
+- **Detect**: Layer-1 `pack-product-brief-missing-problem`, `pack-product-brief-missing-metric`, and `pack-product-brief-missing-acceptance`.
 - **Severity**: error
 
 ## P02 — OKR Key Result không measurable
 - **NG**: KR "improve UX", "make faster".
 - **OK**: "p95 page load < 2s by Q3"; "NPS từ 30 → 45".
 - **Why**: KR không đo = OKR vô nghĩa.
-- **Detect**: Layer-1 `pack-product-kr-vague` (new) — KR thiếu số + đơn vị + deadline.
+- **Detect**: Layer-1 `pack-product-okr-missing-number`; deadline/unit semantics cần Layer-2 review.
 - **Severity**: error
 
 ## P03 — Jargon kỹ thuật trong product doc
 - **NG**: "use Redis pub/sub for event fanout".
 - **OK**: nói nhu cầu user; implementation để eng chốt.
 - **Why**: lock decision sai layer; stakeholder không hiểu.
-- **Detect**: Layer-2 — review jargon list (Redis, Kafka, microservice, ...).
+- **Detect**: Layer-1 `pack-product-jargon-leak` + Layer-2 context review.
 - **Severity**: warn
 
 ## P04 — Brief dictate implementation
 - **NG**: "build a REST API with Postgres".
 - **OK**: "expose data X để mobile sync offline" — let eng chose stack.
 - **Why**: PM lockin tech mà không có context engineering.
-- **Detect**: Layer-2 — review brief cho tech directive.
+- **Detect**: Layer-1 `pack-product-brief-dictates-impl` + Layer-2 constraint-vs-solution review.
 - **Severity**: error
 
 ## P05 — Roadmap dùng date mơ hồ
 - **NG**: "soon", "Q2-ish", "TBD".
 - **OK**: target month (commit) + confidence level.
 - **Why**: stakeholder không plan được; trust break.
-- **Detect**: Layer-1 `pack-product-vague-date` (new) — regex `soon|TBD|Q\d-ish|asap`.
+- **Detect**: Layer-1 `pack-product-roadmap-vague-date`.
 - **Severity**: warn
 
 ## P06 — Persona generic ("user")
 - **NG**: "user wants to ...".
-- **OK**: named persona với role, context, JTBD; ít nhất 2 persona.
+- **OK**: evidence-backed role/context/JTBD; chỉ tạo số persona cần để giải thích materially different needs.
 - **Why**: thiết kế cho ai cũng = không cho ai.
 - **Detect**: Layer-2 — brief có persona section.
 - **Severity**: warn
@@ -53,9 +53,9 @@ Anti-pattern lặp lại với product brief / OKR / roadmap / PRD. Additive tr�
 
 ## P08 — Thiếu non-goals
 - **NG**: brief chỉ liệt kê What.
-- **OK**: section "Non-goals" liệt kê 3-5 điều không làm trong scope này.
+- **OK**: section "Non-goals/Out of scope" nêu các boundary dễ bị hiểu nhầm hoặc gây scope creep.
 - **Why**: scope creep; stakeholder mở rộng silent.
-- **Detect**: Layer-1 `pack-product-no-non-goals` (new) — md thiếu section `Non-goals|Out of scope`.
+- **Detect**: Layer-2 — scope-boundary review.
 - **Severity**: warn
 
 ## P09 — Thiếu stakeholder list / RACI
@@ -76,13 +76,13 @@ Anti-pattern lặp lại với product brief / OKR / roadmap / PRD. Additive tr�
 
 | Pitfall | Layer-1 rule ID | Layer-2 self-check |
 |---|---|---|
-| P01 PMA | `pack-product-brief-incomplete` (new) | ✓ |
-| P02 KR | `pack-product-kr-vague` (new) | ✓ |
-| P03 jargon | — | ✓ |
-| P04 dictate | — | ✓ |
-| P05 date | `pack-product-vague-date` (new) | ✓ |
+| P01 PMA | `pack-product-brief-missing-problem`, `pack-product-brief-missing-metric`, `pack-product-brief-missing-acceptance` | ✓ |
+| P02 KR | `pack-product-okr-missing-number` | ✓ |
+| P03 jargon | `pack-product-jargon-leak` | ✓ |
+| P04 dictate | `pack-product-brief-dictates-impl` | ✓ |
+| P05 date | `pack-product-roadmap-vague-date` | ✓ |
 | P06 persona | — | ✓ |
 | P07 baseline | — | ✓ |
-| P08 non-goals | `pack-product-no-non-goals` (new) | ✓ |
+| P08 non-goals | — | ✓ |
 | P09 RACI | — | ✓ |
 | P10 change-log | — | ✓ |

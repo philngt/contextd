@@ -4,11 +4,15 @@
 
 Trim the retrieved doc list to the 5–7 most relevant, rank them by priority, and slice each doc to only the sections the agent needs. This is the most critical stage — it prevents context overload and enforces the priority order.
 
-## Baseline (out-of-budget) Docs
+## Baseline Static Docs
 
-`agents/constraints.md` and `agents/coding-rules.md` are **engine baseline**: they are always loaded into the main agent's context (effectively part of the system prompt — see `agents/system-prompt.md` Related section) for every intent. Any retrieval-map row that lists them (e.g. `intent_type=review`) is **tracking-only** — these entries are NOT counted toward the 5–7 doc budget defined below.
+`agents/constraints.md` and `agents/coding-rules.md` are **engine baseline**: they
+are always loaded into the compiled context. They do not consume one of the 5–7
+retrieved-document slots, but their actual sliced token estimate is included in
+`budget_report.estimated_tokens_static` and `estimated_tokens_total`.
 
-Workspace overrides (`{ws}/agents/constraints.md`, `{ws}/agents/pipeline/validator-rules.md`) inherit the same baseline status when present.
+Workspace overrides (`{ws}/agents/constraints.md`, `coding-rules.md`, and
+`agents/pipeline/validator-rules.md`) inherit the same static status when present.
 
 ## Priority Order
 
@@ -26,7 +30,9 @@ If a retrieved doc doesn't fit one of these categories, drop it.
 
 ## Max Context Budget
 
-Budget applies to **retrieved knowledge docs only** (contracts + patterns + project + domain). Engine baseline docs (see "Baseline (out-of-budget) Docs" above) are excluded from this count.
+The slot budget applies to **retrieved knowledge docs only** (contracts +
+patterns + project + domain). Static engine/pack/workspace guidance is excluded
+from that count, not from total prompt cost.
 
 | Category | Max Docs | Max Sections per Doc |
 |----------|----------|---------------------|
@@ -36,7 +42,7 @@ Budget applies to **retrieved knowledge docs only** (contracts + patterns + proj
 | Domain | 1 | States, Transitions, Business Rules |
 | Product / Requirement / Design / Quality / Evidence | 1-3 by workstream | Task-specific canonical sections |
 | **Total (retrieved)** | **7** | — |
-| Engine baseline (`agents/constraints.md`, `agents/coding-rules.md`) | out-of-budget | — |
+| Static engine/pack/workspace guidance | outside slot count; included in token total | component-scoped where supported |
 
 ## Section Slicing Rules
 

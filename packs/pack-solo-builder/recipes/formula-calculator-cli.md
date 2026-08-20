@@ -5,23 +5,23 @@ Tool nhập vài giá trị → tính theo công thức → in kết quả. Ch�
 ## When to use
 
 Task signals:
-- "Tính moment uốn cho dầm thép"
-- "Tính tax/VAT theo công thức cụ thể"
-- "Convert đơn vị (mm ↔ inch, °C ↔ °F) hàng loạt"
-- "Tính BMI / liều thuốc theo cân nặng"
+- "Convert đơn vị (mm ↔ inch, °C ↔ °F)"
+- "Tính tổng/chiết khấu theo business rule đã được approve"
+- "Thay công thức spreadsheet ổn định bằng một lệnh có test"
 - "Áp công thức Excel rườm rà thành 1 lệnh nhanh"
 
 Không phải:
 - Cần lưu lịch sử mỗi lần tính → recipe `daily-form-with-history`
 - Tính trên nhiều dòng dữ liệu → recipe `bulk-file-processing`
+- Công thức ảnh hưởng y tế, pháp lý, tài chính, kết cấu hoặc an toàn nhưng chưa có authoritative source + qualified review → giữ spec `draft`, recipe này không cung cấp domain formula
 
 ## Tech Stack
 
 | Component | Chọn | Note |
 |-----------|------|------|
-| Language | Python 3.11+ | Built-in math đủ; cần phức tạp hơn dùng `numpy` |
+| Language | Workspace-supported Python, pinned | Chọn version đã test trên target environment |
 | CLI args | `argparse` (built-in) | Hoặc `typer` nếu muốn UX đẹp hơn |
-| Math | `math` (built-in) hoặc `numpy` | numpy nếu có vector/matrix |
+| Math | built-in `decimal`/`math`; `numpy` chỉ khi data shape cần | Numeric type, rounding và units phải explicit |
 | Output | `print` + table với `rich` (optional) | rich = library in màn hình đẹp |
 
 ### Linux/macOS/Windows native
@@ -33,53 +33,33 @@ source .venv/bin/activate     # Linux/macOS
 pip install rich              # optional, for pretty output
 ```
 
-Recipe này SIÊU đơn giản — không cần Docker. Dùng native venv mọi OS.
+Container thường không tạo lợi ích cho calculator một file. Dùng native environment trên target đã test; chỉ thêm container khi dependency/isolation requirement thực sự có.
 
 ## Trade-offs
 
-**Vì sao Python CLI**: 1 file `.py`, chạy `python tool.py 100 200`, kết quả ra ngay. Không setup phức tạp, không UI bloat, copy file đi máy khác chạy luôn.
+**Vì sao Python CLI**: phù hợp khi input/output nhỏ, người dùng chấp nhận terminal và cần một implementation có tests/versioned formula thay vì cell spreadsheet dễ sửa nhầm.
 
 **Vì sao KHÔNG**:
-- **Excel formula**: phải mở Excel, tốn 30 giây, dễ sửa nhầm cell. CLI chạy 1 giây.
-- **Web form (Streamlit)**: overkill cho task tính 1 lần — Streamlit cần 5 giây boot.
-- **GUI desktop (Tkinter)**: cần build dialog, code dài hơn 5x cho cùng kết quả.
-- **JS/TS**: phải Node setup, library math không tốt bằng Python.
+- **Spreadsheet**: vẫn phù hợp khi user cần inspect/ad-hoc edit; CLI phù hợp hơn khi formula cần version/test/repeatability.
+- **Web/desktop form**: chọn khi accessibility, discoverability hoặc non-terminal workflow quan trọng hơn footprint.
+- **JS/TS**: hợp nếu runtime hiện có là Node/browser; không đổi stack chỉ vì recipe example dùng Python.
 
 ## Skeleton
 
 ```python
-# moment-uon.py — tính moment uốn cho dầm chữ nhật
+# temperature.py — ví dụ conversion có formula công khai, không phải domain authority
 import argparse
-import math
+from decimal import Decimal
 
-def moment_uon(b: float, h: float, F: float, L: float) -> dict:
-    """
-    b: bề rộng (mm)
-    h: chiều cao (mm)
-    F: lực tác dụng (N)
-    L: chiều dài nhịp (mm)
-    """
-    W = (b * h ** 2) / 6   # mô-đun chống uốn
-    M = (F * L) / 4         # moment max (dầm đơn giản, lực giữa nhịp)
-    sigma = M / W          # ứng suất
-    return {
-        "W (mm^3)": round(W, 2),
-        "M (N.mm)": round(M, 2),
-        "sigma (MPa)": round(sigma, 2),
-    }
+def celsius_to_fahrenheit(celsius: Decimal) -> Decimal:
+    return (celsius * Decimal(9) / Decimal(5)) + Decimal(32)
 
 def main():
-    ap = argparse.ArgumentParser(description="Tính moment uốn cho dầm chữ nhật")
-    ap.add_argument("--b", type=float, required=True, help="Bề rộng dầm (mm)")
-    ap.add_argument("--h", type=float, required=True, help="Chiều cao dầm (mm)")
-    ap.add_argument("--F", type=float, required=True, help="Lực tác dụng (N)")
-    ap.add_argument("--L", type=float, required=True, help="Chiều dài nhịp (mm)")
+    ap = argparse.ArgumentParser(description="Convert Celsius to Fahrenheit")
+    ap.add_argument("--celsius", type=Decimal, required=True)
     args = ap.parse_args()
-
-    result = moment_uon(args.b, args.h, args.F, args.L)
-    print("Kết quả:")
-    for k, v in result.items():
-        print(f"  {k:20s} = {v}")
+    result = celsius_to_fahrenheit(args.celsius)
+    print(f"{args.celsius} °C = {result.normalize()} °F")
 
 if __name__ == "__main__":
     main()
@@ -87,13 +67,13 @@ if __name__ == "__main__":
 
 Chạy:
 ```bash
-python moment-uon.py --b 100 --h 200 --F 5000 --L 3000
+python temperature.py --celsius 25
 ```
 
 ## Decision tree
 
 ✅ **Match recipe này KHI**:
-- Input < 10 giá trị, fit vào CLI args
+- Input đủ nhỏ/rõ để CLI flags hoặc stdin không gây nhầm units
 - Output text/number ngắn, in terminal đủ
 - Không cần lưu lịch sử
 - Chạy thi thoảng (không tự động)
@@ -103,3 +83,4 @@ python moment-uon.py --b 100 --h 200 --F 5000 --L 3000
 - Cần share team không cài Python → `team-shared-web-tool`
 - Cần GUI form → `desktop-gui-simple`
 - Cần plot kết quả → mix với `data-visualization`
+- Công thức high-impact chưa có evidence/reviewer/fixtures → không implement; resolve domain contract trước

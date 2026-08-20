@@ -3,14 +3,15 @@
 """
 Pack loader for the contextd knowledge engine.
 
-Resolves which packs an active workspace opts into, and loads their:
-  - Constraints (markdown, additive)
-  - Coding rules (markdown, additive)
-  - Validator rules (Python rule functions, dynamically imported)
-  - Retrieval map (component → file paths)
-  - Prompt overrides (markdown, append to self-check section)
+Loads pack manifests and their optional Python validator rules. The context
+engine compiles versioned prose/routing inputs:
+  - v3: compact manifest metadata, `knowledge.md` component slices, and
+    `pack.yaml#retrieval`.
+  - v2: static manifest/constraints/coding/pitfall guidance and the
+    compatibility retrieval map; validator scripts are loaded here when active.
 
-Pack opt-in: parsed from `workspaces/{ws}/workspace.md` `## Packs` section.
+Workspace-default opt-in can be parsed from `workspaces/{ws}/workspace.md`
+`## Packs`; callers apply project-config replace semantics before loading.
 Format:
 
     ## Packs

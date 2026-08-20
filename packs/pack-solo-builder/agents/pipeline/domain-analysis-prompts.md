@@ -6,7 +6,7 @@ Override cho CORE 1, 2, 4, 8 của [`critical-analysis-prompts.md`](../../../../
 
 `/evidence-analyze` Bước 2 detect:
 - `source.yaml#source_type` is a non-code text source (`paste`, `api`, `mcp`, `document`, `interview`, `ticket`, `analytics`, `regulation`, `design`, or `incident`)
-- Workspace `## Packs` có `pack-solo-builder`
+- Canonical `effective_packs` của codebase có `pack-solo-builder`
 - Workspace KHÔNG có engineering pack active (`pack-event-driven`, `pack-web-api`, `pack-frontend-react`, `pack-ai-app`, `pack-agentic`, `pack-claude-plugin-dev`)
 
 → Dùng prompts trong file này thay vì critical-analysis-prompts.md CORE.

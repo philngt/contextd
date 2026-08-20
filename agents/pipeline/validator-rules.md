@@ -27,7 +27,8 @@ python scripts/validate.py --file <path-to-code-file> [--workspace <name>] [--wi
 ```
 
 * Workspace + `knowledge_root` are auto-resolved from `<cwd-walk-up>/.contextd/config.json` per [system-prompt.md Resolution Rule](../system-prompt.md).
-* Validator reads `## Packs` section from `workspaces/{ws}/workspace.md` and dynamically loads each pack's rule module.
+* Validator uses effective packs from project config (replace semantics) or the
+  workspace default, then dynamically loads each pack's declared rule module.
 * Output: JSON `{violations: [...], summary: {errors, warnings}, context: {..., active_packs: [...]}}` on stdout.
 * Exit code: `0` if no errors (warnings allowed), `1` if any errors, `2` for bad invocation.
 
@@ -48,18 +49,20 @@ Legacy `.claude/wiki.json` / `.Codex/wiki.json` and `wiki_root` remain accepted 
 
 ### Pack rules
 
-Each pack contributes additional rules with prefix `pack-{name}-`. Examples:
+Each pack may contribute additional rules with prefix `pack-{name}-`. Manifest
+v3 documents implemented IDs in `knowledge.md`; manifest v2 uses
+`agents/pipeline/validator-rules.md`. Examples:
 
 - [`pack-event-driven`](../../packs/pack-event-driven/agents/pipeline/validator-rules.md) → `pack-event-driven-kafka-no-hardcoded-topic`, `pack-event-driven-kafka-dlq-required`, `pack-event-driven-mqtt-no-inline-topic`, ...
 
-Pack rules only run if the workspace opts into the pack (via `## Packs` section in `workspace.md`).
+Pack rules run only when the pack is effective for the current codebase.
 
 ### How to add a new rule
 
 | New rule applies to | Where to add |
 |---------------------|--------------|
 | Every workspace, every stack | `scripts/validate.py` `ALL_RULES` + table above (engine) |
-| One stack/concern (Kafka, REST, React, ...) | `packs/{pack-name}/scripts/rules.py` + pack's validator-rules.md (prefix `pack-{name}-`) |
+| One stack/concern (Kafka, REST, React, ...) | `packs/{pack-name}/scripts/rules.py` + v3 `knowledge.md` (v2 validator-rules compatibility doc), prefix `pack-{name}-` |
 | One workspace only | `workspaces/{ws}/agents/pipeline/validator-rules.md` (prefix `ws-`) |
 
 For all three: add a fixture line in `scripts/test-fixtures/` that triggers the rule, and verify the script catches it.
@@ -89,7 +92,10 @@ If no violations found, respond with: "PASS"
   - `engine-no-new-workflow-state` → allowed states: {list from `{ws}/domains/{domain}/workflow.md`}
   - `engine-no-unlisted-transition` → allowed transitions: {list from `{ws}/domains/{domain}/workflow.md`}
 - Coding conventions: [coding-rules.md](../coding-rules.md) (constructor injection, idempotent handlers, etc.)
-- Active packs (append): for each pack in `workspace.md ## Packs`, load `packs/{name}/agents/constraints.md` and `packs/{name}/agents/pipeline/prompt-overrides.md`.
+- Active packs (append): use the static context compiled by `contextd context`.
+  For v3 this is compact manifest metadata + Global Principles + matched
+  component sections from `knowledge.md`; for v2 it is the static manifest,
+  constraints, coding rules, and common-pitfalls compatibility content.
 - Workspace overrides: `workspaces/{ws}/agents/constraints.md` (`ws-*` rules).
 
 ## Solution to Review
@@ -97,7 +103,11 @@ If no violations found, respond with: "PASS"
 {{agent_output}}
 ```
 
-The self-check prompt loads rule definitions by ID from the files above. Do not duplicate rule prose here — single source of truth is [agents/constraints.md](../constraints.md). Pack self-check sections come from each pack's `agents/pipeline/prompt-overrides.md` (e.g. `pack-event-driven` adds Kafka/MQTT checks: offset commit, DLQ, topic format, registered types).
+The self-check prompt loads rule definitions by ID from the sources above. Do
+not duplicate rule prose here. V3 pack self-checks come from selected Standards,
+Failure Signals, and Evidence And Stop Conditions. V2 static rule content comes
+from the compiled artifact; prompt-overrides remain migration documentation
+rather than an untracked extra injection.
 
 ## Escalation
 

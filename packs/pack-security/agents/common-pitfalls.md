@@ -6,7 +6,7 @@ Anti-pattern lặp lại với security review / threat model / authn-authz. Add
 - **NG**: `api_key: "sk-real-prod-..."` trong README/config.
 - **OK**: placeholder `${API_KEY}`; doc setup env.
 - **Why**: leak qua git history vĩnh viễn.
-- **Detect**: Layer-1 `pack-security-hardcoded-secret` (new) — regex `(api_?key|secret|password|token)\s*[:=]\s*["'][^"'$]{12,}`.
+- **Detect**: Layer-1 `pack-security-secrets-in-config` + dedicated secret scanner.
 - **Severity**: error
 
 ## P02 — Logging guidance thiếu redaction
@@ -18,8 +18,8 @@ Anti-pattern lặp lại với security review / threat model / authn-authz. Add
 
 ## P03 — Threat model thiếu abuse case
 - **NG**: design doc liệt kê happy path, không xét attacker.
-- **OK**: ít nhất 3 abuse case (impersonation, escalation, data exfil) + mitigation.
-- **Why**: thiết kế xong rồi sửa security đắt 10x.
+- **OK**: cover credible abuse cases derived từ asset, actor, trust boundary và local risk; mỗi case có mitigation/verification.
+- **Why**: phát hiện trust-boundary/control gap muộn thường kéo theo redesign, migration và retest rộng hơn.
 - **Detect**: Layer-2 — design doc có "Threat / Abuse Cases" section.
 - **Severity**: error
 
@@ -32,7 +32,7 @@ Anti-pattern lặp lại với security review / threat model / authn-authz. Add
 
 ## P05 — Không có key rotation policy
 - **NG**: API key cấp một lần, không hết hạn.
-- **OK**: rotation cadence (≤90 days), automation, alert near-expiry.
+- **OK**: short-lived/dynamic credential khi có thể; otherwise risk-based automated rotation, expiry metadata, alert và immediate revocation path.
 - **Why**: leak key sống mãi.
 - **Detect**: Layer-2 — security doc có rotation section.
 - **Severity**: warn
@@ -48,7 +48,7 @@ Anti-pattern lặp lại với security review / threat model / authn-authz. Add
 - **NG**: `jwt.decode(token, verify=False)`.
 - **OK**: verify signature + issuer + audience + exp.
 - **Why**: forge token trivial.
-- **Detect**: Layer-1 `pack-security-jwt-no-verify` (new) — regex `verify\s*=\s*False|algorithms\s*=\s*\[\s*["']none`.
+- **Detect**: Layer-1 `pack-security-jwt-no-verify`.
 - **Severity**: error
 
 ## P08 — Missing HTTPS-only / HSTS
@@ -62,7 +62,7 @@ Anti-pattern lặp lại với security review / threat model / authn-authz. Add
 - **NG**: `hashlib.md5(pw)`, `MessageDigest.getInstance("SHA-1")` cho auth.
 - **OK**: bcrypt/argon2/scrypt cho password; SHA-256+ cho integrity.
 - **Why**: collision/rainbow trivial.
-- **Detect**: Layer-1 `pack-security-weak-crypto` (new) — regex `(MD5|SHA-?1|DES|RC4)`.
+- **Detect**: Layer-1 `pack-security-weak-crypto` (known weak primitive heuristic).
 - **Severity**: error
 
 ## P10 — Không có incident-response runbook
@@ -76,15 +76,15 @@ Anti-pattern lặp lại với security review / threat model / authn-authz. Add
 
 | Pitfall | Layer-1 rule ID | Layer-2 self-check |
 |---|---|---|
-| P01 secret | `pack-security-hardcoded-secret` (new) | ✓ |
+| P01 secret | `pack-security-secrets-in-config` | ✓ |
 | P02 redact | — | ✓ |
 | P03 abuse | — | ✓ |
 | P04 inline-authz | — | ✓ |
 | P05 rotation | — | ✓ |
 | P06 trust-internal | — | ✓ |
-| P07 jwt-verify | `pack-security-jwt-no-verify` (new) | ✓ |
+| P07 jwt-verify | `pack-security-jwt-no-verify` | ✓ |
 | P08 https | — | ✓ |
-| P09 weak-crypto | `pack-security-weak-crypto` (new) | ✓ |
+| P09 weak-crypto | `pack-security-weak-crypto` | ✓ |
 | P10 IR runbook | — | ✓ |
 
 ---
@@ -94,8 +94,8 @@ Anti-pattern lặp lại với security review / threat model / authn-authz. Add
 ## PT01 — Thiếu authorization document (Rules of Engagement)
 - **NG**: bắt đầu test mà không có RoE/SOW ký bởi target owner.
 - **OK**: RoE: scope, time window, contact, allowed techniques, escalation path.
-- **Why**: tù pháp lý (CFAA / VN Bộ luật Hình sự 286/287).
-- **Detect**: Layer-1 `pack-security-pentest-no-authorization` — engagement doc thiếu section RoE/authorization.
+- **Why**: có thể gây thiệt hại, vi phạm hợp đồng hoặc pháp luật áp dụng; legal owner phải xác nhận jurisdiction.
+- **Detect**: Layer-2 authorization/RoE gate; static scope rule không chứng minh legal authorization.
 - **Severity**: error
 
 ## PT02 — Lưu raw credential thực vào repo
@@ -149,21 +149,21 @@ Anti-pattern lặp lại với security review / threat model / authn-authz. Add
 
 ## PT09 — Missing remediation owner / SLA
 - **NG**: report "vulnerability X exists", không nói ai fix, bao giờ.
-- **OK**: mỗi finding có severity, owner (team), SLA, retest date.
+- **OK**: mỗi finding có severity/vector, owner, due date theo risk policy và retest trigger.
 - **Why**: finding lưu vĩnh viễn không fix.
 - **Detect**: Layer-2 — finding schema có `owner, sla` field.
 - **Severity**: warn
 
 ## PT10 — Không có retest / regression schedule
 - **NG**: 1 lần pentest, không follow-up sau khi client claim fix.
-- **OK**: retest cycle (30/60/90 day); compare delta.
+- **OK**: retest theo remediation due date/risk policy; compare evidence và control delta.
 - **Why**: "fix" không thực sự fix; regression slip in.
 - **Detect**: Layer-2 — engagement plan có retest milestone.
 - **Severity**: warn
 
 | Pitfall | Layer-1 rule ID | Layer-2 self-check |
 |---|---|---|
-| PT01 RoE | `pack-security-pentest-no-authorization` | ✓ |
+| PT01 RoE | — | ✓ |
 | PT02 cred-storage | — (gitleaks) | ✓ |
 | PT03 PII | — | ✓ |
 | PT04 live | — | ✓ |

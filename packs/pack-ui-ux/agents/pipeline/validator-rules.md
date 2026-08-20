@@ -15,13 +15,13 @@ Layer-1 rules. Prefix `pack-ui-ux-`.
 ### UI/UX (pack-ui-ux)
 - Color/spacing dùng token name, không hardcode literal
 - Component spec có A11y blockquote (keyboard nav + ARIA note)
-- User flow có section Edge & Error Paths (≥ 2 cases)
+- User flow cover state/error/recovery paths relevant với requirement; không quota case cố định
 - Contrast ratio được note tại color pair relevant
-- Error message: What happened + Why + What to do (không có stack trace/field name)
-- CTA là verb phrase cụ thể, không "OK"/"Submit"/"Yes"
+- Error message actionable + safe; reason chỉ nêu khi known, không leak stack trace/field name
+- CTA/accessibility name làm rõ action trong surrounding context
 - Design decision lớn (library, system, token scale) có ADR
 - Flow file identify persona/role
-- Component spec cover Empty/Loading/Error states
+- Component spec cover states thực sự áp dụng theo state matrix
 - Responsive breakpoints được note nếu layout phụ thuộc viewport
 ```
 

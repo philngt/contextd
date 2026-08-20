@@ -30,10 +30,10 @@ from pathlib import Path
 from typing import Any, Iterable
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-sys.path.insert(0, str(SCRIPT_DIR / "lib"))
+sys.path.insert(0, str(SCRIPT_DIR))
 
-import contextd_resolver  # noqa: E402
-from stdio import configure_stdio  # noqa: E402
+from lib import contextd_resolver  # noqa: E402
+from lib.stdio import configure_stdio  # noqa: E402
 
 STAGE_FILES = [
     "run.json",

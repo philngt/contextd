@@ -4,23 +4,23 @@ Anti-pattern lặp lại với agent loop / tool use / MCP. Additive trên [cons
 
 ## P01 — Unbounded agent loop
 - **NG**: `while not done: step()` không có max iteration.
-- **OK**: `max_iters=20`; raise + summarize khi vượt.
+- **OK**: configured step/time/token/cost budget; checkpoint + preserve reload state khi vượt.
 - **Why**: cost spike vô hạn, hang task.
-- **Detect**: Layer-1 `pack-agentic-unbounded-loop` (new) — regex `while\s+True|while\s+not.*done` trong agent driver.
+- **Detect**: Layer-1 `pack-agentic-loop-no-max-steps` (heuristic) + Layer-2 budget review.
 - **Severity**: error
 
 ## P02 — Tool không có timeout
 - **NG**: tool gọi HTTP/DB không timeout → agent treo.
 - **OK**: per-tool timeout config; cancel + report on expire.
 - **Why**: 1 slow tool block toàn agent.
-- **Detect**: Layer-2 — tool definition có timeout field.
+- **Detect**: Layer-1 `pack-agentic-tool-no-timeout` (heuristic) + Layer-2 deadline/cancellation review.
 - **Severity**: error
 
 ## P03 — Destructive tool không confirm
 - **NG**: tool `delete_file|drop_table|send_email` exec ngay.
 - **OK**: dry-run preview + explicit confirm step.
 - **Why**: agent hallucinate args → data loss / email spam.
-- **Detect**: Layer-2 — destructive tool có `requires_confirm: true`.
+- **Detect**: Layer-1 `pack-agentic-destructive-no-confirm` (name heuristic) + Layer-2 effect metadata/approval review.
 - **Severity**: error
 
 ## P04 — Tool result không validate schema
@@ -34,7 +34,7 @@ Anti-pattern lặp lại với agent loop / tool use / MCP. Additive trên [cons
 - **NG**: tool nhận `api_key` qua argument → log vào trace.
 - **OK**: credential từ secure config; tool args chỉ chứa intent.
 - **Why**: trace lưu permanent, exposure.
-- **Detect**: Layer-1 `pack-agentic-secret-in-tool-arg` (new) — regex `api_?key|token|password` trong tool schema input.
+- **Detect**: Layer-2 — tool schema + trace redaction review; secret scanner riêng.
 - **Severity**: error
 
 ## P06 — Không có max-tool-calls budget
@@ -62,7 +62,7 @@ Anti-pattern lặp lại với agent loop / tool use / MCP. Additive trên [cons
 - **NG**: agent chạy nhưng không record tool calls + result.
 - **OK**: structured trace (W3C-style); include latency, tokens, status.
 - **Why**: không debug được; không eval được.
-- **Detect**: Layer-2 — driver có trace emit.
+- **Detect**: Layer-1 `pack-agentic-no-step-trace` (heuristic) + trace contract test.
 - **Severity**: warn
 
 ## P10 — Tool không document deprecation / version
@@ -76,13 +76,13 @@ Anti-pattern lặp lại với agent loop / tool use / MCP. Additive trên [cons
 
 | Pitfall | Layer-1 rule ID | Layer-2 self-check |
 |---|---|---|
-| P01 loop | `pack-agentic-unbounded-loop` (new) | ✓ |
-| P02 timeout | — | ✓ |
-| P03 destructive | — | ✓ |
+| P01 loop | `pack-agentic-loop-no-max-steps` | ✓ |
+| P02 timeout | `pack-agentic-tool-no-timeout` | ✓ |
+| P03 destructive | `pack-agentic-destructive-no-confirm` | ✓ |
 | P04 schema | — | ✓ |
-| P05 secret-arg | `pack-agentic-secret-in-tool-arg` (new) | ✓ |
+| P05 secret-arg | — | ✓ |
 | P06 budget | — | ✓ |
 | P07 injection | — | ✓ |
 | P08 recursion | — | ✓ |
-| P09 trace | — | ✓ |
+| P09 trace | `pack-agentic-no-step-trace` | ✓ |
 | P10 version | — | ✓ |

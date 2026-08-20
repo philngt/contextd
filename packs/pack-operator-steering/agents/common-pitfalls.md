@@ -1,7 +1,10 @@
 # pack-operator-steering — Top 10 Common Pitfalls
 
+> Manifest-v2 compatibility adapter. Canonical v3 failure signals live in
+> [`../knowledge.md`](../knowledge.md).
+
 Anti-pattern lặp lại với agent-operator steering. Additive trên [constraints.md](constraints.md).
-Applies to components: `context-audit`, `drift-check`, `remediation-planning`, `decision-ledger`, `handoff-quality`, `workflow-mental-model`.
+Applies to components: `context-audit`, `drift-check`, `remediation-planning`, `decision-ledger`, `handoff-quality`, `workflow-mental-model`, `operator-wayfinding`.
 
 ## P01 — Judgment without evidence
 - **NG**: kết luận "root cause là X" khi chưa nêu evidence inspected.
@@ -45,16 +48,16 @@ Applies to components: `context-audit`, `drift-check`, `remediation-planning`, `
 - **Detect**: Layer-1 `pack-operator-steering-handoff-missing-next-action`.
 - **Severity**: warn
 
-## P07 — Context overload treated as completeness
-- **NG**: dump nhiều docs nhưng không nêu controlling facts.
-- **OK**: context map có authority, freshness, relevance, contradictions, affected decisions.
-- **Why**: nhiều context có thể che mất contract/decision quan trọng.
+## P07 — Context overload or fragmentation treated as completeness
+- **NG**: dump nhiều docs hoặc tạo thêm memory store nhưng không nêu controlling facts/source-of-truth.
+- **OK**: context map có authority, freshness, relevance, contradictions, affected decisions; durable state ở workspace/context artifact owner đã chọn.
+- **Why**: nhiều hoặc phân mảnh context có thể che mất contract/decision quan trọng và tạo drift giữa stores.
 - **Detect**: Layer-2 self-check.
 - **Severity**: warn
 
 ## P08 — Mental model skipped
 - **NG**: operator không có stage/quality-gate model nhưng agent vẫn phán chất lượng.
-- **OK**: workflow stages, artifacts, gates, failure modes, diagnosis cues.
+- **OK**: workflow stages, artifacts, gates, failure modes, diagnosis cues; current decision tách `must-understand`, `safe-to-delegate`, và `needs-evidence-or-expert`.
 - **Why**: không biết stage nào hỏng thì remediation sai chỗ.
 - **Detect**: Layer-2 self-check.
 - **Severity**: warn
@@ -66,12 +69,12 @@ Applies to components: `context-audit`, `drift-check`, `remediation-planning`, `
 - **Detect**: Layer-2 self-check.
 - **Severity**: warn
 
-## P10 — Double source of truth
-- **NG**: ghi memory vào store riêng mà workspace/contextd không biết.
-- **OK**: persist vào workspace docs/reports hoặc nêu rõ artifact chỉ là local fallback được owner chọn.
-- **Why**: drift giữa memory stores là nguyên nhân của steering failure.
-- **Detect**: Layer-2 self-check.
-- **Severity**: warn
+## P10 — AI silently absorbs direction ownership
+- **NG**: operator nói “AI tự quyết đi”, agent tự chọn scope/architecture/roadmap rồi tiếp tục implement không có material decision gate.
+- **OK**: agent tự tìm facts, dựng decision frontier, đưa recommendation + trade-off, rồi giữ `accept|revise|defer|stop` cho operator.
+- **Why**: output có thể trông nhanh nhưng operator mất khả năng giải thích mục tiêu, đánh giá hướng đi và biết khi nào nên dừng.
+- **Detect**: Layer-1 `pack-operator-steering-wayfinding-missing-control-fields` + Layer-2 interaction check.
+- **Severity**: error
 
 ## Mapping to validator
 
@@ -86,4 +89,4 @@ Applies to components: `context-audit`, `drift-check`, `remediation-planning`, `
 | P07 overload | — | ✓ |
 | P08 mental model | — | ✓ |
 | P09 skill mismatch | — | ✓ |
-| P10 double source | — | ✓ |
+| P10 agency loss | `pack-operator-steering-wayfinding-missing-control-fields` | ✓ |

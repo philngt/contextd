@@ -2,14 +2,14 @@
 
 ## Endpoint Layer
 
-- Controller/handler methods stay thin — delegate business logic to service. No DB query / external call inline trong controller.
-- Map domain exceptions to HTTP status via global exception handler (`@ControllerAdvice`, error middleware), not try/catch trong từng handler.
-- Response DTO ≠ entity. Never return JPA/ORM entity directly — use mapper.
+- Keep transport parsing/auth/error mapping separate from domain decisions; a vertical slice may co-locate code, but its boundary remains testable.
+- Map domain failures through a centralized/consistent transport error contract; local handling is allowed when the endpoint owns recovery semantics.
+- Serialize an explicit response field contract. Do not expose persistence/domain objects implicitly or rely on accidental serializer defaults.
 
 ## Validation
 
-- Use framework validation tại boundary: `@Valid` + JSR-380 (Java), Pydantic v2 (Python), Zod (TS), proto validation (gRPC).
-- Validate query params + path vars + headers, không chỉ body.
+- Use the validator supported by the pinned framework/runtime (for example Jakarta Validation, Pydantic, Zod/JSON Schema, or protobuf validation).
+- Validate every consumed untrusted body/query/path/header field; untouched transport metadata does not need fake checks.
 - Custom validator cho business rule, không nhồi vào DTO `@AssertTrue` complex.
 
 ## Error Handling
@@ -22,16 +22,16 @@
 
 - Authentication tại middleware/filter chain, không trong handler.
 - Authorization check explicit per endpoint (annotation `@PreAuthorize`, `@RequiresRole`, hoặc decorator) — không inline `if user.role`.
-- Token validation: signature + expiry + audience. Reject early.
+- Token validation follows issuer/profile contract: allowed algorithm/key, issuer, audience/resource, expiry/not-before, token type and revocation/session rules where applicable. Reject before domain access.
 
 ## Pagination & Filtering
 
-- Cursor-based pagination cho large list, offset chỉ cho UI có total count rõ.
+- Chọn cursor/keyset hoặc offset theo consistency, ordering, random-access và total-count contract; mọi list có bounded page size.
 - Filter params validated whitelist — không cho phép arbitrary field/operator (SQL injection / mass assignment).
 - Default page size + max page size từ config.
 
 ## Observability
 
 - Correlation ID propagated từ inbound header → log + downstream calls.
-- Log mỗi request: method, path, status, latency, userId (nếu auth). KHÔNG log body trừ debug mode.
-- Metrics: rps, p50/p95/p99 latency, error rate per endpoint.
+- Structured access telemetry follows data policy: route template, method, status, latency, correlation/trace ID and privacy-safe principal/tenant signal when justified. Raw body or identifiers are not enabled by a generic debug switch.
+- Metrics include traffic, failures and SLO-relevant latency/distribution; choose percentiles/windows with enough samples rather than hardcode p50/p95/p99 everywhere.

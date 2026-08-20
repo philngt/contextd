@@ -1,0 +1,17 @@
+{
+  "id": "operator-wayfinding",
+  "task": "I am lost after weeks of vibe coding on agent-context-demo; what should I do next and should I stop?",
+  "workspace": "default",
+  "as_of": "2026-08-20",
+  "packs": ["pack-operator-steering"],
+  "expected_docs": [
+    "packs/pack-operator-steering/templates/wayfinding-checkpoint.md",
+    "workspaces/default/projects/agent-context-demo/knowledge-map.md"
+  ],
+  "expected_categories": [
+    "project"
+  ],
+  "forbidden_docs": [],
+  "expected_gaps": [],
+  "policy_expectation": "ok"
+}

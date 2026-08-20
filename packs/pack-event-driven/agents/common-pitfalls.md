@@ -6,41 +6,41 @@ Anti-pattern lặp lại với Kafka/MQTT/broker. Additive trên [constraints.md
 - **NG**: `consumer.commitSync()` rồi mới gọi `process(msg)`.
 - **OK**: process xong (idempotent) → commit. Crash giữa chừng → reprocess.
 - **Why**: data loss khi worker crash sau commit.
-- **Detect**: Layer-1 `pack-event-driven-commit-before-process` (new).
+- **Detect**: Layer-1 `pack-event-driven-kafka-commit-before-process`.
 - **Severity**: error
 
 ## P02 — Thiếu DLQ / retry strategy
 - **NG**: lỗi parse → log + skip, hoặc retry vô hạn block partition.
 - **OK**: bounded retry (exponential) → DLQ topic; alert khi DLQ tăng.
 - **Why**: 1 poison message dừng cả partition; mất visibility.
-- **Detect**: Layer-2 — consumer có DLQ producer + max-retries config.
+- **Detect**: Layer-1 `pack-event-driven-kafka-dlq-required` + Layer-2 delivery-policy review.
 - **Severity**: error
 
 ## P03 — Hardcoded topic name
 - **NG**: `consume("orders.created.v1")`.
 - **OK**: topic name từ config; helper `topicFor(domain, event, version)`.
 - **Why**: rename topic = redeploy toàn cluster; lỗi typo silent.
-- **Detect**: Layer-1 `pack-event-driven-hardcoded-topic` (new).
+- **Detect**: Layer-1 `pack-event-driven-kafka-no-hardcoded-topic`.
 - **Severity**: warn
 
 ## P04 — Inline MQTT topic string
 - **NG**: `client.publish("topic/" + region + "/" + gw + "/up/temp", ...)`.
 - **OK**: `buildTopic({region, gatewayId, direction: 'up', type})` per contract.
 - **Why**: drift khỏi contract; refactor format = grep toàn repo.
-- **Detect**: Layer-1 regex `"topic/"\s*\+`.
+- **Detect**: Layer-1 `pack-event-driven-mqtt-no-inline-topic`.
 - **Severity**: warn
 
 ## P05 — Per-message loop khi batch mode
-- **NG**: `for msg in poll()` xử lý từng cái + commit từng cái.
-- **OK**: process batch atomically, 1 commit cuối.
-- **Why**: throughput thấp 10–100x; commit overhead.
-- **Detect**: Layer-2 — consumer config batch nhưng code loop single.
+- **NG**: batch listener nhưng synchronous commit từng record mà không có correctness/latency rationale.
+- **OK**: choose batch, per-record retry, partial ack, or split strategy from delivery contract; measure throughput and failure isolation.
+- **Why**: commit frequency và failure granularity trade off throughput, duplicates và replay scope.
+- **Detect**: Layer-1 `pack-event-driven-kafka-batch-processing` (heuristic) + Layer-2 policy review.
 - **Severity**: warn
 
 ## P06 — Thiếu dedup khi at-least-once
 - **NG**: producer retry → consumer xử lý 2 lần → duplicate order.
 - **OK**: idempotency key (eventId) + dedup store / upsert.
-- **Why**: at-least-once là default Kafka semantics.
+- **Why**: re-delivery is common under retry/rebalance/failure unless an end-to-end exactly-once contract is proven.
 - **Detect**: Layer-2 — handler có check `seenEventIds`.
 - **Severity**: error
 
@@ -76,11 +76,11 @@ Anti-pattern lặp lại với Kafka/MQTT/broker. Additive trên [constraints.md
 
 | Pitfall | Layer-1 rule ID | Layer-2 self-check |
 |---|---|---|
-| P01 commit-before | `pack-event-driven-commit-before-process` (new) | ✓ |
-| P02 DLQ | — (design) | ✓ |
-| P03 hardcoded-topic | `pack-event-driven-hardcoded-topic` (new) | ✓ |
-| P04 inline-topic | `pack-event-driven-inline-mqtt-topic` (new) | ✓ |
-| P05 per-msg loop | — | ✓ |
+| P01 commit-before | `pack-event-driven-kafka-commit-before-process` | ✓ |
+| P02 DLQ | `pack-event-driven-kafka-dlq-required` | ✓ |
+| P03 hardcoded-topic | `pack-event-driven-kafka-no-hardcoded-topic` | ✓ |
+| P04 inline-topic | `pack-event-driven-mqtt-no-inline-topic` | ✓ |
+| P05 batch policy | `pack-event-driven-kafka-batch-processing` | ✓ |
 | P06 dedup | — | ✓ |
 | P07 ordering | — | ✓ |
 | P08 schema-ver | — | ✓ |

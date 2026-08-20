@@ -7,12 +7,12 @@ my-plugin/
 ├── .claude-plugin/
 │   ├── plugin.json           # manifest
 │   └── marketplace.json      # optional: marketplace listing
-├── .claude/
-│   ├── commands/             # slash commands
-│   ├── agents/               # subagents
-│   ├── skills/               # skills (each in own dir)
-│   ├── settings.json         # plugin-specific settings
-│   └── hooks/                # hook scripts (optional)
+├── commands/                 # slash commands
+├── agents/                   # subagents
+├── skills/                   # skills (each in own dir)
+├── hooks/
+│   ├── hooks.json            # plugin hook configuration
+│   └── scripts/              # optional hook scripts
 ├── .mcp.json                 # MCP servers (optional)
 ├── README.md
 ├── CHANGELOG.md
@@ -25,7 +25,7 @@ my-plugin/
 
 ```md
 ---
-description: One sentence, action verb first, < 100 chars
+description: Concise sentence describing behavior and usage
 argument-hint: <required-arg> [optional-arg]
 allowed-tools: Read, Grep, Bash(git status:*)
 ---
@@ -42,7 +42,7 @@ allowed-tools: Read, Grep, Bash(git status:*)
 name: my-agent
 description: Specialized agent for X. Use when Y. Don't use for Z.
 tools: Read, Grep, Glob, Bash
-model: sonnet
+model: inherit
 ---
 
 # Agent system prompt
@@ -56,9 +56,8 @@ model: sonnet
 ---
 name: my-skill
 description: |
-  Multi-line description with TRIGGER when:, examples, and SKIP conditions.
-  TRIGGER when: user mentions <pattern> OR file matches <glob>.
-  SKIP: tests, examples.
+  What this skill does. Use when <specific condition>.
+  Do not use for <neighboring concern>.
 ---
 
 # Skill body
@@ -75,11 +74,10 @@ description: |
 
 ## Hook Design
 
-- Read input từ stdin (Claude Code pipe JSON to hook stdin).
-- Write structured response to stdout (JSON nếu cần block/allow).
-- Exit code `0` = pass through; non-zero = block (chỉ dùng khi thật sự cần).
-- Log errors to stderr, không stdout (stdout reserved cho protocol response).
-- Timeout 2s default — long-running hooks degrade UX.
+- Configure events in `hooks/hooks.json`; resolve bundled scripts/assets with `${CLAUDE_PLUGIN_ROOT}` so installed paths remain portable.
+- Read the documented event payload from stdin and emit only the response shape allowed by that event.
+- Treat exit codes/JSON control fields as an event-specific protocol contract; test allow, block, timeout, malformed input, and non-critical failure paths.
+- Log diagnostics to stderr when stdout is reserved for protocol output; keep work within the configured hook timeout.
 
 ## MCP Server Coding
 
@@ -90,7 +88,7 @@ description: |
 
 ## Testing Plugin
 
-- Manual test: install vào local Claude Code (`~/.claude/plugins/{name}`) hoặc dev mode.
+- Test through the supported Claude Code plugin install/dev workflow; do not rely on copying files into an undocumented cache path.
 - Validate plugin.json schema trước khi publish.
 - Test mỗi slash command với edge cases (no args, invalid args).
 - Test subagent với multiple delegation paths.

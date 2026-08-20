@@ -16,6 +16,7 @@ Cho **non-tech expert** (cơ khí, kế toán, y tế, luật, giáo viên, ...)
 - Bạn là engineer dev professional → dùng `pack-web-api`, `pack-frontend-react`, ...
 - Bạn là PM/Product Owner trong team có engineer → dùng `pack-product`
 - Bạn build production system phục vụ external customers (cần SLA, security audit, scale) → engineering pack
+- Bạn muốn tự động hoá quyết định y tế, pháp lý, tài chính, kết cấu hoặc lĩnh vực regulated mà chưa có nguồn chuẩn + qualified reviewer → cần domain governance trước, recipe không phải authority
 
 ## Components
 
@@ -26,11 +27,12 @@ Cho **non-tech expert** (cơ khí, kế toán, y tế, luật, giáo viên, ...)
 
 ## Triết lý
 
-1. **Spec trước, code sau** — Claude KHÔNG sinh code khi spec chưa rõ. Nếu rõ rồi, code là việc của session khác.
+1. **Spec trước, code sau** — `/tool-design` chỉ tạo spec. Khi spec đã `specced`, user có thể giao implementation ở task tiếp theo trong cùng conversation hoặc session khác.
 2. **Recipe-driven** — mọi tech recommendation đến từ `recipes/` library, không tự sáng tạo. Nếu task không match recipe nào → STOP và yêu cầu user mô tả thêm.
-3. **Cross-platform first** — recipe luôn cover cả Linux + Windows. Trên Windows, recommend Docker + docker-compose để dependency không vỡ.
+3. **Target-platform explicit** — recipe ghi rõ platform được user cần và đã test. Container chỉ dùng khi portability/dependency/deployment benefit đủ rõ.
 4. **1 tool = 1 mục đích** — không có "tool đa năng". Tool to → tách nhỏ thành nhiều tools.
 5. **Plain language** — mọi reasoning bằng ngôn ngữ đời thường, không jargon.
+6. **Evidence before automation** — công thức, regulation và high-impact decision phải có source/version/assumptions, review owner và verification fixtures.
 
 ## Slash commands liên quan
 
@@ -51,12 +53,13 @@ Cho **non-tech expert** (cơ khí, kế toán, y tế, luật, giáo viên, ...)
 - KHÔNG recommend tech không có trong `recipes/` library
 - KHÔNG sinh code trong slash `/tool-design` — chỉ ghi spec
 - TRƯỚC khi propose tool mới, scan `{ws}/tools/` xem đã có tương tự chưa
-- Mọi recommendation kèm "vì sao chọn" + "vì sao không alternative"
-- Windows-specific: nếu task cần dependency phức tạp (image processing, PDF, share team) → recommend Docker
+- Mỗi lựa chọn kỹ thuật material có lý do plain-language; chỉ so sánh alternative khi trade-off có thể đổi quyết định
+- Setup chỉ cover target OS đã chốt; container là một option có rationale, không phải default bắt buộc
+- Formula/regulation/high-impact workflow chưa có authoritative evidence + review owner phải giữ `draft`, không được coi recipe là nguồn chuyên môn
 
 ## Recipe library
 
-Hiện có 10 recipes (xem [`recipes/README.md`](recipes/README.md)). User có thể tự thêm bằng `templates/tool-recipe.md`.
+Hiện có 11 recipes (xem [`recipes/README.md`](recipes/README.md)). User có thể tự thêm bằng `templates/tool-recipe.md`.
 
 | Recipe | Use cho |
 |--------|---------|
@@ -70,6 +73,7 @@ Hiện có 10 recipes (xem [`recipes/README.md`](recipes/README.md)). User có t
 | [desktop-gui-simple](recipes/desktop-gui-simple.md) | GUI native dùng cá nhân |
 | [api-data-fetcher](recipes/api-data-fetcher.md) | Pull data từ API ngoài |
 | [local-database-manager](recipes/local-database-manager.md) | Quản lý records local |
+| [multi-agent-orchestrator](recipes/multi-agent-orchestrator.md) | Điều phối nhiều CLI agent đã được pin/test |
 
 ## Cấu trúc workspace khuyến nghị
 
@@ -103,12 +107,19 @@ workspaces/{ws}/
 
 ## Validator rules
 
-| Rule | Severity | Check |
-|------|----------|-------|
-| `pack-solo-builder-spec-missing-system-map` | error | Spec thiếu section "System Map" |
-| `pack-solo-builder-spec-missing-stack` | error | Spec thiếu section "Tech Stack" |
-| `pack-solo-builder-spec-missing-acceptance` | error | Spec thiếu "Acceptance Criteria" |
-| `pack-solo-builder-spec-missing-problem` | error | Spec thiếu "Problem" |
-| `pack-solo-builder-recipe-not-in-library` | warn  | Spec mention tech không có trong `recipes/` |
-| `pack-solo-builder-jargon-without-explain` | warn  | Spec dùng từ kỹ thuật không có 1-line explain |
-| `pack-solo-builder-multi-purpose-tool` | warn  | Spec mô tả > 1 mục đích (vi phạm "1 tool = 1 mục đích") |
+Source-of-truth là [validator-rules.md](agents/pipeline/validator-rules.md), với
+exact rule-ID parity được kiểm tra với [rules.py](scripts/rules.py). Structural
+errors giữ spec ở `draft`; heuristic warnings flag setup, recipe citation,
+jargon, scope và acceptance criteria để reviewer quyết định, không tự suy diễn.
+
+## Retrieval behavior
+
+Pack route bằng intent phrase cụ thể như `thiết kế công cụ`, `mở rộng công cụ`, `technology recipe`, hoặc `tool catalog`. Các từ quá rộng như `build`, `sửa`, `script`, `idea` đã bị loại để không kéo recipe library vào mọi task.
+
+## Verification
+
+```bash
+contextd pack-validate --pack pack-solo-builder --format text
+contextd context "Thiết kế công cụ cá nhân từ recipe" --preview --format json
+python scripts/validate.py --file <tool-spec-fixture> --workspace <workspace-with-pack>
+```

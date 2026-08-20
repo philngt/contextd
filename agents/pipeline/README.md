@@ -32,17 +32,27 @@ User Task
    ↓
 [Stage 1] contextd context        → classify intent + detect components
    ↓
-[Stage 2] context artifact engine → retrieve + filter + slice + validate refs
+[Stage 2] synapse builder         → read/hash each governed source once
+                                  → nodes + typed edges + lifecycle/freshness
+                                  → keep transient sources + reusable lookups
+   ↓
+[Stage 3] context artifact engine → retrieve + filter + slice + validate refs
+                                  → lifecycle-aware rank + graph projection
                                   → emit .contextd/context/current-task.json
                                   → render .contextd/context/current-task.md
+                                  → identity-check and materialize the same graph
                                   → materialize .contextd/context/packs/{packKey}.md
    ↓
-[Stage 3] Main agent (Builder)    → đọc JSON artifact, code theo prompt-template.md
+[Stage 4] Main agent (Builder)    → đọc JSON artifact, code theo prompt-template.md
    ↓
-[Stage 4] reviewer (optional)     → check code vs referenced_docs/contextPack
+[Stage 5] reviewer (optional)     → check code vs referenced_docs/contextPack
    ↓
 Output
 ```
+
+Operational authoring, loading, diagnosis, cost, and runtime-memory promotion
+guidance lives in
+[Synapse Context Management and Loading Guide](../../docs/synapse-context-management.md).
 
 `current-task.md` là render cho người/adapter; JSON artifact là source of truth. Chi tiết lịch sử subagent cũ: xem [multi-agent-pipeline.md](multi-agent-pipeline.md).
 

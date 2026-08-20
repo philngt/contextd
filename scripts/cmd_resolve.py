@@ -14,10 +14,10 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-sys.path.insert(0, str(SCRIPT_DIR / "lib"))
+sys.path.insert(0, str(SCRIPT_DIR))
 
-import contextd_resolver  # noqa: E402
-from stdio import configure_stdio  # noqa: E402
+from lib import contextd_resolver  # noqa: E402
+from lib.stdio import configure_stdio  # noqa: E402
 
 
 def find_wiki_json(start_dir: Path) -> Optional[Path]:
@@ -39,6 +39,10 @@ def parse_workspace_packs(workspace_md_path: Path) -> List[str]:
 
 def get_effective_packs(config: Dict, workspace_md_path: Path) -> Tuple[List[str], str]:
     return contextd_resolver.get_effective_packs(config, workspace_md_path)
+
+
+def resolve_workspace_dir(knowledge_root: Path, workspace: object) -> Optional[Path]:
+    return contextd_resolver.resolve_workspace_dir(knowledge_root, workspace)
 
 
 def resolve(cwd: Optional[Path] = None, require_workspace: bool = False) -> Dict:

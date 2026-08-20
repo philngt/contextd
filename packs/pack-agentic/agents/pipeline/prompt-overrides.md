@@ -4,14 +4,16 @@
 
 ```
 ### Agent (pack-agentic)
-- Loop has MAX_STEPS bound + explicit termination condition
+- Loop has explicit step/time/token/cost/deadline budget + termination/checkpoint behavior
 - Repeated-state detection in place
-- Every tool call wrapped in timeout
+- Tool calls have configured deadline/cancellation policy appropriate to effects/SLO
 - Tool input has schema validation; tool error returned structured
-- Destructive tools require confirm param or human approval checkpoint
-- Per-step trace logged (step_n, action, latency, status)
-- Token budget tracked; context compaction strategy explicit
-- Subagent handoff has clear protocol + bounded depth
+- Effect metadata drives approval/dry-run/compensation for destructive or irreversible tools
+- Per-step trace records action class, latency, status, budget delta and redacted artifact refs
+- Runtime vs long-term memory boundary + provenance/lifecycle/replacement behavior explicit
+- Compaction preserves constraints/decisions/source IDs/hashes and reload plan
+- Subagent handoff has schema, tool subset, exit criteria and shared remaining budget
+- MCP protocol revision/extensions/transport compatibility pinned when MCP is in scope
 ```
 
 ## Common Pitfalls (Top 10)

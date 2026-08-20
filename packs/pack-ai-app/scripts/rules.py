@@ -112,7 +112,7 @@ def rule_log_raw_prompt(file_path: Path, lines: List[str], ctx: Dict) -> List[Di
 # messages.create(...) / chat.completions.create(...) without max_tokens
 LLM_CALL_OPEN = re.compile(
     r"\b(messages\.create|chat\.completions\.create|completions\.create|"
-    r"generate_content)\s*\("
+    r"responses\.create|generate_content)\s*\("
 )
 
 
@@ -134,15 +134,18 @@ def rule_no_max_tokens(file_path: Path, lines: List[str], ctx: Dict) -> List[Dic
             if j - start > 4000:
                 break
         body = text[start:j - 1]
-        if re.search(r"\bmax_tokens\s*[=:]", body):
+        if re.search(
+            r"\b(max_tokens|max_completion_tokens|max_output_tokens|maxOutputTokens)\s*[=:]",
+            body,
+        ):
             continue
         prefix = text[:m.start()]
         lineno = prefix.count("\n") + 1
         snippet = lines[lineno - 1] if lineno - 1 < len(lines) else m.group(0)
         out.append(_vio(
             "pack-ai-app-no-max-tokens", "warn", file_path, lineno, snippet,
-            f"{m.group(1)}(...) without max_tokens — output is unbounded. "
-            "Set max_tokens explicitly to control cost."
+            f"{m.group(1)}(...) has no visible output ceiling. Set the provider's "
+            "current max-output parameter or pass a bounded generation config."
         ))
     return out
 
@@ -180,8 +183,9 @@ def rule_missing_prompt_cache(file_path: Path, lines: List[str], ctx: Dict) -> L
         snippet = lines[lineno - 1] if lineno - 1 < len(lines) else "<long string>"
         out.append(_vio(
             "pack-ai-app-missing-prompt-cache", "warn", file_path, lineno, snippet,
-            f"Long system prompt ({len(body)} chars) without cache_control. "
-            "Anthropic prompt caching can save up to 90% on cached input tokens."
+            f"Long Anthropic system prompt ({len(body)} chars) has no visible "
+            "cache policy. Check current model eligibility, data policy, and "
+            "invalidation needs before enabling cache_control."
         ))
         break  # one warning per file is enough
     return out

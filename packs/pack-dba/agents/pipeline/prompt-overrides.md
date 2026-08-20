@@ -7,20 +7,20 @@ Section bổ sung vào `agents/pipeline/prompt-template.md` self-check khi pack 
 ```
 ### Schema Change (pack-dba)
 - Migration có rollback/forward-fix strategy rõ ràng
-- DDL có khả năng lock lớn nêu maintenance window + impact scope
-- Migration immutable + versioned (tool: Flyway/Alembic/Prisma)
-- Foreign key có index trên child column
+- DDL lock/rewrite/replication impact dựa trên exact engine/version + rehearsal/workload evidence
+- Applied migration immutable + versioned theo workspace migration tool/contract
+- Foreign-key access path/index order được verify từ engine catalog/query plan; không tạo index trùng lặp theo folklore
 
 ### Query & Index (pack-dba)
 - Query tuning có EXPLAIN plan / slow log / p95 metric evidence
 - Index proposal nêu trade-off read vs write vs storage
-- Không SELECT * trong application query
+- Projection explicit trên stable/hot application paths; admin/exploratory exceptions có rationale
 - Transaction ngắn, KHÔNG bao external HTTP/IO
 
 ### Backup & DR (pack-dba)
 - Backup policy có RPO + RTO + restore verification cadence
-- Cross-region/offsite copy enabled cho production
-- Restore drill log gần nhất < 30 ngày
+- Backup failure-domain separation phù hợp threat/RPO/data-residency policy
+- Restore drill còn hiệu lực theo risk/RPO/RTO policy và có verification evidence
 ```
 
 ## Layer-2 LLM self-check (append vào validator-rules Layer 2)
@@ -28,12 +28,12 @@ Section bổ sung vào `agents/pipeline/prompt-template.md` self-check khi pack 
 ```md
 ### Database Administration
 - Schema change có rollback hoặc forward-fix
-- Lock impact estimate có cho migration > 1M rows
+- Lock/rewrite impact được evidence bằng engine capability, plan/rehearsal và workload shape
 - Query recommendation có EXPLAIN before/after
-- SELECT * chỉ trong migration/admin script
+- Query projection phù hợp contract và measured cost; broad projection exceptions reviewable
 - Backup doc có RPO/RTO/restore drill
-- Slow query log enabled + alerting active
-- FK column có index
+- Query observability/slow-capture mechanism phù hợp engine, workload và privacy policy
+- Foreign-key access path/index order được verify theo engine; không tạo index trùng lặp cảm tính
 ```
 
 ## Inclusion logic

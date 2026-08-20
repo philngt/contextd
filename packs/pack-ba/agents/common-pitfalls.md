@@ -4,16 +4,16 @@ Anti-pattern lặp lại với business analysis / requirement / user story. Add
 
 ## P01 — Requirement không testable
 - **NG**: "system shall be fast / user-friendly".
-- **OK**: "page load < 2s p95"; "task completion ≤ 3 clicks".
+- **OK**: "p95 page load meets workspace SLO X under workload Y"; "target flow completion improves from measured baseline A to B".
 - **Why**: không verify được = không nghiệm thu được.
-- **Detect**: Layer-1 `pack-ba-untestable-req` (new) — từ ngữ "fast/easy/friendly/good" không kèm số/criterion.
+- **Detect**: Layer-1 `pack-ba-acceptance-vague-language` + Layer-2 requirement review.
 - **Severity**: error
 
 ## P02 — Missing acceptance criteria (Gherkin)
 - **NG**: user story chỉ "As X I want Y".
-- **OK**: kèm AC Given/When/Then ≥ 3 case (happy + edge).
+- **OK**: kèm acceptance rules/scenarios cho relevant success, edge và failure states; Gherkin dùng khi team/tooling hưởng lợi.
 - **Why**: dev đoán requirement → rework.
-- **Detect**: Layer-1 — user story file thiếu `Given|Acceptance`.
+- **Detect**: Layer-2 — story/requirement thiếu acceptance section hoặc testable rule.
 - **Severity**: error
 
 ## P03 — Conflate Problem và Solution
@@ -32,9 +32,9 @@ Anti-pattern lặp lại với business analysis / requirement / user story. Add
 
 ## P05 — Thiếu non-functional requirement
 - **NG**: chỉ list functional, quên performance/security/compliance.
-- **OK**: NFR section: perf, scale, security, accessibility, i18n.
+- **OK**: NFR/risk checklist theo domain; item không áp dụng ghi `N/A` + rationale thay vì copy boilerplate.
 - **Why**: build xong không pass audit / SLA.
-- **Detect**: Layer-1 — spec thiếu heading `Non-Functional|NFR`.
+- **Detect**: Layer-2 — NFR/risk coverage so với task/domain.
 - **Severity**: error
 
 ## P06 — Magic numbers trong business rule
@@ -48,7 +48,7 @@ Anti-pattern lặp lại với business analysis / requirement / user story. Add
 - **NG**: "validate email, phone, etc.".
 - **OK**: enumerate hết, hoặc nêu rõ "etc = các field optional listed in section X".
 - **Why**: scope mơ hồ; dev/QA hiểu khác nhau.
-- **Detect**: Layer-1 `pack-ba-ambiguous-etc` (new) — regex `\betc\.?\b|and so on|v\.v\.`.
+- **Detect**: Layer-2 — ambiguous scope wording review.
 - **Severity**: warn
 
 ## P08 — Missing edge case enumeration
@@ -76,13 +76,13 @@ Anti-pattern lặp lại với business analysis / requirement / user story. Add
 
 | Pitfall | Layer-1 rule ID | Layer-2 self-check |
 |---|---|---|
-| P01 testable | `pack-ba-untestable-req` (new) | ✓ |
-| P02 AC | `pack-ba-missing-ac` (new) | ✓ |
+| P01 testable | `pack-ba-acceptance-vague-language` | ✓ |
+| P02 AC | — | ✓ |
 | P03 problem/sol | — | ✓ |
-| P04 role | — | ✓ |
-| P05 NFR | `pack-ba-missing-nfr` (new) | ✓ |
+| P04 role | `pack-ba-requirement-missing-actor-or-outcome` (partial) | ✓ |
+| P05 NFR | — | ✓ |
 | P06 magic | — | ✓ |
-| P07 etc | `pack-ba-ambiguous-etc` (new) | ✓ |
+| P07 etc | — | ✓ |
 | P08 edge | — | ✓ |
 | P09 version | — | ✓ |
-| P10 source | — | ✓ |
+| P10 source | `pack-ba-stakeholder-missing-owner` (partial) | ✓ |

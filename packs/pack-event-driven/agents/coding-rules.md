@@ -4,18 +4,18 @@ Additive rules trên engine coding-rules. Áp dụng khi workspace bật pack n�
 
 ## Error Handling at Message-Consumer Boundary
 
-- Classify errors: **transient** (network blip, deadlock) → retry với exponential backoff; **permanent** (schema invalid, business rule violation) → dead-letter + log + alert.
-- Never let an unhandled exception cross a message-consumer boundary without first updating the consumer's progress marker (offset / ack / cursor) correctly. Order: process → side-effect committed → ack/offset commit. Never commit before processing.
+- Classify errors by retryability and business meaning. Transient failures use bounded backoff/jitter; permanent/poison events follow the workspace quarantine/DLQ/drop policy with evidence and alerting.
+- Progress-marker order follows declared semantics. A common at-least-once path is process → durable side effect → ack/commit; transactional or at-most-once designs must document and test their different failure trade-off.
 
 ## Idempotency for Re-deliverable Handlers
 
-- Kafka/MQTT/SQS consumers MUST be idempotent (de-dup key on message ID/event ID, or upsert semantics on downstream store).
+- Re-deliverable handlers MUST be idempotent or carry an equivalent dedup/transaction contract; document the identity key and retention window.
 - Outbox pattern khi cần atomic commit DB + publish.
 
 ## Batch vs Per-Message
 
-- Khi consumer chạy batch mode (`max.poll.records`, `setBatchListener`), không loop từng message với commit riêng — commit cả batch sau khi batch processed.
-- Failure handling: batch fail → option (a) reprocess cả batch (yêu cầu idempotent), option (b) split batch và retry per-message + DLQ. Document choice trong service doc.
+- Với batch mode, choose whole-batch, partial-ack, split/retry, or per-record handling from ordering, replay scope and failure-isolation needs; avoid synchronous per-record commits without measured rationale.
+- Document batch failure behavior, progress marker, idempotency/dedup and poison-event destination in the service contract.
 
 ## Topic Naming & Format
 

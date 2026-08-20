@@ -8,7 +8,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>contextd — Onboarding 5 phút (Claude Code)</title>
+<title>contextd — Onboarding runtime-neutral</title>
 <style>
   *,*::before,*::after{box-sizing:border-box}
   html,body{margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:#1f2328;background:#f6f8fa;line-height:1.55}
@@ -135,7 +135,7 @@
 
 <header class="hero">
   <h1>📚 contextd</h1>
-  <p class="tagline">Nơi lưu cách làm việc của team — để AI làm đúng ngay từ lần đầu</p>
+  <p class="tagline">Biên dịch knowledge đáng tin cậy thành context riêng cho từng task, dùng được với mọi coding-agent runtime.</p>
   <div class="meta">Cho mọi vai trò · Bắt đầu trong ~5 phút</div>
   <p style="margin-top:12px;font-size:13px;opacity:.95">Xem mã nguồn và bản phát hành trên <a href="https://github.com/philngt/contextd" style="color:#fff;text-decoration:underline;text-underline-offset:2px">GitHub</a></p>
 </header>
@@ -177,8 +177,9 @@
   <section class="block" id="what">
     <h2>📖 contextd là gì?</h2>
     <p class="lead">
-      Một <strong>thư viện hướng dẫn dùng chung</strong> cho cả người và AI.
-      Bạn ghi cách team làm việc vào wiki. Trước khi hỗ trợ, AI sẽ đọc các hướng dẫn này để làm đúng chuẩn của team.
+      Một <strong>build system cục bộ cho agent context</strong>.
+      Wiki là nội dung knowledge được quản trị; contextd là engine index lifecycle
+      và biên dịch artifact riêng cho từng task để agent sử dụng.
     </p>
 
     <div class="concept-grid">
@@ -211,6 +212,16 @@
         <div class="concept-icon">🔍</div>
         <h4>Evidence</h4>
         <p>Quy trình: đưa dữ liệu thô vào → phân tích → kiểm tra → áp vào wiki.</p>
+      </div>
+      <div class="concept-card">
+        <div class="concept-icon">🕸️</div>
+        <h4>Synapse</h4>
+        <p>Graph có thể rebuild gồm knowledge nodes, quan hệ typed, lifecycle và freshness. Node stale vẫn được giữ để audit.</p>
+      </div>
+      <div class="concept-card">
+        <div class="concept-icon">⚙️</div>
+        <h4>Context artifact</h4>
+        <p>Projection deterministic theo budget cho một task, được dùng qua CLI, MCP hoặc host adapters.</p>
       </div>
     </div>
   </section>
@@ -425,19 +436,25 @@
   <!-- ============ CONCEPTS ============ -->
   <section class="block" id="concepts">
     <h2><span class="step-num">2</span>Khái niệm cốt lõi (đọc 3 phút)</h2>
-    <p class="lead">Hiểu 5 khái niệm này là đủ để dùng wiki hằng ngày.</p>
+    <p class="lead">Các khái niệm này tách rõ canonical knowledge, lifecycle index, task context và runtime state.</p>
 
     <dl class="glossary">
       <dt>Workspace (kho kiến thức riêng cho từng công ty/dự án)</dt>
       <dd>Mỗi công ty/dự án bạn làm = 1 thư mục riêng. Kiến thức KHÔNG được trộn giữa các workspace — vì công ty A và B có quy tắc khác nhau, nếu trộn AI sẽ áp sai. Workspace đang dùng nằm trong <code>.contextd/config.json</code>.</dd>
 
       <dt>Pack (gói kiến thức theo công nghệ)</dt>
-      <dd>contextd core hoạt động với mọi công nghệ. Kiến thức đặc thù (Kafka, REST, React, AI app, product...) nằm trong các <code>packs</code>. Bật/tắt qua <code>/contextd-setup</code> bước chọn packs (giao diện tick), hoặc sửa file <code>workspace.md</code>. Hiện có 13 packs, xem section bên dưới.</dd>
+      <dd>contextd core hoạt động với mọi công nghệ. Kiến thức đặc thù (Kafka, REST, React, AI app, product...) nằm trong các <code>packs</code>. Bật/tắt qua <code>/contextd-setup</code> bước chọn packs (giao diện tick), hoặc sửa file <code>workspace.md</code>. Catalog chuẩn nằm ở <code>packs/README.md</code>.</dd>
 
       <dt>Thoả thuận (Contract) vs Cách làm (Pattern)</dt>
       <dd>Thứ tự ưu tiên: <strong>Thoả thuận &gt; Cách làm &gt; Tài liệu dự án &gt; Kiến thức chuyên môn</strong>.
         Thoả thuận = quy tắc cố định (cấu trúc API, định dạng dữ liệu) — KHÔNG được thay đổi.
         Cách làm = phương pháp tốt nhất — nên tái sử dụng, có thể ngoại lệ nếu có lý do chính đáng.</dd>
+
+      <dt>Synapse lifecycle graph</dt>
+      <dd><code>contextd synapse</code> index mỗi tài liệu được quản trị thành node có lifecycle và freshness. Node <code>stale</code>, <code>deprecated</code> hoặc <code>superseded</code> vẫn được giữ cho lịch sử nhưng bị giảm ưu tiên khi chọn context; replacement active có thể được mở rộng qua typed edges.</dd>
+
+      <dt>Context vs runtime memory vs long-term memory</dt>
+      <dd>Context artifact là projection tạm thời cho một task. Session history, observations và checkpoints là runtime memory. File đã review trong active workspace là long-term memory. Runtime state không bao giờ tự động được promote thành long-term knowledge.</dd>
 
       <dt>Lệnh (Slash command) vs Quy trình nội bộ</dt>
       <dd>Lệnh (<code>/use-contextd</code>, <code>/find</code>, ...) = lệnh bạn gọi trực tiếp.
@@ -492,12 +509,15 @@
           <tr><td class="cmd-name">contextd check</td><td>Kiểm tra config, packs, adapter drift, và safety bằng output dễ đọc</td><td>Trước khi agent bắt đầu task</td></tr>
           <tr><td class="cmd-name">contextd context</td><td>Tạo JSON canonical <code>contextd_task_context.v1</code></td><td>Khi agent hoặc script cần context task deterministic</td></tr>
           <tr><td class="cmd-name">contextd explain</td><td>Giải thích vì sao docs được chọn/bỏ qua/gap</td><td>Khi context sai hoặc cần debug retrieval</td></tr>
+          <tr><td class="cmd-name">contextd synapse</td><td>Preview hoặc materialize workspace lifecycle graph</td><td>Khi review knowledge stale, deprecated, superseded hoặc có quan hệ</td></tr>
+          <tr><td class="cmd-name">contextd doctor</td><td>Chạy diagnostics machine-readable cho config, packs, adapters và safety</td><td>Cho automation hoặc troubleshooting chi tiết</td></tr>
+          <tr><td class="cmd-name">contextd policy-check</td><td>Đánh giá task context theo governance policy</td><td>Trước release gate hoặc agent execution tự động</td></tr>
           <tr><td class="cmd-name">contextd connect</td><td>In snippet MCP cho Claude, Cursor, hoặc Codex</td><td>Khi kết nối contextd với client hỗ trợ MCP</td></tr>
           <tr><td class="cmd-name">contextd recipes</td><td>Hiện các workflow ngắn: first run, daily task, debug, connect, maintain</td><td>Khi không nhớ nên chạy lệnh nào tiếp theo</td></tr>
         </tbody>
       </table>
       <div class="callout info">
-        <strong>MCP là tuỳ chọn.</strong> <code>contextd connect</code> là wrapper dễ dùng cho <code>mcp-config</code>; các lệnh raw như <code>mcp-server</code>, <code>pack-validate</code>, <code>eval</code> nằm trong <code>contextd help --all</code>.
+        <strong>MCP là tuỳ chọn.</strong> <code>contextd connect</code> là wrapper dễ dùng cho <code>mcp-config</code>; inventory CLI chuẩn, gồm <code>mcp-server</code>, <code>pack-validate</code> và <code>eval</code>, luôn có tại <code>contextd help --all</code>.
       </div>
     </div>
 
@@ -527,7 +547,7 @@
         </tbody>
       </table>
       <div class="callout info">
-        <strong>Yêu cầu:</strong> Workspace bật <code>pack-solo-builder</code> (slash <code>/tool-design</code> tự bật giúp). Recipe library cross-platform: Linux native + Windows recommend Docker khi deps phức tạp (PDF, image, share team).
+        <strong>Yêu cầu:</strong> Codebase bật <code>pack-solo-builder</code> (slash <code>/tool-design</code> hướng dẫn bật đúng canonical config). Recipe chỉ cover target environment đã chọn; container là option khi có lợi ích isolation/portability/deployment rõ, không phải mặc định cho Windows.
       </div>
     </div>
 
@@ -622,23 +642,27 @@ implement spec at workspaces/{ws}/tools/{slug}-spec.md
   <section class="block" id="packs">
     <h2><span class="step-num">5</span>Packs có sẵn</h2>
     <p class="lead">Bật pack: chạy <code>/contextd-setup</code> Bước 4.5 (checkbox UI per-codebase, ghi vào <code>.contextd/config.json#packs</code>) — hoặc edit <code>workspaces/{ws}/workspace.md</code> section <code>## Packs</code> (áp dụng workspace-wide cho mọi codebase).</p>
+    <p class="lead">Summary này được kiểm tra với source directories; <code>packs/README.md</code> vẫn là catalog và status reference chuẩn.</p>
+    <p class="lead">Pack manifest-v3 cô đọng guidance vào <code>knowledge.md</code>: runtime chỉ nạp Global Principles + component khớp task. Dùng <code>contextd explain</code> để xem riêng token referenced/static/total; pack v2 vẫn được hỗ trợ trong giai đoạn migration.</p>
 
     <table class="cmd-table">
       <thead><tr><th>Pack</th><th>Status</th><th>Use cho</th></tr></thead>
       <tbody>
-        <tr><td class="cmd-name">pack-event-driven</td><td><span class="cmd-tag tech">stable</span></td><td>Xử lý sự kiện: Kafka, MQTT, RabbitMQ — hàng đợi thử lại, xử lý lỗi</td></tr>
-        <tr><td class="cmd-name">pack-web-api</td><td><span class="cmd-tag tech">stable</span></td><td>API web: REST/GraphQL/gRPC — kiểm tra đầu vào, mã lỗi, không lộ thông tin</td></tr>
-        <tr><td class="cmd-name">pack-frontend-react</td><td><span class="cmd-tag tech">stable</span></td><td>React + Next.js — hooks rules, a11y, effect cleanup, list keys, server/client boundary</td></tr>
-        <tr><td class="cmd-name">pack-ui-ux</td><td><span class="cmd-tag beta">beta v0.1</span></td><td>UI/UX design — design system, design tokens, WCAG 2.1 AA accessibility, user flows, UX writing. Pairs với <code>pack-frontend-react</code> (design doc ↔ code impl)</td></tr>
-        <tr><td class="cmd-name">pack-ai-app</td><td><span class="cmd-tag tech">stable</span></td><td>Ứng dụng AI: prompt caching, output có cấu trúc, kiểm thử, không lộ dữ liệu cá nhân</td></tr>
-        <tr><td class="cmd-name">pack-agentic</td><td><span class="cmd-tag tech">stable</span></td><td>AI Agent: vòng lặp, dùng công cụ, đa agent — giới hạn bước, công cụ lặp lại an toàn</td></tr>
-        <tr><td class="cmd-name">pack-claude-plugin-dev</td><td><span class="cmd-tag tech">stable</span></td><td>Phát triển plugin cho Claude Code — lệnh, agent con, kỹ năng, hook</td></tr>
-        <tr><td class="cmd-name">pack-product</td><td><span class="cmd-tag beta">beta</span></td><td>Tài liệu sản phẩm cho PM/business — bản tóm tắt, OKR, lộ trình, người dùng, chỉ số</td></tr>
-        <tr><td class="cmd-name">pack-solo-builder</td><td><span class="cmd-tag beta">beta</span></td><td>Cho non-tech expert ngành khác (cơ khí, kế toán, ...) dùng Claude Code làm "no-code IDE" — tool design coach + recipe library cross-platform</td></tr>
-        <tr><td class="cmd-name">pack-ba</td><td><span class="cmd-tag beta">beta</span></td><td>Business analysis — mô hình hóa yêu cầu, acceptance criteria, process mapping, stakeholder alignment</td></tr>
-        <tr><td class="cmd-name">pack-qc</td><td><span class="cmd-tag beta">beta v0.2</span></td><td>Quality control + performance optimization (gộp <code>pack-optimize</code>) — test design/execution, defect triage, regression, release gate, baseline metric, profiling, regression guard</td></tr>
-        <tr><td class="cmd-name">pack-security</td><td><span class="cmd-tag beta">beta v0.2</span></td><td>Security engineering + authorized pentest (gộp <code>pack-pentest</code>) — threat modeling, secure design review, scope discipline, evidence-based findings, risk rating, remediation</td></tr>
-        <tr><td class="cmd-name">pack-dba</td><td><span class="cmd-tag beta">beta</span></td><td>DBA workflow — schema change safety, query hygiene, backup/restore readiness, operational guardrails</td></tr>
+        <tr><td class="cmd-name">pack-event-driven</td><td><span class="cmd-tag tech">stable 1.1.0</span></td><td>Event processing: Kafka, MQTT, RabbitMQ — delivery semantics, retry và DLQ</td></tr>
+        <tr><td class="cmd-name">pack-web-api</td><td><span class="cmd-tag tech">stable 1.1.0</span></td><td>API web: REST/GraphQL/gRPC — validation, retry safety, error contract, abuse control</td></tr>
+        <tr><td class="cmd-name">pack-frontend-react</td><td><span class="cmd-tag tech">stable 1.1.0</span></td><td>Rules of React hiện hành + Next.js router được pin — hooks, effects, a11y, server/client boundary</td></tr>
+        <tr><td class="cmd-name">pack-ui-ux</td><td><span class="cmd-tag beta">beta 0.2.0</span></td><td>UI/UX — design system, WCAG 2.2 AA, user-flow states, UX writing</td></tr>
+        <tr><td class="cmd-name">pack-ai-app</td><td><span class="cmd-tag tech">stable 1.1.0</span></td><td>Ứng dụng AI: provider-aware cache policy, structured output, eval, privacy/cost control</td></tr>
+        <tr><td class="cmd-name">pack-agentic</td><td><span class="cmd-tag tech">stable 1.1.0</span></td><td>AI Agent: bounded budgets, tool effects, MCP, handoff, runtime/long-term memory boundary</td></tr>
+        <tr><td class="cmd-name">pack-claude-plugin-dev</td><td><span class="cmd-tag tech">stable 1.1.0</span></td><td>Claude Code plugin-root packaging — command, agent, skill, hook, MCP</td></tr>
+        <tr><td class="cmd-name">pack-operator-steering</td><td><span class="cmd-tag beta">beta 0.4.0</span></td><td>Phục hồi định hướng, giữ quyền quyết định của người dùng, audit drift/context và chốt tiếp tục/tạm dừng/chuyển hướng/dừng</td></tr>
+        <tr><td class="cmd-name">pack-product</td><td><span class="cmd-tag beta">beta 0.2.0</span></td><td>Product docs — brief, outcome, roadmap, persona và journey có evidence</td></tr>
+        <tr><td class="cmd-name">pack-solo-builder</td><td><span class="cmd-tag beta">beta 0.2.0</span></td><td>Tool đơn mục đích theo recipe cho chuyên gia non-tech</td></tr>
+        <tr><td class="cmd-name">pack-ba</td><td><span class="cmd-tag beta">beta 0.2.0</span></td><td>Business analysis — requirement, acceptance criteria, process map, stakeholder decision</td></tr>
+        <tr><td class="cmd-name">pack-qc</td><td><span class="cmd-tag beta">beta 0.3.0</span></td><td>QC + measured performance optimization — test/defect/release evidence, regression guard</td></tr>
+        <tr><td class="cmd-name">pack-security</td><td><span class="cmd-tag beta">beta 0.3.0</span></td><td>Threat/control review + authorized validation — evidence, CVSS v4.0/local impact, remediation</td></tr>
+        <tr><td class="cmd-name">pack-dba</td><td><span class="cmd-tag beta">beta 0.2.0</span></td><td>DBA — evidence-based schema change, query plan, restore proof, operations</td></tr>
+        <tr><td class="cmd-name">pack-devops-iac</td><td><span class="cmd-tag beta">beta 0.2.0</span></td><td>Terraform/OpenTofu, Kubernetes, CI/CD promotion, drift và rollback</td></tr>
       </tbody>
     </table>
 
@@ -652,6 +676,18 @@ implement spec at workspaces/{ws}/tools/{slug}-spec.md
   <!-- ============ FAQ ============ -->
   <section class="block" id="faq">
     <h2><span class="step-num">6</span>FAQ</h2>
+
+    <details>
+      <summary>Tôi vibe code lâu và không biết nên làm gì tiếp hoặc có nên dừng không?</summary>
+      <div class="faq-body">
+        <p>Bật <code>pack-operator-steering</code>, rồi nói tự nhiên:</p>
+        <pre><code>Tôi đang bị lạc hướng. Hãy kiểm tra repo/context hiện tại,
+cho tôi biết stage hiện tại, gap chính, điều tối thiểu tôi cần hiểu, quyết định cần chốt tiếp theo,
+recommendation của bạn, và nên continue, pause, pivot hay stop.
+Đừng implement hướng mới trước khi tôi xác nhận.</code></pre>
+        <p>Agent phải tự tìm facts trong repo, chỉ hỏi material decision, đưa recommended answer và giữ quyết định cuối ở phía bạn.</p>
+      </div>
+    </details>
 
     <details>
       <summary>Tôi không biết code, có dùng wiki được không?</summary>
@@ -760,7 +796,7 @@ implement spec at workspaces/{ws}/tools/{slug}-spec.md
       <div class="faq-body">
         <p>Chạy lệnh tạo pack mới:</p>
         <pre style="background:#0d1117;color:#e6edf3"><code>python scripts/scaffold-pack.py pack-mobile-flutter</code></pre>
-        <p>Sinh 8 file skeleton. Customize <code>pack.yaml</code> components + keywords, viết <code>constraints.md</code>, thêm rule vào <code>scripts/rules.py</code>.
+        <p>Sinh 4 file manifest-v3. Customize <code>pack.yaml</code> components, keywords + retrieval; viết principles/mental models/standards trong <code>knowledge.md</code>; chỉ thêm rule deterministic cần thiết vào <code>scripts/rules.py</code>.
           Đăng ký vào catalog: edit <code>packs/README.md</code>.</p>
       </div>
     </details>

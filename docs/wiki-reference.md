@@ -70,18 +70,22 @@ Legacy `wiki_root` in `.claude/wiki.json`, `.Codex/wiki.json`, and legacy global
 
 ## Pack-specific Hard Constraints
 
-Active only when the workspace enables that pack:
+Pack rules are active only when the codebase resolves that pack. Do not copy a
+summary list into this reference: it becomes stale and can accidentally loosen
+the canonical rules. Resolve and read, in order:
 
-- **pack-event-driven**: never bypass retry/DLQ, commit Kafka offset before processing, inline MQTT topic, hardcode topic
-- **pack-web-api**: never leak stack trace, miss input validation, expose mutating endpoint without idempotency
-- **pack-frontend-react**: no direct state mutation, no missing alt/key, no effect without cleanup
-- **pack-ai-app**: never log raw prompt, hardcode model ID, omit max_tokens, skip prompt cache
-- **pack-agentic**: no unbounded agent loop, no tool without timeout, no destructive tool without confirm
-- **pack-claude-plugin-dev**: never miss plugin.json manifest, slash command without description, subagent without explicit tools, hardcoded API secret
-- **pack-product**: brief must include Problem/Metric/Acceptance, KR must be measurable, no tech jargon, no implementation dictation, no vague roadmap dates
-- **pack-solo-builder**: tool spec must include Problem/System Map/Tech Stack/Acceptance/Setup, recommend only tech in `recipes/`, plain language with 1-line jargon explain, 1-tool-1-purpose, concrete acceptance
-- **pack-security**: never recommend technique without authorization context, leak credentials in logs, skip threat model on auth/crypto changes
-- **pack-qc**: no untested critical path, no perf regression without budget, no flaky test merged
+1. `packs/{name}/pack.yaml` for scope, audiences, task types and components.
+2. For manifest v3, `knowledge.md#Global Principles` plus matched component
+   sections; for v2, the declared `agents/` compatibility rule files.
+3. For manifest v3, selected `pack.yaml#retrieval` rows; for v2, selected rows
+   in `agents/pipeline/retrieval-map.md`.
+4. `scripts/rules.py` and the version-appropriate canonical knowledge catalog
+   for documented/executable Layer-1 parity.
+
+The canonical catalog, maturity model and selection guide are in
+[`packs/README.md`](../packs/README.md). Validate them with
+`contextd pack-validate --all --format text`; use `contextd explain` to verify
+that a task loads only the intended pack components.
 
 ## Maintaining the Wiki
 
@@ -94,9 +98,9 @@ When code changes, update the wiki of the **active workspace**. Keep both in syn
 | New project service | `{ws}/projects/{project}/services/` + `knowledge-map.md` |
 | Architecture decision | `{ws}/decisions/` (workspace) or `{ws}/projects/{p}/decisions/` (project) |
 | Repeated agent mistake (workspace-local) | `{ws}/agents/constraints.md` + `{ws}/agents/pipeline/validator-rules.md` (prefix `ws-`) |
-| Repeated agent mistake (stack-wide) | `packs/{name}/agents/constraints.md` + validator-rules (prefix `pack-{name}-`) |
+| Repeated agent mistake (stack-wide) | v3 `packs/{name}/knowledge.md` + `scripts/rules.py` when deterministic (v2 constraints/validator compatibility files), prefix `pack-{name}-` |
 | Repeated agent mistake (engine-wide) | `agents/constraints.md` + `agents/pipeline/validator-rules.md` |
-| Onboard new stack | New `packs/{name}/` from `templates/pack.yaml` |
+| Onboard new stack | `python scripts/scaffold-pack.py pack-{name}` → v3 manifest + canonical knowledge |
 | Production incident | `{ws}/runbooks/` |
 | Raw evidence (MCP/API/paste) | `{ws}/evidence/` via `/evidence-{ingest,analyze,qa,apply}`. Solo-builder workspaces auto-use [domain-analysis-prompts.md](../packs/pack-solo-builder/agents/pipeline/domain-analysis-prompts.md) + [qa-batch-non-tech.md](../packs/pack-solo-builder/agents/pipeline/qa-batch-non-tech.md) |
 | Onboard codebase / refresh platform from code | `/code-analyze` → evidence pipeline (`source_type=code`) → CORE-CODE prompts → `/evidence-qa` → `/evidence-apply` |
@@ -128,6 +132,17 @@ Concept files trong workspace theo [OKF v0.2](https://github.com/GoogleCloudPlat
 - Per-claim attribution: footnote `[^id]` trong body, `id` join vào `sources[].id`; `resource` bắt buộc mỗi entry, `id` optional (entry chỉ có `resource`, hoặc id không được cite trong body, đều hợp lệ).
 - Consumers KHÔNG reject unknown keys/types — OKF "tolerate unknown" (lint chỉ warning).
 
+### Synapse metadata
+
+Concept files may add `node_id`, `freshness`, `review_by`, `lifecycle`, and a
+typed `relations` list. `contextd synapse` compiles these fields into a
+workspace-scoped `contextd_synapse.v1` index. Missing fields remain backward
+compatible: path-derived ID, active lifecycle, and unknown freshness.
+
+The generated graph is not canonical storage. Workspace files remain the
+long-term governed knowledge source; task artifacts contain a context
+projection, while session history/checkpoints remain runtime state.
+
 **Enforcement**: `scripts/lint-wiki.py` check frontmatter parseable, `type` non-empty, type ∈ set, `status` ∈ enum, mỗi `sources[]` entry có `resource`, footnote `[^id]` khớp `sources[].id` (id không cite trong body là hợp lệ) — tất cả warning, **exit 0 mặc định** (CI-friendly; `--strict` → exit 2 nếu muốn warnings-as-errors). File ngoài concept (index/config) và `.claude/**` (harness schema riêng) không bị check.
 
 ## Detailed References
@@ -136,11 +151,12 @@ Concept files trong workspace theo [OKF v0.2](https://github.com/GoogleCloudPlat
 |-------|------|
 | Workspaces — mechanism | [workspaces/README.md](../workspaces/README.md) |
 | Packs — catalog + mechanism | [packs/README.md](../packs/README.md) |
-| Coding rules (engine) | [agents/coding-rules.md](../agents/coding-rules.md) (+ `packs/{name}/agents/coding-rules.md`) |
+| Coding rules (engine) | [agents/coding-rules.md](../agents/coding-rules.md) (+ v3 pack `knowledge.md`, v2 compatibility `agents/coding-rules.md`) |
 | Per-workspace pattern lookup | `{ws}/patterns-index.md` |
 | Engine constraints | [agents/constraints.md](../agents/constraints.md) (+ workspace override) |
 | Prompt pipeline design | [agents/pipeline/README.md](../agents/pipeline/README.md) |
 | Context retrieval rules | [agents/pipeline/task-to-docs-map.md](../agents/pipeline/task-to-docs-map.md) |
+| Synapse context management and loading | [docs/synapse-context-management.md](synapse-context-management.md) |
 | Prompt template | [agents/pipeline/prompt-template.md](../agents/pipeline/prompt-template.md) |
 | Validator rules | [agents/pipeline/validator-rules.md](../agents/pipeline/validator-rules.md) (+ workspace override) |
 | Multi-agent pipeline | [agents/pipeline/multi-agent-pipeline.md](../agents/pipeline/multi-agent-pipeline.md) |

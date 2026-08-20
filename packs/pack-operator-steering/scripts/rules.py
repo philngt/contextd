@@ -45,6 +45,37 @@ def _looks_operator_doc(file_path: Path, lines: List[str]) -> bool:
     )
 
 
+def _looks_decision_doc(file_path: Path, lines: List[str]) -> bool:
+    name = file_path.name.lower()
+    if "decision" in name or name.startswith("adr-") or "-adr-" in name:
+        return True
+    for raw in lines[:30]:
+        stripped = raw.strip().lower()
+        if stripped == "type: decision":
+            return True
+        if not stripped.startswith("# "):
+            continue
+        title = stripped[2:].strip()
+        if title in {
+            "decision", "decision note", "decision record",
+            "architecture decision record", "adr", "quyết định",
+        }:
+            return True
+    return False
+
+
+def _looks_wayfinding_doc(file_path: Path, lines: List[str]) -> bool:
+    haystack = (file_path.as_posix() + "\n" + "\n".join(lines[:40])).lower()
+    return any(
+        token in haystack
+        for token in [
+            "wayfinding checkpoint", "operator wayfinding",
+            "steering checkpoint", "orientation checkpoint",
+            "điểm định hướng", "diem dinh huong",
+        ]
+    )
+
+
 def rule_report_missing_evidence(file_path: Path, lines: List[str], ctx: Dict) -> List[Dict]:
     if not _is_md(file_path) or not _looks_operator_doc(file_path, lines):
         return []
@@ -78,8 +109,7 @@ def rule_remediation_missing_verification(file_path: Path, lines: List[str], ctx
 def rule_decision_missing_ledger_fields(file_path: Path, lines: List[str], ctx: Dict) -> List[Dict]:
     if not _is_md(file_path):
         return []
-    haystack = (file_path.as_posix() + "\n" + _text(lines[:80])).lower()
-    if "decision" not in haystack and "adr" not in haystack and "quyết định" not in haystack:
+    if not _looks_decision_doc(file_path, lines):
         return []
     text = _text(lines)
     missing = []
@@ -119,9 +149,36 @@ def rule_handoff_missing_next_action(file_path: Path, lines: List[str], ctx: Dic
     )]
 
 
+def rule_wayfinding_missing_control_fields(file_path: Path, lines: List[str], ctx: Dict) -> List[Dict]:
+    if not _is_md(file_path) or not _looks_wayfinding_doc(file_path, lines):
+        return []
+    text = _text(lines)
+    required = {
+        "current orientation": ["## Current Orientation", "## Định hướng hiện tại"],
+        "primary gap": ["## Primary Gap", "## Gap chính", "## Khoảng trống chính"],
+        "knowledge recovery": ["## Knowledge Recovery", "## Khôi phục kiến thức"],
+        "decision frontier": ["## Decision Frontier", "## Các quyết định đang mở"],
+        "recommended next step": ["## Recommended Next Step", "## Bước tiếp theo đề xuất"],
+        "continue/pause/pivot/stop gate": [
+            "## Continue, Pause, Pivot, Or Stop",
+            "## Tiếp tục, Tạm dừng, Chuyển hướng, Hoặc dừng",
+        ],
+        "operator decision": ["## Operator Decision", "## Quyết định của người dùng"],
+    }
+    missing = [label for label, needles in required.items() if not _has_any(text, needles)]
+    if not missing:
+        return []
+    return [_vio(
+        "pack-operator-steering-wayfinding-missing-control-fields", "error",
+        file_path, 1, lines[0] if lines else "",
+        "Wayfinding checkpoint missing: " + ", ".join(missing) + ".",
+    )]
+
+
 RULES: List = [
     rule_report_missing_evidence,
     rule_remediation_missing_verification,
     rule_decision_missing_ledger_fields,
     rule_handoff_missing_next_action,
+    rule_wayfinding_missing_control_fields,
 ]

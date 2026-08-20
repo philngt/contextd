@@ -1,6 +1,14 @@
 name: pack-ai-app
-version: 1.0.0
+manifest_version: 2
+version: 1.1.0
 description: LLM application patterns — prompt caching, structured output, eval harness, cost tracking, no PII leak
+status: stable
+category: engineering
+reviewed_on: 2026-08-20
+audiences: [engineering, product, security]
+task_types: [implement_feature, fix_bug, design, review]
+scope_includes: [LLM API integration, prompt lifecycle, retrieval augmented generation, embedding search]
+scope_excludes: [model training and fine-tuning, autonomous agent orchestration]
 
 components:
   - llm
@@ -9,10 +17,10 @@ components:
   - embedding
 
 keywords:
-  llm: [llm, anthropic, openai, gemini, claude, gpt, "messages.create", "chat.completions"]
-  prompt: [prompt, system_prompt, "system prompt", "cache_control", template]
-  rag: [rag, retrieval, "vector store", chunk, embedding, retrieve]
-  embedding: [embedding, "vector db", pinecone, qdrant, weaviate, chroma, faiss]
+  llm: ["llm api", "anthropic api", "openai api", "gemini api", "messages.create", "chat.completions"]
+  prompt: ["system prompt", "prompt template", "prompt version", "structured prompt", "cache_control"]
+  rag: [rag, "retrieval augmented generation", "vector store", "chunking strategy", "grounded retrieval"]
+  embedding: ["embedding model", "vector database", pinecone, qdrant, weaviate, chroma, faiss]
 
 files:
   constraints: agents/constraints.md

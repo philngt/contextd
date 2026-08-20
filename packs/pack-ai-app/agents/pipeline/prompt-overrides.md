@@ -4,14 +4,15 @@
 
 ```
 ### LLM App (pack-ai-app)
-- Model ID read from config (not hardcoded)
+- Provider/model snapshot and endpoint policy read from versioned config
 - Prompt template has explicit version/name
-- max_tokens set explicitly per LLM call
-- Long static system prompt uses cache_control
+- Provider-supported output budget field set intentionally and covered by compatibility tests
+- Prompt caching is provider/model/endpoint aware; only stable eligible prefixes are cached when measured useful
 - No PII / raw user prompt in logs (metadata only)
-- Structured output via schema (tool_choice / response_format)
-- RAG response cites source chunk/doc
-- Token usage logged per call (input, output, cache_read)
+- Structured output uses a provider-supported schema path with refusal/parse/fallback tests
+- Grounded response cites source chunk/doc and exposes insufficient-evidence behavior
+- Usage/cost telemetry maps provider fields into a stable internal schema, including cache fields when available
+- Retry handles ambiguous completion/idempotency/billing and respects provider policy
 ```
 
 ## Common Pitfalls (Top 10)

@@ -10,11 +10,10 @@ from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
-sys.path.insert(0, str(SCRIPT_DIR / "lib"))
 
 import cmd_resolve  # noqa: E402
-import task_context_engine  # noqa: E402
-from stdio import configure_stdio  # noqa: E402
+from lib import task_context_engine  # noqa: E402
+from lib.stdio import configure_stdio  # noqa: E402
 
 
 def run(contract_id: str, workspace: str | None = None,

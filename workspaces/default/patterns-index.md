@@ -14,6 +14,7 @@ Quick lookup table for AI agents. Find the pattern name, follow the link, read b
 | `evidence-state-machine` | Track evidence lifecycle (ingest → analyze → qa → apply) qua 7-state DAG. Storage: `{ws}/evidence/_index.md`. PAIR with `evidence-state-machine-transitions` contract. | [platform/patterns/evidence-state-machine.md](platform/patterns/evidence-state-machine.md) |
 | `redaction-post-pass` | Sau build output — scan secrets (password/token/api-key/email/URL-with-creds) → STOP-on-secret. Companion với `secrets-blocklist-gate`. | [platform/patterns/redaction-post-pass.md](platform/patterns/redaction-post-pass.md) |
 | `secrets-blocklist-gate` | Pre-read config files — 5-tier defense (hard blocklist + AskUser gate + redaction + log + workspace override). Default block-all. | [platform/patterns/secrets-blocklist-gate.md](platform/patterns/secrets-blocklist-gate.md) |
+| `synapse-context-projection` | Build lifecycle-aware nodes/typed edges, retain stale knowledge, and compile task context as a deterministic graph projection. PAIR with `synapse-node-edge-schema`. | [platform/patterns/synapse-context-projection.md](platform/patterns/synapse-context-projection.md) |
 | `variant-discriminated-dispatcher` | (v1, single-instance) Command/pipeline phục vụ nhiều variants — discriminate qua field `variant`, dispatch internally. Hiện áp dụng cho `/code-analyze` `code_variant ∈ {code, agentic-engine}`. | [platform/patterns/variant-discriminated-dispatcher.md](platform/patterns/variant-discriminated-dispatcher.md) |
 | `workspace-resolve-step0` | Bước 0 universal cho mọi context-aware command — resolve `.contextd/config.json` (legacy adapters supported) → set `{ws}` → validate workspace.md. Engine-level invariant. | [platform/patterns/workspace-resolve-step0.md](platform/patterns/workspace-resolve-step0.md) |
 
@@ -29,6 +30,7 @@ Quick lookup table for AI agents. Find the pattern name, follow the link, read b
 | `slash-command-naming` | Naming invariant cho slash commands: kebab-case + lowercase + hyphens. Recommendation (non-binding): subject-verb cho commands mới. | [platform/contracts/slash-command-naming.md](platform/contracts/slash-command-naming.md) |
 | `source-yaml-schema` | Required + conditional fields cho `source.yaml`. Workspace lock invariant via `workspace_at_ingest`. | [platform/contracts/source-yaml-schema.md](platform/contracts/source-yaml-schema.md) |
 | `sub-agent-frontmatter-schema` | Required frontmatter (name, description, tools, model) cho `.claude/agents/*.md`. Convention (non-binding): description chứa `DÙNG KHI` + `KHÔNG DÙNG`. | [platform/contracts/sub-agent-frontmatter-schema.md](platform/contracts/sub-agent-frontmatter-schema.md) |
+| `synapse-node-edge-schema` | Deterministic node/edge, lifecycle/freshness, workspace isolation, and task context projection invariants. PAIR with `synapse-context-projection`. | [platform/contracts/synapse-node-edge-schema.md](platform/contracts/synapse-node-edge-schema.md) |
 
 ## Domain Workflows
 

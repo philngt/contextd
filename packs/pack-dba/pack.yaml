@@ -1,6 +1,14 @@
 name: pack-dba
-version: 0.1.0
+manifest_version: 2
+version: 0.2.0
 description: Database administration pack — schema change safety, query hygiene, backup/restore readiness, and operational guardrails.
+status: beta
+category: operations
+reviewed_on: 2026-08-20
+audiences: [ops, engineering, security]
+task_types: [implement_feature, fix_bug, design, incident, review]
+scope_includes: [database schema changes, query plan analysis, backup restore verification, database operations]
+scope_excludes: [application persistence architecture, generic infrastructure deployment]
 
 components:
   - schema-change-management

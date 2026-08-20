@@ -6,14 +6,14 @@ Anti-pattern lặp lại với React/Next.js. Additive trên [constraints.md](co
 - **NG**: `state.items.push(x); setState(state)`.
 - **OK**: `setState({...state, items: [...state.items, x]})` hoặc immer.
 - **Why**: React so sánh reference → không re-render; bug khó tìm.
-- **Detect**: Layer-1 `pack-frontend-react-state-mutation` (new) — regex `\.push\(|\.pop\(|\.splice\(` trên state ref.
+- **Detect**: Layer-1 `pack-frontend-react-direct-state-mutation` (heuristic).
 - **Severity**: error
 
 ## P02 — useEffect thiếu cleanup
 - **NG**: `useEffect(() => { setInterval(...) }, [])` không clear.
 - **OK**: return cleanup `() => clearInterval(id)`.
 - **Why**: memory leak, callback chạy sau unmount → set state on unmounted.
-- **Detect**: Layer-2 — effect có `setInterval|addEventListener|subscribe` mà không có return.
+- **Detect**: Layer-1 `pack-frontend-react-effect-no-cleanup` (heuristic) + Effect lifecycle test.
 - **Severity**: error
 
 ## P03 — Dependency array sai/thiếu
@@ -27,7 +27,7 @@ Anti-pattern lặp lại với React/Next.js. Additive trên [constraints.md](co
 - **NG**: `items.map((x, i) => <Row key={i} />)` khi list có reorder/insert/delete.
 - **OK**: `key={x.id}` stable.
 - **Why**: re-mount sai, mất focus/state input.
-- **Detect**: Layer-1 `pack-frontend-react-key-index` (new) — regex `key=\{(idx|index|i)\}`.
+- **Detect**: Layer-1 `pack-frontend-react-list-no-key`; index-key correctness vẫn cần Layer-2 review.
 - **Severity**: warn
 
 ## P05 — Fetch trong render body
@@ -41,21 +41,21 @@ Anti-pattern lặp lại với React/Next.js. Additive trên [constraints.md](co
 - **NG**: `<img src=... />` không `alt`; button bằng `<div onClick>`.
 - **OK**: `<img alt>`, `<button>`, `aria-label`.
 - **Why**: screen reader broken, lint fail, lawsuit risk.
-- **Detect**: Layer-1 `pack-frontend-react-missing-alt` (new) — regex `<img(?![^>]*\balt=)`.
+- **Detect**: Layer-1 `pack-frontend-react-img-no-alt` + accessibility tooling.
 - **Severity**: warn
 
-## P07 — Prop drilling > 3-4 levels
-- **NG**: pass `user` qua 5 component trung gian.
-- **OK**: Context, hoặc state management (Zustand/Redux/Jotai).
-- **Why**: refactor đau, coupling cao.
-- **Detect**: Layer-2 review.
+## P07 — State ownership không rõ
+- **NG**: pass mutable state qua nhiều boundary không liên quan, hoặc đưa mọi state vào global store.
+- **OK**: colocate state với owner; dùng composition/context/store khi nhiều consumer thực sự cần cùng lifecycle.
+- **Why**: coupling và rerender khó đoán; global state thừa cũng tăng complexity.
+- **Detect**: Layer-2 review ownership + React Profiler khi có performance claim.
 - **Severity**: info
 
-## P08 — Không memo cho expensive child
-- **NG**: parent re-render mỗi keystroke → render lại table 10k row.
-- **OK**: `React.memo`, `useMemo`, `useCallback` cho prop fn.
-- **Why**: jank, UX kém.
-- **Detect**: Layer-2 review React Profiler trace.
+## P08 — Memoization không có evidence
+- **NG**: rải `React.memo`, `useMemo`, `useCallback` theo checklist hoặc bỏ qua jank đã được profiler chứng minh.
+- **OK**: profile interaction; sửa ownership/work split trước, memoize đúng hotspot/identity contract, đo lại.
+- **Why**: memoization có maintenance cost và không thay thế semantic correctness.
+- **Detect**: Layer-2 review kèm React Profiler before/after.
 - **Severity**: warn
 
 ## P09 — useState cho derived value
@@ -76,12 +76,12 @@ Anti-pattern lặp lại với React/Next.js. Additive trên [constraints.md](co
 
 | Pitfall | Layer-1 rule ID | Layer-2 self-check |
 |---|---|---|
-| P01 mutation | `pack-frontend-react-state-mutation` (new) | ✓ |
-| P02 cleanup | — | ✓ |
+| P01 mutation | `pack-frontend-react-direct-state-mutation` | ✓ |
+| P02 cleanup | `pack-frontend-react-effect-no-cleanup` | ✓ |
 | P03 deps | — (ESLint) | ✓ |
-| P04 key-index | `pack-frontend-react-key-index` (new) | ✓ |
+| P04 key-index | `pack-frontend-react-list-no-key` (partial) | ✓ |
 | P05 fetch-render | — | ✓ |
-| P06 a11y-alt | `pack-frontend-react-missing-alt` (new) | ✓ |
+| P06 a11y-alt | `pack-frontend-react-img-no-alt` | ✓ |
 | P07 drilling | — | ✓ |
 | P08 memo | — | ✓ |
 | P09 derived-state | — | ✓ |

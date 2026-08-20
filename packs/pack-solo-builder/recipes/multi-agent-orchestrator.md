@@ -19,13 +19,13 @@ Không phải:
 
 | Component | Chọn | Note |
 |-----------|------|------|
-| Language | Python 3.11+ | Async/subprocess sạch, dễ đọc cho non-tech |
+| Language | Workspace-supported Python, pinned | Async/subprocess support phải test trên target OS |
 | Async runtime | `asyncio` (built-in) | Chạy nhiều CLI song song không block |
 | Subprocess | `asyncio.create_subprocess_exec` | Capture stdout/stderr từng agent, control process group |
 | **Agent adapter layer** | Python class per vendor (`ClaudeAdapter` / `GeminiAdapter` / `CodexAdapter`) | Isolate vendor CLI drift (flags/output/auth khác nhau); FORCE non-interactive flag |
 | **Execution strategy** | `ExecutionStrategy` interface (`ParallelStrategy` V1) | Stub sẵn pipeline/judge/fallback/consensus cho V2 — không refactor core |
 | **Process group control** | `start_new_session=True` (POSIX) + `CREATE_NEW_PROCESS_GROUP` (Windows) | Kill cả process tree, không leak subprocess |
-| **Preflight checker** | `AgentAdapter.health_check()` chạy `--version` (timeout 5s) | CLI chưa cài/chưa auth → `status: agent_unavailable`, KHÔNG crash batch |
+| **Preflight checker** | `AgentAdapter.health_check()` chạy version/help probe với configured deadline | Xác nhận binary/capability; auth cần safe vendor-specific probe riêng |
 | Routing config | YAML (`pyyaml`) | User edit file thêm agent / template / capability |
 | CLI entrypoint | `typer` | Tự sinh help/autocomplete, ít boilerplate |
 | Terminal UI | `rich.Console` (color only, KHÔNG Live/Panel) | Tránh rabbit hole stdout flush; output text đơn giản `[1/N] {agent} running...` |
@@ -133,11 +133,10 @@ class AgentResult:
 class AgentAdapter(ABC):
     """Cô lập 1 vendor CLI. Concrete class PHẢI:
     - Set non-interactive flag (vd `-p`, `--prompt`, `exec`, `--no-tty`).
-    - Set `CLI_VERSION_TESTED = "<vendor> <major.minor>"` để detect drift.
-    - Implement `health_check()` (probe `--version` hoặc tương đương).
+    - Record resolved CLI version + invocation contract trong config/report để detect drift.
+    - Implement `health_check()` (version/help probe; auth/capability probe riêng nếu vendor hỗ trợ safe no-op).
     - Implement `build_cmd(prompt)` trả về list[str] sẵn sàng `create_subprocess_exec`.
     """
-    CLI_VERSION_TESTED: str = ""   # override per subclass; major diff → warning
     name: str
     cmd_base: list[str]
     template: Optional[str] = None
@@ -235,21 +234,18 @@ def _kill_process_tree(proc: asyncio.subprocess.Process):
 # Concrete adapters — non-interactive flag bắt buộc.
 class ClaudeAdapter(AgentAdapter):
     """Claude Code CLI. Non-interactive: `claude -p <prompt>` (print mode, không TUI)."""
-    CLI_VERSION_TESTED = "claude-code 1.0"
 
     def build_cmd(self, prompt: str) -> list[str]:
         return [*self.cmd_base, prompt]
 
 class GeminiAdapter(AgentAdapter):
     """Gemini CLI. Non-interactive: `gemini --prompt <prompt>`."""
-    CLI_VERSION_TESTED = "gemini 0.1"
 
     def build_cmd(self, prompt: str) -> list[str]:
         return [*self.cmd_base, prompt]
 
 class CodexAdapter(AgentAdapter):
     """OpenAI Codex CLI. Non-interactive: `codex exec <prompt>`."""
-    CLI_VERSION_TESTED = "codex 0.1"
 
     def build_cmd(self, prompt: str) -> list[str]:
         return [*self.cmd_base, prompt]
@@ -281,7 +277,7 @@ class ParallelStrategy(ExecutionStrategy):
             else:
                 results.append(AgentResult(
                     adapter.name, "agent_unavailable", None, "",
-                    "preflight failed: CLI missing or not authed", 0.0, adapter.cmd_base,
+                    "version/help preflight failed; authentication was not evaluated", 0.0, adapter.cmd_base,
                 ))
         ran = await asyncio.gather(*[a.run(prompt, timeout) for a in to_run])
         return results + list(ran)
@@ -471,7 +467,8 @@ python orchestrator.py run "review file auth.py có lỗ hổng nào không"
 - **LUÔN ghi JSON song song markdown** — markdown cho người đọc, JSON cho diff/benchmark/eval sau.
 - **LUÔN hash prompt** vào filename (`sha256[:12]`) — dedupe + truy ngược cùng 1 prompt qua các lần chạy.
 - **LUÔN decode stdout/stderr với `errors="replace"`** — Windows console hay cp1252, prompt có emoji sẽ crash nếu không.
-- **LUÔN preflight `--version`** trước khi spawn — CLI chưa cài/chưa auth → mark `agent_unavailable`, không crash batch.
+- Preflight version/help một lần mỗi run và record resolved version; đây không chứng minh auth. Dùng safe vendor-specific capability/auth probe khi có, rồi mark reason cụ thể (`missing`, `version_mismatch`, `auth_unavailable`).
+- Các flag trong adapter là example reviewed with a pinned CLI only; verify `--help`/non-interactive behavior and update golden fixtures before changing version.
 - **LUÔN `pathlib.Path`** — không hardcode `/` hay `\` trong code.
 - **Capability metadata** chuẩn bị sẵn dù V1 routing chỉ keyword — tránh schema migration khi V2 thêm LLM classifier.
 - **KHÔNG paste secret vào prompt** — prompt được log vào report markdown + JSON.

@@ -58,6 +58,12 @@ You do not invent architecture. You follow established contracts, patterns, and 
 
 ---
 
+## Pack Guidance (active, component-scoped)
+
+{{pack_guidance}}
+
+---
+
 # INSTRUCTIONS
 
 1. **Analyze** the task — restate it in your own words to confirm understanding
@@ -74,18 +80,9 @@ Constraints to check (engine baseline):
 - No new states or transitions beyond the domain workflow
 - No knowledge gap filled with guesses
 
-{{pack_self_check_sections}}
-<!-- One block per active pack. Loader appends each pack's prompt-overrides.md
-     "Self-Check Constraints" section here. Example for pack-event-driven:
-       ### Kafka
-       - Offset committed only after processing completes
-       - DLQ path implemented
-       - No hardcoded topic names
-       ### MQTT
-       - Topic format matches contract
-       - Only registered types used
-       - No inline topic construction
--->
+Apply the stable standards, failure signals, evidence requirements, and stop
+conditions in `{{pack_guidance}}`. Manifest-v3 guidance is already sliced to
+Global Principles plus matched components; do not load the rest of a pack.
 
 
 ---
@@ -134,6 +131,7 @@ Trace emit failure không block output. Nếu fail, append 1 dòng `# trace emit
 | `{{patterns}}` | Sliced pattern sections | Context Filter output |
 | `{{project_docs}}` | Sliced project service docs | Context Filter output |
 | `{{domain_docs}}` | Sliced domain workflow sections | Context Filter output |
+| `{{pack_guidance}}` | Sliced active-pack static context | Context Filter output |
 
 ## Token Budget Guidance
 
@@ -145,7 +143,11 @@ Trace emit failure không block output. Nếu fail, append 1 dòng `# trace emit
 | Patterns | ~800 |
 | Project docs | ~500 |
 | Domain docs | ~300 |
+| Pack guidance | task-dependent; enforced by static/total budget reporting |
 | Instructions + format | ~300 |
-| **Total** | **~2,700** |
+| **Baseline before pack guidance** | **~2,700** |
 
-Keeps the prompt well within context limits while leaving room for the agent's output.
+Use `budget_report.estimated_tokens_total` for the assembled input. Static pack
+guidance is part of that total and must not be treated as free context. Legacy
+v2 prompt-override files are migration documentation, not an extra implicit
+prompt injection beyond the compiled artifact.

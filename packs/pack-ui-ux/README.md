@@ -6,7 +6,7 @@ UI/UX pack cho workspace có thiết kế sản phẩm: design system, accessibi
 
 Enable khi workspace cần:
 - Chuẩn hóa design token (color, typography, spacing, motion)
-- Đảm bảo accessibility baseline WCAG 2.1 AA
+- Đảm bảo accessibility baseline WCAG 2.2 AA
 - Document user flows / screen flows cho feature
 - Thống nhất UX writing (microcopy, error messages, tone of voice)
 
@@ -42,7 +42,7 @@ Enable khi workspace cần:
 ## Components declared
 
 - `design-system` — component catalog, design token, figma/storybook integration
-- `accessibility` — WCAG 2.1 AA compliance, ARIA, keyboard navigation
+- `accessibility` — WCAG 2.2 AA compliance, ARIA, keyboard navigation
 - `user-flows` — screen flows, interaction spec, happy path + edge cases
 - `ux-writing` — microcopy, tone of voice, error message guidelines
 
@@ -63,3 +63,22 @@ Enable khi workspace cần:
 - Pack mechanism: [`packs/README.md`](../README.md)
 - Cross-cutting principles: [`agents/cross-cutting-principles.md`](../../agents/cross-cutting-principles.md)
 - Report injection: [`agents/pipeline/report-prompts.md`](../../agents/pipeline/report-prompts.md) — "pack-ui-ux → Architecture"
+
+## When not to enable
+
+- Task chỉ implement React component theo design đã chốt; dùng `pack-frontend-react`.
+- Product strategy, roadmap hoặc persona research; dùng `pack-product`/`pack-ba`.
+
+## Retrieval behavior
+
+Design system, accessibility, user flow và UX writing route độc lập. Accessibility baseline dùng WCAG 2.2; workspace có thể siết thêm nhưng không hạ chuẩn bằng override.
+
+## Verification
+
+```bash
+contextd pack-validate --pack pack-ui-ux --format text
+contextd context "Review keyboard flow and accessible authentication" --preview --format json
+python scripts/validate.py --file <design-fixture> --workspace <workspace-with-pack>
+```
+
+Standards baseline được review ngày `2026-08-20`: [W3C WCAG 2.2 Recommendation](https://www.w3.org/TR/WCAG22/). Workspace có thể thêm platform-specific guidance nhưng không được hạ requirement đã áp dụng.

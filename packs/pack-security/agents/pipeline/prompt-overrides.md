@@ -7,18 +7,18 @@ Pack này gộp pentest workflow — self-check chia thành Security Engineering
 
 ```
 ### Threat Model & AuthN-Z (pack-security)
-- Feature mới có abuse case + mitigation (tối thiểu 3 case)
+- Feature mới cover credible abuse cases theo asset/actor/trust boundary
 - Trust boundary vẽ rõ, input validate ở mỗi boundary (defense in depth)
-- Authz check ở middleware/policy engine, không inline if-role
-- JWT verify signature + iss + aud + exp; không alg=none / verify=False
-- Password hash bằng bcrypt/argon2/scrypt; không MD5/SHA-1/SHA-256 plain
+- Authz decision centralized/testable at every protected object/action boundary; no scattered role-name checks
+- Token validation follows pinned issuer/profile: algorithm/key, iss, aud/resource, exp/nbf, type and revocation/session rules
+- Password storage uses workspace-approved current password-hashing profile with parameters/rehash policy; never fast general-purpose hash
 
 ### Secret & Crypto (pack-security)
 - Không secret literal trong config/example/test fixture
-- Secret từ secret manager (Vault/AWS SM/sealed-secret)
+- Secret từ workspace-approved managed mechanism; prefer short-lived/dynamic credentials where supported
 - Không MD5/SHA-1/DES/RC4/ECB cho auth/integrity
 - Random dùng crypto-secure source (secrets/crypto.randomBytes)
-- TLS ≥ 1.2 (prefer 1.3); cipher suite từ allow-list current
+- TLS/protocol/cipher baseline comes from current workspace/platform policy and target compatibility evidence
 
 ### Logging & Data Handling (pack-security)
 - Logging guidance có redaction per-field (PII, auth, payment)
@@ -28,7 +28,7 @@ Pack này gộp pentest workflow — self-check chia thành Security Engineering
 
 ### Pentest Workflow (pack-security)
 - Engagement có RoE ký bởi asset owner
-- Finding có evidence reproducible + risk rating (CVSS 3.1)
+- Finding có evidence reproducible + CVSS v4.0 vector/score hoặc approved current framework
 - Finding có owner + ETA + verification step (retest)
 - Out-of-scope tag rõ; PII victim redact trong report
 ```
@@ -39,16 +39,16 @@ Pack này gộp pentest workflow — self-check chia thành Security Engineering
 ### Security Engineering
 - Threat model có abuse case, không chỉ happy path
 - Authz centralized (middleware), không inline scattered
-- Secret từ vault, rotation cadence ≤ 90 days
-- Crypto: SHA-256+ / bcrypt / argon2 / AES-GCM
+- Secret từ managed store; prefer short-lived/dynamic, lifecycle cadence theo risk policy
+- Crypto primitive/mode/parameters come from current approved profile for the exact purpose; password hashing, signatures, encryption and checksums are not interchangeable
 - Logging có redactor + structured schema
-- IR runbook tồn tại trong {ws}/runbooks/
+- Incident/escalation path exists for the controls/data in scope, or missing runbook is an explicit gap
 
 ### Pentest
 - Finding format: Context → Repro → Impact → CVSS → Remediation → Verify
 - Evidence redacted PII, không raw dump vào repo
-- Risk rating dùng CVSS 3.1, không "high/medium" mơ hồ
-- Remediation 2-tier (short/long-term) + retest schedule
+- Risk rating có vector/rationale + local impact, không "high/medium" mơ hồ
+- Remediation has owner, priority/rationale, target date or policy exception, and verification/retest plan
 - Report có exec summary + methodology + coverage matrix
 ```
 

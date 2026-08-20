@@ -15,6 +15,8 @@
     "referenced_docs",
     "gaps",
     "warnings",
+    "synapse",
+    "context_projection",
     "contextPack",
     "retrieval_policy",
     "source_hashes"
@@ -110,6 +112,17 @@
           "source_hash": {
             "type": "string",
             "pattern": "^[a-f0-9]{64}$"
+          },
+          "synapse": {
+            "$ref": "#/definitions/synapseState"
+          },
+          "synapse_expansion": {
+            "type": "object",
+            "properties": {
+              "reason": { "const": "active_replacement" },
+              "replaces": { "type": "string" }
+            },
+            "additionalProperties": false
           }
         },
         "additionalProperties": true
@@ -117,7 +130,7 @@
     },
     "static_context": {
       "type": "array",
-      "description": "Deterministic non-volatile sources materialized into context packs, such as workspace profile, engine guidance, and active pack rules.",
+      "description": "Deterministic non-volatile sources materialized into context packs, including workspace profile/overrides, engine guidance, and active pack component guidance.",
       "items": {
         "type": "object",
         "required": ["category", "path", "sections", "content", "source_hash"],
@@ -132,7 +145,8 @@
           "source_hash": {
             "type": "string",
             "pattern": "^[a-f0-9]{64}$"
-          }
+          },
+          "synapse": { "$ref": "#/definitions/synapseState" }
         },
         "additionalProperties": true
       }
@@ -153,6 +167,62 @@
     "warnings": {
       "type": "array",
       "items": { "type": "string" }
+    },
+    "synapse": {
+      "type": "object",
+      "required": [
+        "artifact_type", "version", "policy_version", "synapse_hash",
+        "as_of", "ref", "status", "summary"
+      ],
+      "properties": {
+        "artifact_type": { "const": "contextd_synapse_ref.v1" },
+        "version": { "const": "1" },
+        "policy_version": { "const": "synapse-lifecycle.v1" },
+        "synapse_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "as_of": { "type": "string", "format": "date" },
+        "ref": { "type": ["string", "null"] },
+        "status": { "enum": ["not_materialized", "materialized", "drifted"] },
+        "summary": { "type": "object", "additionalProperties": true }
+      },
+      "additionalProperties": false
+    },
+    "context_projection": {
+      "type": "object",
+      "required": [
+        "artifact_type", "version", "memory_class", "source_synapse_hash",
+        "policy_version", "selected_node_ids", "selected_states", "edges"
+      ],
+      "properties": {
+        "artifact_type": { "const": "contextd_context_projection.v1" },
+        "version": { "const": "1" },
+        "memory_class": { "const": "context" },
+        "source_synapse_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "policy_version": { "const": "synapse-lifecycle.v1" },
+        "selected_node_ids": {
+          "type": "array",
+          "items": { "type": "string" },
+          "uniqueItems": true
+        },
+        "selected_states": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/synapseState" }
+        },
+        "edges": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "type", "source", "target"],
+            "properties": {
+              "id": { "type": "string" },
+              "type": { "type": "string" },
+              "source": { "type": "string" },
+              "target": { "type": "string" }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
     },
     "contextPack": {
       "type": "object",
@@ -199,21 +269,48 @@
           "items": { "type": "string" }
         },
         "max_docs": { "type": "integer" },
-        "rag_policy": { "type": "string" }
+        "rag_policy": { "type": "string" },
+        "lifecycle_policy": {
+          "type": "object",
+          "required": ["version", "score_adjustments", "replacement_traversal_depth"],
+          "properties": {
+            "version": { "const": "synapse-lifecycle.v1" },
+            "score_adjustments": {
+              "type": "object",
+              "additionalProperties": { "type": "integer" }
+            },
+            "replacement_traversal_depth": { "const": 1 }
+          },
+          "additionalProperties": false
+        }
       },
       "additionalProperties": true
     },
     "budget_report": {
       "type": "object",
-      "description": "Deterministic, model-neutral budget estimate for selected context.",
+      "description": "Deterministic, model-neutral budget estimate for referenced, static, and deduplicated total context.",
       "properties": {
         "estimator": { "type": "string" },
         "max_docs": { "type": "integer" },
         "considered_docs": { "type": "integer" },
         "selected_docs": { "type": "integer" },
+        "static_docs": { "type": "integer" },
+        "compiled_docs": { "type": "integer" },
+        "deduplicated_overlap_docs": { "type": "integer" },
         "dropped_docs": { "type": "integer" },
         "estimated_tokens_selected": { "type": "integer" },
+        "estimated_tokens_referenced": { "type": "integer" },
+        "estimated_tokens_static": { "type": "integer" },
+        "estimated_tokens_total": { "type": "integer" },
         "estimated_tokens_by_category": {
+          "type": "object",
+          "additionalProperties": { "type": "integer" }
+        },
+        "estimated_tokens_static_by_category": {
+          "type": "object",
+          "additionalProperties": { "type": "integer" }
+        },
+        "estimated_tokens_total_by_category": {
           "type": "object",
           "additionalProperties": { "type": "integer" }
         },
@@ -274,6 +371,22 @@
     "materialized": {
       "type": "object",
       "additionalProperties": true
+    }
+  },
+  "definitions": {
+    "synapseState": {
+      "type": "object",
+      "required": [
+        "node_id", "memory_class", "lifecycle", "freshness", "review_by"
+      ],
+      "properties": {
+        "node_id": { "type": "string", "minLength": 1 },
+        "memory_class": { "const": "long_term" },
+        "lifecycle": { "enum": ["draft", "active", "deprecated", "superseded"] },
+        "freshness": { "enum": ["fresh", "stale", "unknown"] },
+        "review_by": { "type": ["string", "null"], "format": "date" }
+      },
+      "additionalProperties": false
     }
   },
   "additionalProperties": true

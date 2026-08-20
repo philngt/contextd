@@ -18,9 +18,9 @@ Không phải:
 
 | Component | Chọn | Note |
 |-----------|------|------|
-| Language | Python 3.11+ | |
-| GUI library | `tkinter` (built-in) hoặc `PySimpleGUI` | tkinter đủ; PySimpleGUI wrap tkinter cho code ngắn hơn |
-| Alternative GUI | `PyWebView` | Wrap web app thành desktop window — dùng nếu UI cần đẹp |
+| Language | Workspace-supported Python, pinned | Verify Tcl/Tk + packaging trên từng target OS |
+| GUI library | `tkinter` baseline | Standard Python interface to Tcl/Tk; ít dependency hơn cho form nhỏ |
+| Optional GUI layer | `PySimpleGUI` hoặc `PyWebView` | Chỉ chọn sau khi review license/support/version và UI requirement |
 | Packaging | `PyInstaller` | Build `.exe` / binary để click chạy không cần Python |
 
 ### Linux/macOS native
@@ -29,7 +29,8 @@ Không phải:
 python3 -m venv .venv
 source .venv/bin/activate
 # tkinter built-in (Linux có thể cần): sudo apt install python3-tk
-pip install PySimpleGUI    # optional, cho code ngắn hơn
+python -m tkinter          # verify Tcl/Tk runtime mở được window
+# optional dependency phải pin trong requirements/lock file
 python tool.py
 ```
 
@@ -38,7 +39,7 @@ python tool.py
 ```powershell
 python -m venv .venv
 .venv\Scripts\Activate.ps1
-pip install PySimpleGUI    # optional
+python -m tkinter          # verify Tcl/Tk runtime
 python tool.py
 ```
 
@@ -56,22 +57,22 @@ pyinstaller --onefile --windowed tool.py
 # Output: dist/tool.exe (Windows) hoặc dist/tool (Linux/macOS)
 ```
 
-User chỉ cần double-click file `.exe`, không cần cài Python.
+Build artifact phải tạo/test riêng trên từng target OS/architecture; đừng giả định một binary cross-compile chạy mọi nơi.
 
 ## Trade-offs
 
-**Vì sao tkinter / PySimpleGUI**:
-- Built-in Python (tkinter) — không cần install gì thêm
-- Code ngắn cho form đơn giản
-- Cross-platform (Linux/macOS/Windows) cùng 1 file Python
+**Vì sao tkinter baseline**:
+- Python distribution thường cung cấp interface Tcl/Tk, nhưng setup phải verify bằng `python -m tkinter` trên target.
+- Phù hợp form/event flow nhỏ và tránh thêm web runtime.
+- Source có thể dùng chung, nhưng packaging/UI behavior phải test riêng trên từng OS.
 
 **Vì sao KHÔNG**:
-- **PyQt / PySide**: tốt hơn UI nhưng license phức tạp, học mất tuần.
-- **Electron**: cần Node + JS, output app 100MB+.
-- **Streamlit**: web app, mở browser — nếu user OK thì Streamlit dễ hơn nhiều, dùng cho cả share team.
-- **GTK**: setup khó trên Windows.
+- **PySide/Qt**: hợp UI nhiều screen/widget hoặc accessibility/native behavior cao hơn; thêm dependency, packaging và license review.
+- **Electron/webview**: hợp khi team đã sở hữu web stack; thêm runtime/distribution surface.
+- **Streamlit**: hợp browser workflow và sharing; không phải desktop-native UX.
+- **GTK/other native toolkit**: chọn theo target OS/team support, không theo recipe default.
 
-## Skeleton — PySimpleGUI
+## Optional skeleton — PySimpleGUI (pin/review dependency first)
 
 ```python
 # tool.py — File converter GUI
@@ -155,11 +156,13 @@ root.mainloop()
 ✅ **Match recipe này KHI**:
 - Dùng cá nhân (1 người, 1 máy)
 - User refuse mở terminal/browser
-- Form đơn giản (≤ 5 button, ≤ 10 input fields)
+- Form/event/state đủ nhỏ để một window hoặc vài dialog vẫn dễ hiểu/test
 - Output text/file đủ — không cần chart phức tạp
 
 ❌ **KHÔNG match KHI**:
 - Cần share team → `team-shared-web-tool`
 - UI cần đẹp / phức tạp → cân nhắc PyWebView hoặc chuyển web app
-- Cần cài trên 10+ máy → Streamlit + Docker dễ deploy hơn
+- Distribution/updates trên nhiều máy cần installer/update/signing plan; cân nhắc web deployment nếu nó giảm vận hành
 - User OK với browser → Streamlit dễ build hơn nhiều
+
+Baseline review `2026-08-20`: [Python tkinter documentation](https://docs.python.org/3/library/tkinter.html) và [PySimpleGUI project status](https://docs.pysimplegui.com/FAQ/). Nếu chọn optional wrapper, pin release đã test và re-check support/license trước build.

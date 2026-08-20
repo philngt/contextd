@@ -17,6 +17,7 @@ Fields:
 - `id`: stable fixture id
 - `task`: task prompt to classify and retrieve context for
 - `workspace`: optional workspace override
+- `as_of`: required ISO evaluation date for deterministic lifecycle/freshness
 - `packs`: optional pack override for this fixture
 - `expected_docs`: path globs that must be selected
 - `expected_categories`: categories that must appear
@@ -29,9 +30,14 @@ Fields:
 ```bash
 contextd eval --golden --workspace default --format json
 contextd eval --golden --workspace default --format text --output .contextd/runs/eval.txt
+contextd eval --golden --workspace default --as-of 2026-08-20 --format json
 ```
 
 Eval builds each task context with materialization disabled, runs policy checks through the normal artifact path, then emits `contextd_evaluation_report.v1`.
+
+Each fixture should pin `as_of`. `--as-of` is a migration fallback for older
+fixtures that do not yet contain the field. An invalid or missing effective
+date is a load error rather than silently using the wall-clock date.
 
 Result files are runtime artifacts. Keep them under `.contextd/runs/` or another ignored path, not in workspace knowledge.
 

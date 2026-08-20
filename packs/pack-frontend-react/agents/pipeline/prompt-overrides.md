@@ -9,8 +9,10 @@
 - All effects with subscription/listener/timer have cleanup
 - All <img> have alt attribute, interactive elements have accessible label
 - List items have stable key (not array index unless list is immutable)
-- Server vs Client boundary respected (Next.js: "use client" only when needed)
-- No expensive computation in render body without useMemo
+- Server/client/rendering boundary follows pinned framework/router; `use client` guidance only when that runtime supports it
+- Memoization follows profiler/identity contract and compiler/toolchain behavior; `useMemo` is not a semantic requirement
+- Effects synchronize external systems only; dependencies include reactive values and setup/cleanup tolerates remount checks
+- Reachable loading/error/empty/stale states and recovery behavior follow data contract
 ```
 
 ## Common Pitfalls (Top 10)

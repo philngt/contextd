@@ -1,40 +1,42 @@
 # pack-agentic — Constraints
 
-## Agent Loop Safety
+## Agent Loop Safety (`pack-agentic-loop-safety`)
 
-- **Max steps bounded** — every autonomous loop has an explicit step limit (vd `MAX_STEPS = 50`). Khi đạt limit → escalate hoặc terminate, KHÔNG tight-loop forever.
+- **Loop budget bounded** — every autonomous loop has an explicit step/time/token budget chosen from task risk and runtime SLO. Khi chạm bất kỳ budget nào → checkpoint, escalate hoặc terminate; KHÔNG tight-loop forever.
 - **Termination condition explicit** — clear exit criteria (task done, repeated state, error threshold). KHÔNG dựa duy nhất vào LLM tự dừng.
 - **Repeated-state detection** — track recent (state hash) để break out of cycles.
-- **Token budget enforced** — track cumulative input + output tokens; compact context khi vượt threshold (typically 70% context window).
+- **Context reserve enforced** — track cumulative input/output tokens and reserve enough capacity for tool results, recovery, and final output. Compaction threshold comes from runtime config and measured workload, không hardcode một phần trăm chung.
 
-## Tool Use
+## Tool Use (`pack-agentic-tool-use`)
 
 - **Tool schema explicit** — name, description, input_schema, output_schema. Không generate schema runtime.
-- **Tool execution has timeout** — every tool call wrapped trong timeout (vd 30s default, override per tool).
+- **Tool execution has deadline** — every tool call receives a configured deadline/cancellation policy based on side effects and upstream SLO; timeout không phải một literal chung cho mọi tool.
 - **Tool errors structured** — return `{error: {code, message}}`, không throw raw exception lên agent loop.
 - **Idempotent tools when possible** — agent có thể retry safely. Document side-effect tools explicitly.
 
-## Destructive Actions
+## Destructive Actions (`pack-agentic-destructive-actions`)
 
-- **Destructive tools require confirmation** — tool name chứa `delete|drop|destroy|send|publish|deploy|kill` MUST have `confirm: bool` param hoặc human-in-the-loop checkpoint.
+- **Effectful tools declare risk metadata** — destructive/irreversible/external actions require an approval policy or human checkpoint. Tool-name matching chỉ là static hint, không phải security boundary.
 - **Confirmation default = false** — agent phải explicitly opt-in.
-- **No mass destructive ops** — batch delete/send giới hạn N items per tool call.
+- **Bulk effects are bounded** — batch size, blast radius, dry-run support, and rollback/compensation follow configured policy for the target system.
 
-## Multi-Agent Orchestration
+## Multi-Agent Orchestration (`pack-agentic-orchestration`)
 
 - **Subagent role explicit** — system prompt, tool subset, exit criteria documented.
 - **Handoff protocol** — what data passes giữa agents, format chuẩn (vd JSON với schema).
 - **Supervisor doesn't loop subagents indefinitely** — supervisor cũng có max-handoff limit.
 
-## MCP Server
+## MCP Server (`pack-agentic-mcp-server`)
 
-- **Tool name namespaced** — prefix `{server-name}__{tool}` để tránh collision.
+- **Protocol revision/SDK compatibility is explicit** — pin the supported MCP revision and migration tests. For the reviewed `2026-07-28` core, do not depend on legacy connection-session state; requests carry/derive the routing, capability and authorization context they need.
+- **Extensions are opt-in capabilities** — Tasks, Skills, Apps or other extensions require explicit client/server support and fallback behavior; core support does not imply extension support.
+- **Host-visible tool identity is collision-safe** — preserve the MCP tool name and apply host/server namespace where the client adapter requires it.
 - **Resources có URI scheme rõ** — `{server}://{path}` consistent.
 - **Server doesn't trust client** — validate input từ MCP client như public API.
 
-## Observability
+## Observability (`pack-agentic-observability`)
 
-- **Per-step trace required** — log mỗi agent step: step_n, action (tool call / message), latency, status. Persist tới structured store.
+- **Per-step trace required** — log each step's index, action class, latency, status, budget delta, and artifact references; redact prompt/tool payloads theo data policy.
 - **Trace ID propagated** xuyên subagent handoff.
 - **Cost per task tracked** — total tokens + tool latency aggregated.
 

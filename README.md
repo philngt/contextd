@@ -10,13 +10,17 @@ contextd turns team knowledge into a build artifact an agent can actually consum
 ```mermaid
 flowchart LR
   Config["Project config<br/>.contextd/config.json"]
-  Knowledge["Team knowledge<br/>workspace docs, packs, policies"]
+  Knowledge["Workspace knowledge<br/>contracts, patterns, project docs"]
+  Static["Shared inputs<br/>packs, engine policies"]
+  Synapse["Synapse<br/>lifecycle nodes + typed edges"]
   Build["Build<br/>contextd context &quot;task&quot;"]
   Artifact["Artifact<br/>current-task.json"]
   Agents["Agents<br/>Claude, Codex, Cursor, MCP"]
 
   Config --> Build
-  Knowledge --> Build
+  Knowledge --> Synapse
+  Synapse --> Build
+  Static --> Build
   Build --> Artifact
   Artifact --> Agents
 ```
@@ -26,18 +30,28 @@ The artifact records what was selected, what was dropped, what is missing, and w
 ```text
 $ contextd explain "prepare agent context for product requirements" --text
 Workspace: default
-Intent: review / product
-Budget: 2/7 docs, ~2245 tokens
+Intent: <detected intent> / <detected workstream>
+Context Pack: <context-pack-hash>
+Synapse: <synapse-hash>
+Budget: <selected>/<limit> docs, ~<estimated> tokens
 
 Selected Docs
-- workspaces/default/platform/contracts/sub-agent-frontmatter-schema.md [contract]
-- workspaces/default/platform/patterns/variant-discriminated-dispatcher.md [pattern]
+- <workspace-scoped contract, pattern, or project document> [category]
+
+Dropped Docs
+- <candidate excluded by budget or policy> [category]
 
 Gaps
-- (none)
+- <missing knowledge, or (none)>
+
+Warnings
+- <lifecycle, freshness, configuration, or safety warning, if any>
 ```
 
-For the same task, `--format json` includes selected and dropped docs, warning count, budget report, and `source_hashes` for reproducibility.
+This is an abbreviated output shape rather than a golden result: selected documents
+change when governed knowledge changes. For the same task, `--format json` includes
+selected and dropped docs, warning count, budget report, synapse projection, and
+`source_hashes` for reproducibility.
 
 
 ## Onboarding
@@ -62,6 +76,10 @@ For the same task, `--format json` includes selected and dropped docs, warning c
 
 5. **Deterministic knowledge priority**  
    Contracts > Platform Patterns > Project Documentation > Domain Knowledge.
+
+6. **Old knowledge remains inspectable**
+   Synapse lifecycle and freshness metadata lower stale guidance during context
+   compilation without deleting the historical node.
 
 ## Who This Is For
 
@@ -93,6 +111,7 @@ Use is provided under the repository license ([MIT](LICENSE)) and is offered **"
 | CLI: deterministic task context | Available (`contextd context`) |
 | CLI: diagnostics and selection explain | Available (`contextd doctor`, `contextd explain`) |
 | CLI: governance and evaluation | Available (`contextd policy-check`, `contextd pack-validate`, `contextd eval --golden`) |
+| CLI: lifecycle graph | Available (`contextd synapse`) |
 | Plain markdown bundle export | Available |
 | Codex skill/plugin export | Available |
 | Cursor rules export | Available |
@@ -116,9 +135,10 @@ Use is provided under the repository license ([MIT](LICENSE)) and is offered **"
 contextd is a local build system for agent inputs:
 
 1. **Start/check**: `contextd init`, `contextd check`
-2. **Daily task artifact**: `contextd context "task" --preview`, with `contextd explain "task" --text` for selection trace
-3. **Manifest index**: `.contextd/manifest.json`
-4. **Runtime export/adapters**: `contextd connect`, plain markdown, Codex skill/plugin, Cursor rules, Claude Code artifacts, MCP stdio tools
+2. **Lifecycle graph**: `contextd synapse --preview` builds the workspace-scoped, rebuildable knowledge index
+3. **Daily task artifact**: `contextd context "task" --preview`, with `contextd explain "task" --text` for selection trace
+4. **Manifest index**: `.contextd/manifest.json`
+5. **Runtime export/adapters**: `contextd connect`, plain markdown, Codex skill/plugin, Cursor rules, Claude Code artifacts, MCP stdio tools
 
 Existing `.claude/commands` and `.claude/agents` remain supported adapters during the migration window, but `.contextd/config.json` is the canonical project config.
 
@@ -192,17 +212,47 @@ Packs are stack/use-case knowledge layers between engine and workspace:
 - Packs: stack-specific rules/patterns/contracts (web-api, event-driven, frontend, agentic, product, ...).
 - Workspace: company/project-specific domain and implementation knowledge.
 
+New packs use manifest v3: `pack.yaml` owns routing and `knowledge.md` owns
+Global Principles plus component-scoped Mental Models, Standards, Failure
+Signals, and Evidence/Stop Conditions. Runtime loads only the matched component
+sections and reports their static token cost. Existing manifest-v2 packs remain
+supported during staged migration. Stable IDs and documented/executable
+validator parity are checked by `contextd pack-validate`.
+
 Enable packs via:
 
 - Workspace default: `workspaces/{ws}/workspace.md` → `## Packs`
 - Per-codebase override: `<cwd>/.contextd/config.json` → `packs` (replace semantics)
 
-See [packs/README.md](packs/README.md) for the full catalog.
+Prefer the smallest pack set that owns the task. Pack context is included in
+`budget_report.estimated_tokens_total`; precise selection and routing reduce
+noise, while enabling every pack can increase context cost.
+
+When a user can no longer name the current stage, next decision, or reason to
+continue, `pack-operator-steering` provides an evidence-backed wayfinding
+checkpoint. It makes the AI recommendation visible while keeping material
+direction and the `continue|pause|pivot|stop` decision with the human operator.
+
+```bash
+contextd pack-validate --all --format text
+contextd explain "Review retry-safe payment endpoint" --format text
+```
+
+See [packs/README.md](packs/README.md) for the maturity model, current versions,
+scope boundaries, selection guide, and authoring checklist.
 
 ## Engine & Workspace Reference
 
 - Engine folders: [agents/](agents/), [templates/](templates/), [.claude/commands/](.claude/commands/)
 - Workspace structure and overrides: [workspaces/README.md](workspaces/README.md)
+
+## Documentation Map
+
+- This README owns the product thesis, support matrix, architecture, and reference links.
+- [QUICKSTART.md](QUICKSTART.md) owns the runnable CLI-first setup and demo flow.
+- [onboarding/](onboarding/) owns persona guidance and the bilingual browser-friendly install summary.
+- [packs/README.md](packs/README.md) is the canonical pack catalog; onboarding summaries are CI-checked mirrors.
+- `contextd help --all` is the canonical CLI command inventory.
 
 ## How to Use
 
@@ -272,20 +322,9 @@ if ($actual -ne $expected.ToLower()) { throw "SHA256 mismatch for install.ps1" }
 .\install.ps1
 ```
 
-Developer/source checkout flow (for editing this repo or installing Claude adapters from a checkout):
-
-```bash
-pip install -e .
-bash scripts/install-to-claude.sh --knowledge-root ~/contextd --default-workspace default
-bash scripts/install-to-claude.sh --dry-run
-bash scripts/install-to-claude.sh --force
-```
-
-If your workspaces live in a separate team repo:
-
-```bash
-bash scripts/install-to-claude.sh --knowledge-root ~/company-wiki --default-workspace shared
-```
+For source/developer installation, Claude adapters, and a separate team knowledge
+repository, follow [QUICKSTART.md](QUICKSTART.md). The CLI install and host adapter
+install are intentionally separate operations.
 
 ### Set up a codebase config
 
@@ -320,12 +359,14 @@ Or with the runtime-neutral CLI:
 ```bash
 contextd context "Add Kafka consumer..." --preview
 contextd explain "Add Kafka consumer..." --text
+contextd synapse --preview --text
 contextd contract-path citation-format
 ```
 
-`contextd context` emits the canonical JSON artifact. `contextd explain` shows why docs were selected or dropped, including gaps, warnings, source hashes, and the lightweight budget report.
+`contextd context` emits the canonical JSON artifact. `contextd explain` shows why docs were selected or dropped, including lifecycle score adjustments, gaps, warnings, source hashes, and the lightweight budget report. `contextd synapse` exposes the complete rebuildable lifecycle index; materialized task context stores its task-specific projection. A materializing context build reads and raw-byte-hashes each governed workspace source once, reuses transient source/lookup state during projection, then identity-checks and writes that same graph instead of rebuilding it.
 
 See [docs/context-quality.md](docs/context-quality.md) for budget semantics, safety guard behavior, and rollout scorecards.
+See [docs/synapse-context-management.md](docs/synapse-context-management.md) for node authoring, lifecycle review, loading workflows, cost controls, and promotion boundaries.
 See [docs/effectiveness.md](docs/effectiveness.md) for measurable signals contextd can prove today without synthetic benchmark claims.
 
 ### Production Governance Loop
@@ -342,7 +383,7 @@ contextd eval --golden --workspace default --json
 ```
 
 - [docs/governance.md](docs/governance.md): policy-as-code over selected context.
-- [docs/pack-validation.md](docs/pack-validation.md): pack API and retrieval-map validation.
+- [docs/pack-validation.md](docs/pack-validation.md): versioned pack API, knowledge, routing, and validator checks.
 - [docs/evaluation.md](docs/evaluation.md): golden-task evaluation for context selection quality.
 - [docs/effectiveness.md](docs/effectiveness.md): adoption metrics and proof signals.
 - [docs/build-system-model.md](docs/build-system-model.md): deeper product and artifact model.
@@ -410,8 +451,10 @@ Workflow: [release.yml](.github/workflows/release.yml)
 
 - Trigger:
   - semver tag push `v*.*.*`
-  - manual `workflow_dispatch`
-- Flow: package release artifacts, then publish GitHub Release assets.
+  - manual `workflow_dispatch` with a version matching `pyproject.toml`
+- Flow: validate release metadata, run the Python 3.10/3.12 verification
+  matrix, package source and binaries, smoke each binary, then publish GitHub
+  Release assets.
 
 ## Troubleshooting
 
