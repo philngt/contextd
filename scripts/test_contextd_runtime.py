@@ -15,6 +15,7 @@ import hashlib
 import io
 import importlib.util
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -1364,7 +1365,16 @@ def test_thesis_hardening_docs_and_release_mapping() -> None:
     assert 'BINARY="contextd-${PLATFORM}-arm64"' not in release, release
     assert "Linux arm64 prebuilt binary is not available" in release, release
     assert "contextd-linux-arm64" not in release, release
-    assert 'version = "1.3.2"' in pyproject, pyproject
+    project_version_match = re.search(
+        r'(?m)^version\s*=\s*"([^"]+)"\s*$',
+        pyproject,
+    )
+    assert project_version_match, pyproject
+    project_version = project_version_match.group(1)
+    assert re.fullmatch(
+        r"[0-9]+\.[0-9]+\.[0-9]+(?:[.-][0-9A-Za-z.-]+)?",
+        project_version,
+    ), project_version
     for module in ("cmd_synapse", "lib.synapse_engine", "lib.frontmatter"):
         assert f"'{module}'" in spec, (module, spec)
     assert "'synapse_engine'" not in spec, "top-level lib module would create duplicate state"
@@ -1372,7 +1382,7 @@ def test_thesis_hardening_docs_and_release_mapping() -> None:
     assert "needs: [release-metadata, verify, package-source, build-binaries]" in release
     assert "python-version: ['3.10', '3.12']" in release
     actual_version = contextd_version.get_version(start_path=ROOT)
-    assert actual_version == "1.3.2", actual_version
+    assert actual_version == project_version, (actual_version, project_version)
     print("  ok thesis_hardening_docs_and_release_mapping")
 
 

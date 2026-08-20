@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Release version; must match pyproject.toml (for example 1.3.2)'
+        description: 'Release version; must match pyproject.toml (without the v prefix)'
         required: true
         type: string
 
