@@ -62,36 +62,47 @@ def _parse_frontmatter(text: str) -> Optional[Dict[str, str]]:
     return result
 
 
-def _under_claude_dir(file_path: Path, segment: str) -> bool:
-    """True if file is inside `.claude/{segment}/...`."""
-    parts = file_path.as_posix().split("/")
-    try:
-        idx = parts.index(".claude")
-        return len(parts) > idx + 1 and parts[idx + 1] == segment
-    except ValueError:
+PLUGIN_COMPONENT_DIRS = {"commands", "agents", "skills", "hooks"}
+
+
+def _component_dir(file_path: Path, segment: str) -> Optional[Path]:
+    """Return the top-level plugin component directory containing a file.
+
+    Claude Code plugin components live at the plugin root. A project-local
+    `.claude/{segment}` directory is deliberately excluded.
+    """
+    for parent in file_path.parents:
+        if parent.name != segment:
+            continue
+        if parent.parent.name == ".claude":
+            return None
+        return parent
+    return None
+
+
+def _under_plugin_dir(file_path: Path, segment: str) -> bool:
+    component_dir = _component_dir(file_path, segment)
+    if component_dir is None:
         return False
+    return _find_plugin_root(file_path) == component_dir.parent
 
 
 def _is_skill_md(file_path: Path) -> bool:
-    if file_path.name != "SKILL.md":
-        return False
-    parts = file_path.as_posix().split("/")
-    try:
-        idx = parts.index(".claude")
-        return len(parts) > idx + 2 and parts[idx + 1] == "skills"
-    except ValueError:
-        return False
+    return file_path.name == "SKILL.md" and _under_plugin_dir(file_path, "skills")
 
 
 def _find_plugin_root(file_path: Path) -> Optional[Path]:
-    """Walk up from file looking for parent dir that contains .claude/."""
+    """Find a plugin root from its manifest marker or default component dirs."""
     cur = file_path.parent
     for _ in range(15):
-        if (cur / ".claude").is_dir():
+        if (cur / ".claude-plugin").is_dir():
             return cur
         if cur.parent == cur:
-            return None
+            break
         cur = cur.parent
+    for parent in file_path.parents:
+        if parent.name in PLUGIN_COMPONENT_DIRS and parent.parent.name != ".claude":
+            return parent.parent
     return None
 
 
@@ -100,9 +111,9 @@ def _find_plugin_root(file_path: Path) -> Optional[Path]:
 # ---------------------------------------------------------------------------
 
 def rule_missing_plugin_manifest(file_path: Path, lines: List[str], ctx: Dict) -> List[Dict]:
-    """If file is in .claude/{commands|agents|skills}/, check sibling .claude-plugin/plugin.json."""
+    """Plugin-root components require sibling .claude-plugin/plugin.json."""
     in_plugin_dir = any(
-        _under_claude_dir(file_path, seg) for seg in ("commands", "agents", "skills")
+        _under_plugin_dir(file_path, seg) for seg in ("commands", "agents", "skills", "hooks")
     ) or _is_skill_md(file_path)
     if not in_plugin_dir:
         return []
@@ -115,13 +126,14 @@ def rule_missing_plugin_manifest(file_path: Path, lines: List[str], ctx: Dict) -
     return [_vio(
         "pack-claude-plugin-dev-missing-plugin-manifest", "error", file_path, 1,
         lines[0] if lines else "",
-        f"Plugin assets found under {plugin_root}/.claude/ but no manifest "
-        f"at .claude-plugin/plugin.json. Create one with name/version/description/author."
+        f"Plugin components found under {plugin_root} but no manifest at "
+        ".claude-plugin/plugin.json. Add at least the required plugin `name`; "
+        "distribution metadata should include version, description, and author."
     )]
 
 
 def rule_command_missing_description(file_path: Path, lines: List[str], ctx: Dict) -> List[Dict]:
-    if not _under_claude_dir(file_path, "commands") or file_path.suffix.lower() != ".md":
+    if not _under_plugin_dir(file_path, "commands") or file_path.suffix.lower() != ".md":
         return []
     text = "\n".join(lines)
     fm = _parse_frontmatter(text)
@@ -138,13 +150,13 @@ def rule_command_missing_description(file_path: Path, lines: List[str], ctx: Dic
             "pack-claude-plugin-dev-command-missing-description", "error",
             file_path, 1, lines[0] if lines else "",
             "Slash command frontmatter missing `description:` field. "
-            "Add a single action-verb sentence (< 100 chars) — this is what users see in /help."
+            "Add a concise sentence describing what the command does and when to use it."
         )]
     return []
 
 
 def rule_agent_missing_tools(file_path: Path, lines: List[str], ctx: Dict) -> List[Dict]:
-    if not _under_claude_dir(file_path, "agents") or file_path.suffix.lower() != ".md":
+    if not _under_plugin_dir(file_path, "agents") or file_path.suffix.lower() != ".md":
         return []
     text = "\n".join(lines)
     fm = _parse_frontmatter(text)
@@ -169,8 +181,8 @@ def rule_agent_missing_tools(file_path: Path, lines: List[str], ctx: Dict) -> Li
 
 
 TRIGGER_PHRASE = re.compile(
-    r"(TRIGGER when|Use when|use this when|trigger when|invoke when|"
-    r"Triggers? when)", re.IGNORECASE,
+    r"(trigger when|use when|use this when|use for|invoke when|triggers? when|\bwhen\b)",
+    re.IGNORECASE,
 )
 
 
@@ -184,22 +196,22 @@ def rule_skill_description_too_vague(file_path: Path, lines: List[str], ctx: Dic
             "pack-claude-plugin-dev-skill-description-too-vague", "warn",
             file_path, 1, lines[0] if lines else "",
             "SKILL.md missing YAML frontmatter. Add `---` block with `name:` and "
-            "`description:` (>= 50 chars, include TRIGGER when: phrase for auto-invoke)."
+            "a specific `description:` covering what the skill does and when to use it."
         )]
     desc = fm.get("description", "").strip()
-    if len(desc) < 50:
+    if not desc:
         return [_vio(
             "pack-claude-plugin-dev-skill-description-too-vague", "warn",
             file_path, 1, lines[0] if lines else "",
-            f"Skill description too short ({len(desc)} chars). Need >= 50 chars with "
-            "explicit trigger condition (e.g. 'TRIGGER when: user asks about X')."
+            "Skill frontmatter is missing `description:`. State both capability "
+            "and usage boundary so discovery can route it correctly."
         )]
     if not TRIGGER_PHRASE.search(desc):
         return [_vio(
             "pack-claude-plugin-dev-skill-description-too-vague", "warn",
             file_path, 1, lines[0] if lines else "",
-            "Skill description missing trigger phrase ('TRIGGER when:', 'Use when'). "
-            "Auto-invocation depends on this — be explicit about when the skill should fire."
+            "Skill description does not state when to use it. Add a concise usage "
+            "condition and, when useful, a skip boundary."
         )]
     return []
 
@@ -242,13 +254,8 @@ def rule_secret_literal(file_path: Path, lines: List[str], ctx: Dict) -> List[Di
 
 
 def rule_hook_no_error_handling(file_path: Path, lines: List[str], ctx: Dict) -> List[Dict]:
-    """Flag hook scripts (.sh / .py under .claude/hooks/) without basic error handling."""
-    parts = file_path.as_posix().split("/")
-    try:
-        idx = parts.index(".claude")
-    except ValueError:
-        return []
-    if len(parts) <= idx + 1 or parts[idx + 1] != "hooks":
+    """Flag plugin hook scripts without basic error handling."""
+    if not _under_plugin_dir(file_path, "hooks"):
         return []
     text = "\n".join(lines)
     ext = file_path.suffix.lower()

@@ -212,8 +212,34 @@
   "packs": [
     {
       "name": "pack-agentic",
+      "manifest_version": 2,
       "description": "Agent loops, tool use, multi-agent orchestration, MCP servers — bounded steps, idempotent tools, human-in-the-loop checkpoints",
-      "version": "1.0.0",
+      "version": "1.1.0",
+      "status": "stable",
+      "category": "agent-runtime",
+      "reviewed_on": "2026-08-20",
+      "audiences": [
+        "engineering",
+        "ops",
+        "security"
+      ],
+      "task_types": [
+        "implement_feature",
+        "fix_bug",
+        "design",
+        "incident",
+        "review"
+      ],
+      "scope_includes": [
+        "agent loop control",
+        "tool execution boundaries",
+        "MCP server behavior",
+        "multi-agent handoffs"
+      ],
+      "scope_excludes": [
+        "provider-specific LLM application policy",
+        "generic project task delegation"
+      ],
       "components": [
         "agent",
         "tool",
@@ -224,8 +250,33 @@
     },
     {
       "name": "pack-ai-app",
+      "manifest_version": 2,
       "description": "LLM application patterns — prompt caching, structured output, eval harness, cost tracking, no PII leak",
-      "version": "1.0.0",
+      "version": "1.1.0",
+      "status": "stable",
+      "category": "engineering",
+      "reviewed_on": "2026-08-20",
+      "audiences": [
+        "engineering",
+        "product",
+        "security"
+      ],
+      "task_types": [
+        "implement_feature",
+        "fix_bug",
+        "design",
+        "review"
+      ],
+      "scope_includes": [
+        "LLM API integration",
+        "prompt lifecycle",
+        "retrieval augmented generation",
+        "embedding search"
+      ],
+      "scope_excludes": [
+        "model training and fine-tuning",
+        "autonomous agent orchestration"
+      ],
       "components": [
         "llm",
         "prompt",
@@ -236,8 +287,32 @@
     },
     {
       "name": "pack-ba",
+      "manifest_version": 2,
       "description": "Business analysis pack — requirements modeling, acceptance criteria, process mapping, and stakeholder alignment.",
-      "version": "0.1.0",
+      "version": "0.2.0",
+      "status": "beta",
+      "category": "product",
+      "reviewed_on": "2026-08-20",
+      "audiences": [
+        "ba",
+        "product",
+        "qc",
+        "engineering"
+      ],
+      "task_types": [
+        "design",
+        "review"
+      ],
+      "scope_includes": [
+        "business requirements",
+        "acceptance criteria",
+        "process maps",
+        "stakeholder decisions"
+      ],
+      "scope_excludes": [
+        "technical architecture implementation",
+        "executable test automation"
+      ],
       "components": [
         "requirements-modeling",
         "acceptance-criteria",
@@ -248,8 +323,33 @@
     },
     {
       "name": "pack-claude-plugin-dev",
+      "manifest_version": 2,
       "description": "Build Claude Code plugins per Anthropic standards — plugin manifest, slash commands, subagents, skills, hooks, MCP servers",
-      "version": "1.0.0",
+      "version": "1.1.0",
+      "status": "stable",
+      "category": "developer-tooling",
+      "reviewed_on": "2026-08-20",
+      "audiences": [
+        "engineering",
+        "ops",
+        "security"
+      ],
+      "task_types": [
+        "implement_feature",
+        "fix_bug",
+        "design",
+        "review"
+      ],
+      "scope_includes": [
+        "Claude Code plugin packaging",
+        "plugin commands and agents",
+        "plugin skills and hooks",
+        "plugin MCP configuration"
+      ],
+      "scope_excludes": [
+        "project-local Claude configuration",
+        "generic MCP application design"
+      ],
       "components": [
         "plugin",
         "command",
@@ -262,8 +362,34 @@
     },
     {
       "name": "pack-dba",
+      "manifest_version": 2,
       "description": "Database administration pack — schema change safety, query hygiene, backup/restore readiness, and operational guardrails.",
-      "version": "0.1.0",
+      "version": "0.2.0",
+      "status": "beta",
+      "category": "operations",
+      "reviewed_on": "2026-08-20",
+      "audiences": [
+        "ops",
+        "engineering",
+        "security"
+      ],
+      "task_types": [
+        "implement_feature",
+        "fix_bug",
+        "design",
+        "incident",
+        "review"
+      ],
+      "scope_includes": [
+        "database schema changes",
+        "query plan analysis",
+        "backup restore verification",
+        "database operations"
+      ],
+      "scope_excludes": [
+        "application persistence architecture",
+        "generic infrastructure deployment"
+      ],
       "components": [
         "schema-change-management",
         "query-performance-hygiene",
@@ -274,8 +400,34 @@
     },
     {
       "name": "pack-devops-iac",
+      "manifest_version": 2,
       "description": "DevOps and infrastructure-as-code pack — Terraform dependency safety, Kubernetes workload readiness, CI/CD deployment gates, environment promotion, drift control, and rollback readiness.",
-      "version": "0.1.0",
+      "version": "0.2.0",
+      "status": "beta",
+      "category": "operations",
+      "reviewed_on": "2026-08-20",
+      "audiences": [
+        "ops",
+        "engineering",
+        "security"
+      ],
+      "task_types": [
+        "implement_feature",
+        "fix_bug",
+        "design",
+        "incident",
+        "review"
+      ],
+      "scope_includes": [
+        "infrastructure as code",
+        "Kubernetes workloads",
+        "release promotion",
+        "infrastructure drift and rollback"
+      ],
+      "scope_excludes": [
+        "application business logic",
+        "database schema migration internals"
+      ],
       "components": [
         "terraform-safety",
         "kubernetes-workload",
@@ -288,8 +440,33 @@
     },
     {
       "name": "pack-event-driven",
+      "manifest_version": 2,
       "description": "Kafka, MQTT, and event-driven backend patterns (DLQ, offset commit, idempotent consumer, batch processing)",
-      "version": "1.0.0",
+      "version": "1.1.0",
+      "status": "stable",
+      "category": "engineering",
+      "reviewed_on": "2026-08-20",
+      "audiences": [
+        "engineering",
+        "ops"
+      ],
+      "task_types": [
+        "implement_feature",
+        "fix_bug",
+        "design",
+        "incident",
+        "review"
+      ],
+      "scope_includes": [
+        "event broker producers and consumers",
+        "MQTT routing",
+        "message batch processing",
+        "delivery and retry semantics"
+      ],
+      "scope_excludes": [
+        "synchronous HTTP API design",
+        "generic scheduled jobs without messaging"
+      ],
       "components": [
         "kafka",
         "mqtt",
@@ -299,8 +476,32 @@
     },
     {
       "name": "pack-frontend-react",
+      "manifest_version": 2,
       "description": "React/Next.js frontend patterns — hooks rules, a11y, effect cleanup, list keys, no direct state mutation",
-      "version": "1.0.0",
+      "version": "1.1.0",
+      "status": "stable",
+      "category": "engineering",
+      "reviewed_on": "2026-08-20",
+      "audiences": [
+        "engineering",
+        "design"
+      ],
+      "task_types": [
+        "implement_feature",
+        "fix_bug",
+        "design",
+        "review"
+      ],
+      "scope_includes": [
+        "React component implementation",
+        "React hooks",
+        "JSX accessibility",
+        "Next.js routing boundaries"
+      ],
+      "scope_excludes": [
+        "framework-neutral visual design",
+        "React Native mobile implementation"
+      ],
       "components": [
         "react",
         "hooks",
@@ -311,22 +512,80 @@
     },
     {
       "name": "pack-operator-steering",
-      "description": "Agent-operator steering pack — context audit, drift checks, remediation planning, decision logs, handoff quality, and workflow mental models.",
-      "version": "0.1.0",
+      "manifest_version": 3,
+      "description": "Agent-operator steering pack — wayfinding, context audits, drift checks, remediation, durable decisions, handoffs, and workflow mental models.",
+      "version": "0.4.0",
+      "status": "beta",
+      "category": "agent-runtime",
+      "reviewed_on": "2026-08-20",
+      "audiences": [
+        "engineering",
+        "product",
+        "ba",
+        "qc",
+        "security",
+        "design",
+        "ops",
+        "domain"
+      ],
+      "task_types": [
+        "implement_feature",
+        "fix_bug",
+        "design",
+        "incident",
+        "review"
+      ],
+      "scope_includes": [
+        "operator wayfinding and thinking recovery",
+        "context quality audits",
+        "task drift diagnosis",
+        "remediation planning",
+        "durable decisions and handoffs"
+      ],
+      "scope_excludes": [
+        "implementation-domain coding rules",
+        "autonomous agent loop mechanics",
+        "personal wellbeing or clinical guidance"
+      ],
       "components": [
         "context-audit",
         "drift-check",
         "remediation-planning",
         "decision-ledger",
         "handoff-quality",
-        "workflow-mental-model"
+        "workflow-mental-model",
+        "operator-wayfinding"
       ],
       "template_file": "packs/pack-operator-steering/pack.yaml"
     },
     {
       "name": "pack-product",
+      "manifest_version": 2,
       "description": "Product/business knowledge pack — product briefs, OKR, roadmap, personas, customer journey, success metrics. For non-tech contributors (PM, business, stakeholder).",
-      "version": "0.1.0",
+      "version": "0.2.0",
+      "status": "beta",
+      "category": "product",
+      "reviewed_on": "2026-08-20",
+      "audiences": [
+        "product",
+        "ba",
+        "design",
+        "engineering"
+      ],
+      "task_types": [
+        "design",
+        "review"
+      ],
+      "scope_includes": [
+        "product briefs",
+        "measurable outcomes",
+        "roadmaps",
+        "personas and customer journeys"
+      ],
+      "scope_excludes": [
+        "technical implementation design",
+        "unsupported market research claims"
+      ],
       "components": [
         "brief",
         "okr",
@@ -339,8 +598,32 @@
     },
     {
       "name": "pack-qc",
+      "manifest_version": 2,
       "description": "Quality control + performance optimization pack — test design/execution, defect triage, regression coverage, release quality gates, baseline metrics, bottleneck profiling, safe optimization, regression guarding.",
-      "version": "0.2.0",
+      "version": "0.3.0",
+      "status": "beta",
+      "category": "quality",
+      "reviewed_on": "2026-08-20",
+      "audiences": [
+        "qc",
+        "engineering",
+        "ops"
+      ],
+      "task_types": [
+        "fix_bug",
+        "incident",
+        "review"
+      ],
+      "scope_includes": [
+        "test design and execution",
+        "defect triage",
+        "release regression evidence",
+        "measured performance optimization"
+      ],
+      "scope_excludes": [
+        "security penetration testing",
+        "unmeasured speculative optimization"
+      ],
       "components": [
         "test-case-design",
         "test-execution",
@@ -355,8 +638,33 @@
     },
     {
       "name": "pack-security",
+      "manifest_version": 2,
       "description": "Security engineering + authorized pentest pack — threat modeling, secure design review, vulnerability management, control verification, scope discipline, evidence-based findings, risk rating, and remediation reporting.",
-      "version": "0.2.0",
+      "version": "0.3.0",
+      "status": "beta",
+      "category": "security",
+      "reviewed_on": "2026-08-20",
+      "audiences": [
+        "security",
+        "engineering",
+        "ops"
+      ],
+      "task_types": [
+        "fix_bug",
+        "design",
+        "incident",
+        "review"
+      ],
+      "scope_includes": [
+        "threat modeling",
+        "security control review",
+        "authorized vulnerability validation",
+        "remediation reporting"
+      ],
+      "scope_excludes": [
+        "testing without explicit authorization",
+        "destructive exploitation and persistence"
+      ],
       "components": [
         "threat-modeling",
         "secure-design-review",
@@ -371,8 +679,30 @@
     },
     {
       "name": "pack-solo-builder",
-      "description": "Cho non-tech expert (cơ khí, kế toán, y tế, ...) dùng Claude Code làm \"no-code IDE\" — tool design coach + tech recipe library cross-platform (Linux native + Windows Docker).",
-      "version": "0.1.0",
+      "manifest_version": 2,
+      "description": "Evidence-aware tool discovery, recipe selection, and maintainable single-purpose workflows for non-technical domain experts.",
+      "version": "0.2.0",
+      "status": "beta",
+      "category": "enablement",
+      "reviewed_on": "2026-08-20",
+      "audiences": [
+        "domain"
+      ],
+      "task_types": [
+        "implement_feature",
+        "design",
+        "review"
+      ],
+      "scope_includes": [
+        "single-purpose personal tool discovery",
+        "recipe-based technology selection",
+        "reusable domain tool catalog"
+      ],
+      "scope_excludes": [
+        "production systems with formal SLOs",
+        "professional software architecture",
+        "unreviewed safety-critical or regulated decision automation"
+      ],
       "components": [
         "tool-design",
         "tool-extend",
@@ -383,8 +713,33 @@
     },
     {
       "name": "pack-ui-ux",
+      "manifest_version": 2,
       "description": "UI/UX pack — design system, accessibility (WCAG), user flows, và UX writing conventions.",
-      "version": "0.1.0",
+      "version": "0.2.0",
+      "status": "beta",
+      "category": "design",
+      "reviewed_on": "2026-08-20",
+      "audiences": [
+        "design",
+        "product",
+        "ba",
+        "engineering"
+      ],
+      "task_types": [
+        "implement_feature",
+        "design",
+        "review"
+      ],
+      "scope_includes": [
+        "design systems",
+        "WCAG accessibility",
+        "interaction flows",
+        "interface microcopy"
+      ],
+      "scope_excludes": [
+        "framework-specific component code",
+        "product strategy and roadmap"
+      ],
       "components": [
         "design-system",
         "accessibility",
@@ -395,8 +750,34 @@
     },
     {
       "name": "pack-web-api",
+      "manifest_version": 2,
       "description": "REST/GraphQL/gRPC API patterns — input validation, error shape, idempotency, auth boundary, no info leak",
-      "version": "1.0.0",
+      "version": "1.1.0",
+      "status": "stable",
+      "category": "engineering",
+      "reviewed_on": "2026-08-20",
+      "audiences": [
+        "engineering",
+        "security",
+        "ops"
+      ],
+      "task_types": [
+        "implement_feature",
+        "fix_bug",
+        "design",
+        "incident",
+        "review"
+      ],
+      "scope_includes": [
+        "REST endpoints",
+        "GraphQL resolvers",
+        "gRPC services",
+        "shared API boundary controls"
+      ],
+      "scope_excludes": [
+        "event broker message contracts",
+        "frontend data fetching state"
+      ],
       "components": [
         "rest",
         "graphql",
@@ -533,6 +914,10 @@
     {
       "name": "run-trace.schema",
       "template_file": "templates/run-trace.schema.json"
+    },
+    {
+      "name": "synapse.schema",
+      "template_file": "templates/synapse.schema.json"
     },
     {
       "name": "task-context.schema",

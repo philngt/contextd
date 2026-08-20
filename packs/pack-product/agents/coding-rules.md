@@ -6,21 +6,21 @@
 
 - **Lead with the problem, not the solution**. Section đầu tiên là `## Problem`, không phải `## Feature description`.
 - **Quantify the problem**: "30% of new users abandon onboarding at step 3" beats "users find onboarding hard".
-- **One brief = one feature/initiative**. Nếu brief có > 5 acceptance criteria có thể tách → tách thành nhiều brief.
+- **One brief = one coherent outcome/initiative**. Split khi phần có owner, metric, rollout hoặc acceptance lifecycle độc lập; không split chỉ vì số bullet.
 - **Use active voice**: "User uploads CSV" beats "CSV file is uploaded by user".
 
 ## OKR Writing
 
 - **Objective = qualitative, inspirational, time-bound**. Vd: "Make first-week activation effortless by Q2".
 - **Key Result = quantitative, measurable, ambitious**. Vd: "Increase D7 retention from 22% → 35%".
-- **3-5 KRs per Objective**. > 5 → diluted. < 3 → likely under-scoped.
+- Giữ tập Key Result nhỏ và đủ để chứng minh Objective; số lượng do outcome model/governance quyết định, không theo quota chung.
 - **KR is an outcome, not an output**. "Ship feature X" is output (binary done/undone). "X% of users adopt feature X within 14 days" is outcome.
 
 ## Persona Writing
 
-- Header với 1 photo (optional), name, age range, role.
-- Section bắt buộc: **Goals**, **Frustrations**, **Behaviors**, **Tech savviness**, **Evidence base** (n=, sources, date).
-- **Quote** trực tiếp từ user research (in italic), không paraphrase nếu có raw quote.
+- Header ưu tiên role/context/JTBD; name/photo/demographic chỉ dùng khi research cần và privacy policy cho phép, không dùng ảnh/chi tiết hư cấu để tăng cảm giác “thật”.
+- Sections: **Goals**, **Constraints/Frictions**, **Observed Behaviors**, **Context**, **Evidence base** (method, sample, source IDs, date, confidence).
+- Quote chỉ dùng excerpt đã consent/redact và gắn source ID; paraphrase phải được label để không biến thành lời người dùng.
 
 ## Customer Journey Writing
 
@@ -30,13 +30,13 @@
 
 ## Roadmap Writing
 
-- Format theo quarter, mỗi quarter ≤ 5 committed items + ≤ 5 exploring items.
+- Format theo planning cadence của workspace; giới hạn WIP/capacity phải lấy từ planning policy thay vì quota cố định trong pack.
 - Mỗi item: link → brief + status (`committed` / `exploring` / `shipped` / `cut`).
 - **Date format**: `YYYY-Qx` cho quarter, `YYYY-MM` cho month milestone, không dùng "soon" / "next sprint".
 
 ## Metrics Writing
 
-- **One north star metric per workspace**. Multiple north stars = no north star.
+- Xác định một primary outcome metric cho mỗi product/scope khi mô hình phù hợp; portfolio workspace có thể có nhiều scoped primary metrics nhưng phải nêu hierarchy/trade-off.
 - Supporting metrics organized in tree: NSM → input metrics → leading indicators.
 - Mỗi metric: **definition** (formula), **owner** (team/role), **measurement cadence** (daily/weekly), **dashboard link** (nếu có).
 

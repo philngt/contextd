@@ -17,11 +17,10 @@ from typing import Dict, List, Optional
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
-sys.path.insert(0, str(SCRIPT_DIR / "lib"))
 
 import cmd_resolve  # noqa: E402
 import cmd_bundle  # noqa: E402
-from stdio import configure_stdio  # noqa: E402
+from lib.stdio import configure_stdio  # noqa: E402
 
 REPO_ROOT = SCRIPT_DIR.parent
 

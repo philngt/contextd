@@ -2,19 +2,19 @@
 
 Hard rules đặc thù event-driven (Kafka/MQTT/broker). Pack này được load **additive** sau engine constraints. Strict-only direction.
 
-## Architecture
+## Architecture (`pack-event-driven-architecture`)
 
-- **Do not bypass retry logic** — every Kafka consumer must implement retry + DLQ per the platform pattern
+- **Delivery failure policy is mandatory** — each consumer follows the workspace contract for retry, dead-letter/quarantine, pause/escalation, or intentional drop; no silent skip or unbounded retry.
 - **Do not add new Kafka topics** without updating the topic contract trong `{ws}/platform/contracts/`
 - **Do not add new MQTT types** without registering them trong `{ws}/platform/contracts/mqtt-topic-contract.md`
 
-## Code
+## Code (`pack-event-driven-code`)
 
 - **Do not hardcode** topic names, broker connection strings, region codes, or gateway IDs — read from config
 - **Do not inline** MQTT topic construction — use the contract format helper (`buildTopic`, `topicFor`, ...)
-- **Do not commit offset before processing** — this is a data-loss risk; commit only after successful processing of the batch/message
+- **Progress marker follows the delivery contract** — for at-least-once flows, ack/commit only after the required durable outcome; at-most-once/transactional exceptions must be explicit and tested.
 
-## Knowledge
+## Knowledge (`pack-event-driven-knowledge`)
 
 - **Do not assume** topic formats, partition keys, or consumer group naming — read the contract
 - **Do not duplicate** broker setup code — apply existing `{ws}/platform/patterns/kafka-event-processing.md` (or equivalent)

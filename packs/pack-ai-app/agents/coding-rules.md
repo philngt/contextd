@@ -2,45 +2,45 @@
 
 ## SDK Usage
 
-- Use official SDK (anthropic, openai, google-genai). Don't roll your own HTTP client.
-- Pin SDK version trong `requirements.txt` / `package.json`. Test SDK upgrade trên golden set trước.
+- Prefer a maintained provider SDK or workspace-approved gateway client; a raw HTTP adapter needs the same auth, retry, streaming, telemetry and compatibility tests.
+- Pin SDK/client version in the dependency lock. Test SDK/provider upgrade on representative eval + contract fixtures.
 - Initialize client tại startup, reuse instance — không tạo client per-request.
 
 ## Prompt Construction
 
-- System prompt: high-level role + rules + format spec. Static — cacheable.
-- Few-shot examples: cố định trong code (versionable). Avoid dynamic example selection trừ khi có lý do mạnh.
-- User message: chỉ chứa user input + minimal context. Keep dynamic content thấp để cache hit cao.
+- Separate stable policy/instructions from task/user/retrieved data so provenance, versioning and provider-eligible caching are explicit.
+- Few-shot examples are versioned and selected by measured task coverage; static or dynamic selection both require eval evidence and contamination/privacy review.
+- Include only relevant user/retrieved context, but never omit constraints or evidence merely to improve cache hit rate.
 
-## Anthropic Prompt Caching
+## Provider-aware Prompt Caching
 
-- `cache_control: {type: "ephemeral"}` ở cuối block bạn muốn cache (system, tool definitions, long context).
-- Cache breakpoint thứ 4 tốn nhất — cân nhắc gộp.
-- Tracking: `cache_creation_input_tokens` + `cache_read_input_tokens` từ response.
+- Read eligibility, minimums, lifetime, breakpoints/key semantics, data controls and pricing from the pinned provider/model/endpoint contract.
+- Cache only stable reusable prefixes; prompt/source/model/tool-schema version changes invalidate the logical key.
+- Normalize provider cache-write/read telemetry and compare measured hit rate, latency and cost. No universal threshold or savings claim.
 
 ## RAG
 
 - Chunk size + overlap từ config, không hardcode.
 - Embedding model + version pinned — re-embed toàn corpus khi đổi model.
-- Hybrid retrieval (BM25 + vector) cho recall tốt; rerank top-K bằng cross-encoder hoặc LLM.
+- Choose lexical/vector/hybrid retrieval and reranking from corpus/query evals; `top_k`, filters and reranker budget are configuration, not a universal stack.
 - Citation: include chunk ID + source doc trong response, render trên UI.
 
 ## Tool Use / Function Calling
 
 - Tool schema explicit (name, description, input_schema). No dynamic schema generation tại runtime.
 - Tool execution: idempotent khi possible, có timeout, có error handling rõ ràng.
-- Tool result format: structured JSON, không free-form text.
+- Tool result follows an explicit schema/content contract (including references or multimodal content when supported); unbounded free-form payloads do not flow directly into context.
 
 ## Streaming
 
-- Use SDK streaming API (`messages.stream()`), không poll.
-- Backpressure: buffer client, không drop event.
+- Use the pinned SDK's streaming path only when UX/moderation/structured-output behavior warrants it; otherwise non-streaming is valid.
+- Backpressure is bounded; slow/disconnected clients trigger cancellation, coalescing or spill strategy instead of unbounded buffering.
 - Cancel khi client disconnect — release upstream API connection.
 
 ## Error Handling
 
-- Distinguish: rate limit (429) → backoff retry; 5xx → retry với jitter; 4xx (model error) → fail fast log.
-- Provider down: degrade gracefully (fallback model hoặc cached response).
+- Classify provider errors from the pinned endpoint contract: rate/temporary failures may retry with `Retry-After`/jitter; invalid/auth/policy errors fail fast; timeout/5xx with ambiguous completion require idempotency/dedup and billing-aware handling.
+- Provider down: apply an approved failure policy (fail closed, queue, fallback model, or explicitly freshness-safe cached response) and record semantic differences.
 - Never catch+swallow LLM error — surface tới observability.
 
 ## Testing

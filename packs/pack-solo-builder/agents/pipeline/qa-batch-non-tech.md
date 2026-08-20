@@ -4,8 +4,8 @@ UX adjustments áp dụng khi `pack-solo-builder` active. Áp lên `/evidence-qa
 
 ## Detect rule
 
-`/evidence-qa` Bước 0 sau khi resolve workspace, đọc `workspace.md ## Packs`:
-- `pack-solo-builder` active → áp toàn bộ overrides bên dưới.
+`/evidence-qa` Bước 0 sau khi resolve workspace, dùng `effective_packs` theo canonical per-codebase replace semantics (fallback `workspace.md ## Packs`):
+- `pack-solo-builder` trong `effective_packs` → áp toàn bộ overrides bên dưới.
 - Else → giữ nguyên flow gốc.
 
 ## Override 1: Skip Bước 3.5 (QA Recommender) khi không phải code source

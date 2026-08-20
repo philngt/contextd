@@ -10,11 +10,10 @@ from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
-sys.path.insert(0, str(SCRIPT_DIR / "lib"))
 
 import cmd_resolve  # noqa: E402
-import task_context_engine  # noqa: E402
-from stdio import configure_stdio  # noqa: E402
+from lib import task_context_engine  # noqa: E402
+from lib.stdio import configure_stdio  # noqa: E402
 
 
 def _render_text(payload: dict) -> str:
@@ -36,10 +35,13 @@ def _render_text(payload: dict) -> str:
             lines.append(f"  {axis} scores: {scores_str}{tie_note}")
     lines += [
         f"Context Pack: {summary['context_pack_key']}",
+        f"Synapse: {summary.get('synapse_hash', '(not available)')}",
         (
             "Budget: "
             f"{budget.get('selected_docs', 0)}/{budget.get('max_docs', 0)} docs, "
-            f"~{budget.get('estimated_tokens_selected', 0)} tokens"
+            f"~{budget.get('estimated_tokens_referenced', budget.get('estimated_tokens_selected', 0))} referenced + "
+            f"~{budget.get('estimated_tokens_static', 0)} static = "
+            f"~{budget.get('estimated_tokens_total', budget.get('estimated_tokens_selected', 0))} total tokens"
         ),
         "",
         "## Selected Docs",
@@ -49,9 +51,17 @@ def _render_text(payload: dict) -> str:
         lines.append("- (none)")
     for doc in selected:
         redacted = " redacted=true" if doc.get("redacted") else ""
+        state = doc.get("synapse") or {}
+        state_note = ""
+        if state:
+            state_note = (
+                f" lifecycle={state.get('lifecycle')} freshness={state.get('freshness')}"
+                f" state_adjustment={doc.get('state_score_adjustment', 0)}"
+            )
         lines.append(
             f"- {doc['path']} [{doc['category']}] "
-            f"score={doc['selection_score']} reason={doc['selection_reason']}{redacted}"
+            f"score={doc['selection_score']} reason={doc['selection_reason']}"
+            f"{state_note}{redacted}"
         )
 
     dropped = trace.get("dropped_docs") or []
@@ -59,9 +69,17 @@ def _render_text(payload: dict) -> str:
     if not dropped:
         lines.append("- (none)")
     for doc in dropped[:30]:
+        state = doc.get("synapse") or {}
+        state_note = ""
+        if state:
+            state_note = (
+                f" lifecycle={state.get('lifecycle')} freshness={state.get('freshness')}"
+                f" state_adjustment={doc.get('state_score_adjustment', 0)}"
+            )
         lines.append(
             f"- {doc['path']} [{doc['category']}] "
             f"score={doc['selection_score']} reason={doc['selection_reason']}"
+            f"{state_note}"
         )
     if len(dropped) > 30:
         lines.append(f"- ... {len(dropped) - 30} more")
@@ -115,20 +133,32 @@ def run(
         return 1
 
     if workspace:
-        ws_md = wiki_root / "workspaces" / workspace / "workspace.md"
+        ws_dir = cmd_resolve.resolve_workspace_dir(wiki_root, workspace)
+        if ws_dir is None or not ws_dir.is_dir():
+            print(
+                f"Error: Invalid or missing workspace {workspace!r}; "
+                "context build refused.",
+                file=sys.stderr,
+            )
+            return 1
+        ws_md = ws_dir / "workspace.md"
         packs, _ = cmd_resolve.get_effective_packs({}, ws_md)
     else:
         packs = resolved.get("packs") or []
 
     project_dir = Path(resolved.get("project_dir") or ".").resolve()
-    payload = task_context_engine.build_context_explanation(
-        task=task,
-        wiki_root=wiki_root,
-        workspace=ws,
-        packs=packs,
-        project_dir=project_dir,
-        warnings=resolved.get("warnings") or [],
-    )
+    try:
+        payload = task_context_engine.build_context_explanation(
+            task=task,
+            wiki_root=wiki_root,
+            workspace=ws,
+            packs=packs,
+            project_dir=project_dir,
+            warnings=resolved.get("warnings") or [],
+        )
+    except ValueError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
 
     if fmt == "json":
         print(json.dumps(payload, indent=2, ensure_ascii=False))

@@ -41,7 +41,7 @@ Idioms cho security review/design/control. Less strict than constraints — đâ
 ## Remediation Writing
 
 - Remediation note **rõ owner + verification step** + ETA + risk-if-deferred.
-- Severity rating PHẢI dùng scoring framework (CVSS 3.1) — không "high/medium" mơ hồ.
+- Severity rating dùng CVSS v4.0 vector/score hoặc workspace-approved current framework; priority thêm local threat/environment/business context.
 - False positive ghi nhận có evidence + reviewer; không silent dismiss.
 
 ## Review Checklist Pattern
@@ -70,8 +70,8 @@ Idioms cho security review/design/control. Less strict than constraints — đâ
 
 ## Risk Rating
 
-- Dùng framework CVSS 3.1 (base + temporal + environmental); KHÔNG ad-hoc "high/medium/low".
-- Mỗi finding nêu attack vector, complexity, privilege required, user interaction.
+- Với CVSS v4.0, publish vector + score và phân biệt Base, Threat, Environmental, Supplemental context; KHÔNG ad-hoc "high/medium/low".
+- Mỗi finding ghi các metric đã chọn và evidence/rationale để reviewer tái lập vector.
 - Business impact thêm vào (data loss / availability / compliance / reputational).
 - Severity ≠ priority; priority do client quyết theo business context.
 
@@ -87,7 +87,7 @@ Idioms cho security review/design/control. Less strict than constraints — đâ
 - **Owner + ETA + verification step** bắt buộc cho mỗi finding.
 - Remediation đề xuất 2 tier: short-term (mitigation) + long-term (fix).
 - Reference: OWASP cheat sheet, CWE ID, vendor advisory, framework doc.
-- Retest cycle: 30/60/90 day mặc định; document khi nào re-engage.
+- Retest cycle bám remediation due date/risk policy; document owner, trigger và evidence cần để close.
 
 ## Scope Discipline
 

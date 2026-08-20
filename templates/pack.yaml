@@ -1,33 +1,43 @@
-# Skeleton cho pack mới. Copy file này vào packs/{your-pack}/pack.yaml.
-# Convention: tên pack lowercase, prefix `pack-`.
+# Skeleton for a new contextd pack. Copy to packs/{your-pack}/pack.yaml.
+# Convention: lowercase `pack-{slug}` name, kebab-case components.
 
 name: pack-{your-name}
+manifest_version: 3
 version: 0.1.0
-description: {Một câu mô tả: stack/use case pack này phục vụ}
+description: "Describe the concrete workflow or artifact this pack owns in at least forty characters."
+status: experimental
+category: engineering
+reviewed_on: YYYY-MM-DD
 
-# Components mà pack này khai báo. Intent-parser sẽ map keyword → component.
-# Các component này phải KHÔNG trùng với pack khác (engine fail-fast nếu trùng).
+# Runtime intent contract. Values must match templates/pack.schema.json.
+audiences: [engineering]
+task_types: [implement_feature, fix_bug, design, review]
+
+# Make the ownership boundary explicit so neighboring packs stay narrow.
+scope_includes:
+  - concrete workflow or artifact this pack owns
+scope_excludes:
+  - neighboring concern owned by another pack
+
 components:
-  - {component-1}
-  - {component-2}
+  - component-one
+  - component-two
 
-# Keyword detection cho task-to-docs-map. Map component → list keyword (case-insensitive).
+# Use at least three specific, globally unique signals for each component.
+# Avoid generic words such as build, fix, component, query, handoff, or audit.
 keywords:
-  {component-1}: [keyword1, keyword2]
-  {component-2}: [keyword3, keyword4]
+  component-one: ["specific phrase one", "specific phrase two", "owned artifact one"]
+  component-two: ["specific phrase three", "specific phrase four", "owned artifact two"]
 
-# Pack files. Tất cả relative tới packs/{name}/.
-# Bỏ field nếu pack không có file đó.
+# Manifest v3 owns routing here; no separate retrieval-map is required.
+retrieval:
+  component-one: ["projects/{project}/knowledge-map.md", "platform/patterns/owned-pattern.md"]
+  component-two: ["projects/{project}/knowledge-map.md", "platform/contracts/owned-contract.md"]
+
+# knowledge.md is the canonical human/runtime guidance. Runtime loads Global
+# Principles plus only the component sections selected for the current task.
 files:
-  constraints: agents/constraints.md
-  # Compatibility filename. Non-code packs may use this as "working rules"
-  # for requirements, product, QC, UX, ops, or research docs.
-  coding_rules: agents/coding-rules.md
-  validator_rules: agents/pipeline/validator-rules.md
+  knowledge: knowledge.md
   validator_script: scripts/rules.py
-  retrieval_map: agents/pipeline/retrieval-map.md
-  prompt_overrides: agents/pipeline/prompt-overrides.md
-  common_pitfalls: agents/common-pitfalls.md
 
-# Packs không thể bật chung. Loader fail-fast nếu cùng workspace bật cả hai.
 conflicts_with: []

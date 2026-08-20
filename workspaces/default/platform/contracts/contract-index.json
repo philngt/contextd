@@ -15,6 +15,8 @@
     "source-yaml-schema": "source-yaml-schema.md",
     "source-yaml-schema.v1": "source-yaml-schema.md",
     "sub-agent-frontmatter-schema": "sub-agent-frontmatter-schema.md",
-    "sub-agent-frontmatter-schema.v1": "sub-agent-frontmatter-schema.md"
+    "sub-agent-frontmatter-schema.v1": "sub-agent-frontmatter-schema.md",
+    "synapse-node-edge-schema": "synapse-node-edge-schema.md",
+    "synapse-node-edge-schema.v1": "synapse-node-edge-schema.md"
   }
 }

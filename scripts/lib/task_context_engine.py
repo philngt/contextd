@@ -11,13 +11,14 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
-from typing import Dict, Iterable, List, Optional, Tuple
+from typing import Dict, Iterable, List, Mapping, Optional, Tuple
 
-import context_policy
-from atomic_write import atomic_write_text
-from context_security import block_reason, is_relative_to, redact_text, reject_unsafe_entry
+import pack_loader
+from . import context_policy, synapse_engine
+from .atomic_write import atomic_write_text
+from .context_security import block_reason, is_relative_to, redact_text, reject_unsafe_entry
 
 
 INTENT_KEYWORDS = {
@@ -120,7 +121,10 @@ SECTION_POLICY = {
     "workspace-profile": ["all"],
     "engine-guidance": ["all"],
     "engine-rule": ["all"],
+    "workspace-rule": ["all"],
     "pack-rule": ["all"],
+    "pack-metadata": ["all"],
+    "pack-knowledge": ["all"],
     "operator": ["all"],
 }
 
@@ -144,7 +148,10 @@ CATEGORY_BUDGETS = {
     "workspace-profile": 1,
     "engine-guidance": 1,
     "engine-rule": 2,
+    "workspace-rule": 3,
     "pack-rule": 3,
+    "pack-metadata": 1,
+    "pack-knowledge": 3,
     "operator": 3,
 }
 
@@ -168,9 +175,28 @@ PRIORITY = {
     "workspace-profile": 2,
     "engine-guidance": 2,
     "engine-rule": 1,
+    "workspace-rule": 1,
     "pack-rule": 1,
+    "pack-metadata": 1,
+    "pack-knowledge": 1,
     "operator": 1,
 }
+
+SYNAPSE_SCORE_ADJUSTMENTS = {
+    "draft": -6,
+    "active": 0,
+    "deprecated": -12,
+    "superseded": -16,
+    "stale": -4,
+}
+
+# A component-specific retrieval-map is an explicit ownership signal, stronger
+# than incidental word overlap in generic intent candidates. Direct entries and
+# earlier map entries receive a small deterministic tie-break while category and
+# max-doc budgets still apply.
+PACK_ROUTE_BASE_SCORE = 2
+PACK_ROUTE_DIRECT_SCORE = 12
+PACK_ROUTE_ORDER_SCORE = 4
 
 WORKSTREAM_BUDGETS = {
     "engineering": CATEGORY_BUDGETS,
@@ -313,9 +339,17 @@ def _sha256_text(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
-def _sha256_file(path: Path) -> Optional[str]:
-    text = _read(path)
-    return _sha256_text(text) if text is not None else None
+def _read_source_record(path: Path) -> Optional[synapse_engine.SourceRecord]:
+    """Read exact source bytes once, then decode for context processing."""
+    try:
+        payload = path.read_bytes()
+        text = payload.decode("utf-8")
+    except (OSError, UnicodeDecodeError):
+        return None
+    return synapse_engine.SourceRecord(
+        text=text,
+        source_hash=hashlib.sha256(payload).hexdigest(),
+    )
 
 
 def _rel(path: Path, root: Path) -> str:
@@ -323,6 +357,11 @@ def _rel(path: Path, root: Path) -> str:
         return path.relative_to(root).as_posix()
     except ValueError:
         return path.as_posix()
+
+
+def _is_workspace_source_ref(relative_path: str) -> bool:
+    parts = relative_path.split("/")
+    return len(parts) >= 3 and parts[0] == "workspaces" and bool(parts[1])
 
 
 _KEYWORD_PATTERN_CACHE: Dict[str, "re.Pattern"] = {}
@@ -414,6 +453,62 @@ def _parse_pack_keywords(pack_yaml: Path) -> Dict[str, List[str]]:
         items = [x.strip().strip("'\"") for x in m.group(2).split(",")]
         out[m.group(1)] = [x for x in items if x]
     return out
+
+
+def _load_pack_manifest(pack_yaml: Path) -> Dict:
+    text = _read(pack_yaml)
+    if text is None:
+        return {}
+    try:
+        manifest = pack_loader._parse_simple_yaml(text)  # noqa: SLF001
+    except (TypeError, ValueError):
+        return {}
+    return manifest if isinstance(manifest, dict) else {}
+
+
+def _pack_manifest_version(manifest: Mapping) -> int:
+    value = manifest.get("manifest_version", 1)
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 1
+
+
+def _manifest_retrieval_rows(manifest: Mapping) -> Dict[str, List[str]]:
+    raw = manifest.get("retrieval") or {}
+    if not isinstance(raw, dict):
+        return {}
+    rows: Dict[str, List[str]] = {}
+    for component, value in raw.items():
+        if isinstance(value, list):
+            entries = [str(item).strip() for item in value if str(item).strip()]
+        elif isinstance(value, str) and value.strip():
+            entries = [value.strip()]
+        else:
+            entries = []
+        if entries:
+            rows[str(component)] = entries
+    return rows
+
+
+def _pack_retrieval_rows(wiki_root: Path, pack_name: str) -> Dict[str, List[str]]:
+    pack_dir = wiki_root / "packs" / pack_name
+    manifest = _load_pack_manifest(pack_dir / "pack.yaml")
+    if _pack_manifest_version(manifest) >= 3:
+        # V3 has one routing authority. An invalid/empty canonical map must not
+        # silently fall back to a stale v2 adapter.
+        return _manifest_retrieval_rows(manifest)
+    files = manifest.get("files") or {}
+    declared = files.get("retrieval_map") if isinstance(files, dict) else None
+    map_path = pack_dir / str(declared or "agents/pipeline/retrieval-map.md")
+    return _parse_retrieval_map(map_path)
+
+
+def _uses_canonical_pack_knowledge(manifest: Mapping) -> bool:
+    # Never fall back to legacy prose for a malformed v3 pack. Validation
+    # reports the missing canonical file; runtime simply omits unavailable v3
+    # guidance instead of loading a competing source of truth.
+    return _pack_manifest_version(manifest) >= 3
 
 
 def detect_components(task: str, wiki_root: Path, packs: List[str]) -> List[str]:
@@ -651,28 +746,44 @@ def _collect_pack_retrieval_candidates(
     domain: Optional[str],
     project: Optional[str],
     warnings: Optional[List[str]] = None,
+    source_records: Optional[Mapping[str, synapse_engine.SourceRecord]] = None,
 ) -> Tuple[List[Dict], List[Dict]]:
     ws_dir = wiki_root / "workspaces" / workspace
     candidates: List[Dict] = []
     gaps: List[Dict] = []
     for pack_name in packs:
-        map_path = wiki_root / "packs" / pack_name / "agents" / "pipeline" / "retrieval-map.md"
-        rows = _parse_retrieval_map(map_path)
+        rows = _pack_retrieval_rows(wiki_root, pack_name)
         if not rows:
             continue
         for component in components:
             entries = rows.get(component)
             if not entries:
                 continue
-            for entry in entries:
+            for entry_index, entry in enumerate(entries):
                 paths, gap = _expand_map_entry(entry, wiki_root, ws_dir, pack_name, domain, project)
                 if gap:
                     gaps.append(gap)
+                entry_path = entry.split("#", 1)[0].strip()
+                direct_entry = bool(Path(entry_path).suffix)
                 for path in paths:
                     rel = _rel(path, wiki_root)
                     category = _category_from_path(path, rel)
-                    item = _doc(path, category, wiki_root, gaps=gaps, warnings=warnings)
+                    item = _doc(
+                        path,
+                        category,
+                        wiki_root,
+                        gaps=gaps,
+                        warnings=warnings,
+                        source_records=source_records,
+                    )
                     if item is not None:
+                        item["pack_retrieval_route"] = {
+                            "pack": pack_name,
+                            "component": component,
+                            "entry": entry,
+                            "entry_index": entry_index,
+                            "direct_entry": direct_entry,
+                        }
                         candidates.append(item)
     return candidates, gaps
 
@@ -688,7 +799,9 @@ def _iter_files(base: Path, patterns: Iterable[str]) -> List[Path]:
 
 def _doc(path: Path, category: str, wiki_root: Path,
          gaps: Optional[List[Dict]] = None,
-         warnings: Optional[List[str]] = None) -> Optional[Dict]:
+         warnings: Optional[List[str]] = None,
+         source_records: Optional[Mapping[str, synapse_engine.SourceRecord]] = None,
+         ) -> Optional[Dict]:
     rel = _rel(path, wiki_root)
     reason = block_reason(path)
     if reason:
@@ -699,10 +812,22 @@ def _doc(path: Path, category: str, wiki_root: Path,
                 "blocking_hint": False,
             })
         return None
-    text = _read(path)
-    if text is None:
+    source = source_records.get(rel) if source_records is not None else None
+    if (
+        source_records is not None
+        and source is None
+        and _is_workspace_source_ref(rel)
+    ):
+        # A workspace path discovered after the synapse scan belongs to a
+        # different source generation. Keep this build coherent by deferring
+        # it to the next invocation instead of rereading outside the snapshot.
         return None
-    source_hash = _sha256_text(text)
+    if source is None:
+        source = _read_source_record(path)
+    if source is None:
+        return None
+    text = source.text
+    source_hash = source.source_hash
     safe_text, findings = redact_text(text)
     if findings and warnings is not None:
         warnings.append(f"Redacted sensitive-looking content in {rel}")
@@ -719,6 +844,72 @@ def _doc(path: Path, category: str, wiki_root: Path,
     return doc
 
 
+def _synapse_state(node: Dict) -> Dict:
+    return {
+        "node_id": node["id"],
+        "memory_class": node["memory_class"],
+        "lifecycle": node["lifecycle"],
+        "freshness": node["freshness"],
+        "review_by": node.get("review_by"),
+    }
+
+
+def _attach_synapse_metadata(
+    docs: Iterable[Dict],
+    lookups: synapse_engine.SynapseLookups,
+) -> None:
+    for doc in docs:
+        node = lookups.nodes_by_path.get(doc["path"])
+        if not node:
+            continue
+        doc["synapse"] = _synapse_state(node)
+
+
+def _expand_replacement_candidates(
+    candidates: List[Dict],
+    lookups: synapse_engine.SynapseLookups,
+    wiki_root: Path,
+    gaps: List[Dict],
+    warnings: List[str],
+    source_records: Optional[Mapping[str, synapse_engine.SourceRecord]] = None,
+) -> List[Dict]:
+    """Add active one-hop replacements for superseded/deprecated candidates."""
+    expanded = list(candidates)
+    existing_paths = {doc["path"] for doc in expanded}
+    for doc in list(expanded):
+        state = doc.get("synapse") or {}
+        if state.get("lifecycle") not in {"deprecated", "superseded"}:
+            continue
+        replacement_ids = lookups.replacements_by_target.get(
+            state.get("node_id", ""),
+            (),
+        )
+        for replacement_id in replacement_ids:
+            replacement = lookups.nodes_by_id.get(replacement_id)
+            if not replacement or replacement["path"] in existing_paths:
+                continue
+            path = wiki_root / replacement["path"]
+            category = _category_from_path(path, replacement["path"], replacement["kind"])
+            item = _doc(
+                path,
+                category,
+                wiki_root,
+                gaps=gaps,
+                warnings=warnings,
+                source_records=source_records,
+            )
+            if item is None:
+                continue
+            item["synapse"] = _synapse_state(replacement)
+            item["synapse_expansion"] = {
+                "reason": "active_replacement",
+                "replaces": state.get("node_id"),
+            }
+            expanded.append(item)
+            existing_paths.add(item["path"])
+    return expanded
+
+
 def _dedupe_paths(paths: Iterable[Path]) -> List[Path]:
     seen: set[Path] = set()
     out: List[Path] = []
@@ -731,14 +922,18 @@ def _dedupe_paths(paths: Iterable[Path]) -> List[Path]:
     return sorted(out)
 
 
-def _contract_files(directory: Path, wiki_root: Path) -> Tuple[List[Path], List[Dict]]:
+def _contract_files(
+    directory: Path,
+    wiki_root: Path,
+    source_records: Optional[Mapping[str, synapse_engine.SourceRecord]] = None,
+) -> Tuple[List[Path], List[Dict]]:
     """Return contract files plus blocking gaps from contract-index.json."""
     if not directory.is_dir():
         return [], []
     gaps: List[Dict] = []
     paths: List[Path] = []
     index_path = directory / "contract-index.json"
-    index = _load_index(index_path)
+    index = _load_index(index_path, wiki_root, source_records)
     for contract_id, rel_path in sorted(index.items()):
         target = directory / rel_path
         if target.is_file():
@@ -769,6 +964,7 @@ def _collect_candidates(
     domain: Optional[str] = None,
     project: Optional[str] = None,
     warnings: Optional[List[str]] = None,
+    source_records: Optional[Mapping[str, synapse_engine.SourceRecord]] = None,
 ) -> Tuple[List[Dict], List[Dict]]:
     ws_dir = wiki_root / "workspaces" / workspace
     candidates: List[Dict] = []
@@ -777,7 +973,14 @@ def _collect_candidates(
 
     def add_many(paths: List[Path], category: str) -> None:
         for path in paths:
-            item = _doc(path, category, wiki_root, gaps=gaps, warnings=warnings)
+            item = _doc(
+                path,
+                category,
+                wiki_root,
+                gaps=gaps,
+                warnings=warnings,
+                source_records=source_records,
+            )
             if item is not None:
                 candidates.append(item)
 
@@ -789,7 +992,11 @@ def _collect_candidates(
     architecture = ws_dir / "platform" / "architecture"
     decisions = ws_dir / "decisions"
 
-    contract_files, contract_gaps = _contract_files(contracts, wiki_root)
+    contract_files, contract_gaps = _contract_files(
+        contracts,
+        wiki_root,
+        source_records,
+    )
     gaps.extend(contract_gaps)
 
     if intent == "implement_feature":
@@ -815,7 +1022,14 @@ def _collect_candidates(
         add_many(_iter_files(domains, ["*/workflow.md"]), "domain")
 
     pack_candidates, pack_gaps = _collect_pack_retrieval_candidates(
-        wiki_root, workspace, packs, components, domain, project, warnings=warnings,
+        wiki_root,
+        workspace,
+        packs,
+        components,
+        domain,
+        project,
+        warnings=warnings,
+        source_records=source_records,
     )
     candidates.extend(pack_candidates)
     gaps.extend(pack_gaps)
@@ -828,6 +1042,12 @@ def _collect_candidates(
                 "missing": f"packs/{pack_name}",
                 "blocking_hint": False,
             })
+            continue
+        manifest = _load_pack_manifest(pack_dir / "pack.yaml")
+        if _uses_canonical_pack_knowledge(manifest):
+            # Manifest v3 folds failure signals into the selected component
+            # section of knowledge.md. The legacy all-intent pitfalls document
+            # remains on disk only as a compatibility adapter.
             continue
         add_many(_iter_files(pack_dir, ["agents/common-pitfalls.md"]), "pitfalls")
 
@@ -863,7 +1083,25 @@ def _score(doc: Dict, words: List[str]) -> int:
         elif _matches(word, text):
             score += 1
     score += max(0, 5 - PRIORITY.get(doc["category"], 5))
+    route = doc.get("pack_retrieval_route") or {}
+    if route:
+        score += PACK_ROUTE_BASE_SCORE
+        if route.get("direct_entry"):
+            score += PACK_ROUTE_DIRECT_SCORE
+        score += max(
+            0,
+            PACK_ROUTE_ORDER_SCORE - int(route.get("entry_index", 0)),
+        )
+    score += _synapse_score_adjustment(doc)
     return score
+
+
+def _synapse_score_adjustment(doc: Dict) -> int:
+    state = doc.get("synapse") or {}
+    adjustment = SYNAPSE_SCORE_ADJUSTMENTS.get(state.get("lifecycle"), 0)
+    if state.get("freshness") == "stale":
+        adjustment += SYNAPSE_SCORE_ADJUSTMENTS["stale"]
+    return adjustment
 
 
 def _estimate_tokens(text: str) -> int:
@@ -874,7 +1112,7 @@ def _estimate_tokens(text: str) -> int:
 
 
 def _trace_doc(doc: Dict, score: int, reason: str) -> Dict:
-    return {
+    item = {
         "path": doc["path"],
         "category": doc["category"],
         "selection_score": score,
@@ -883,6 +1121,14 @@ def _trace_doc(doc: Dict, score: int, reason: str) -> Dict:
         "source_hash": doc["source_hash"],
         "redacted": bool(doc.get("redacted")),
     }
+    if doc.get("synapse"):
+        item["synapse"] = doc["synapse"]
+        item["state_score_adjustment"] = _synapse_score_adjustment(doc)
+    if doc.get("synapse_expansion"):
+        item["synapse_expansion"] = doc["synapse_expansion"]
+    if doc.get("pack_retrieval_route"):
+        item["pack_retrieval_route"] = doc["pack_retrieval_route"]
+    return item
 
 
 def _rank_budget_trace(candidates: List[Dict], task: str, components: List[str],
@@ -1008,14 +1254,182 @@ def _slice_doc(doc: Dict) -> Dict:
         "content": sliced,
         "source_hash": doc["source_hash"],
     }
+    if doc.get("synapse"):
+        out["synapse"] = doc["synapse"]
+    if doc.get("synapse_expansion"):
+        out["synapse_expansion"] = doc["synapse_expansion"]
     if doc.get("redacted"):
         out["redacted"] = True
         out["redaction_findings"] = doc.get("redaction_findings", [])
     return out
 
 
-def _load_index(index_path: Path) -> Dict[str, str]:
-    data = _read(index_path)
+def _slice_pack_manifest(doc: Dict, manifest: Mapping,
+                         selected_components: Iterable[str]) -> Dict:
+    owned = {str(item) for item in (manifest.get("components") or [])}
+    selected = sorted(owned & {str(item) for item in selected_components})
+    lines = [
+        f"# Pack Metadata — {manifest.get('name', Path(doc['path']).parent.name)}",
+        "",
+        f"- Version: `{manifest.get('version', 'unknown')}`",
+        f"- Status: `{manifest.get('status', 'legacy')}`",
+        f"- Category: `{manifest.get('category', 'unspecified')}`",
+        "- Knowledge source: `"
+        + str((manifest.get("files") or {}).get("knowledge") or "missing")
+        + "`",
+        "- Selected components: " + (
+            ", ".join(f"`{item}`" for item in selected) if selected else "(global only)"
+        ),
+    ]
+    return {
+        "category": "pack-metadata",
+        "path": doc["path"],
+        "sections": ["metadata"],
+        "content": "\n".join(lines),
+        "source_hash": doc["source_hash"],
+    }
+
+
+def _slice_pack_knowledge(doc: Dict, owned_components: Iterable[str],
+                          selected_components: Iterable[str]) -> Dict:
+    text = doc["content_full"]
+    sections = _split_sections(text)
+    owned = {str(item) for item in owned_components}
+    selected = owned & {str(item) for item in selected_components}
+    chunks: List[str] = []
+    selected_titles: List[str] = []
+    for title, body in sections.items():
+        normalized = title.strip().casefold()
+        include = normalized == "global principles"
+        if normalized.startswith("component:"):
+            component = title.split(":", 1)[1].strip()
+            include = component in selected
+        if include:
+            chunks.append(body)
+            selected_titles.append(title)
+
+    if not chunks:
+        # Validation rejects malformed v3 knowledge, but runtime preserves the
+        # full source instead of silently dropping all pack guidance.
+        return _slice_doc({**doc, "category": "pack-knowledge"})
+
+    h1 = next(
+        (line.strip() for line in text.splitlines() if line.startswith("# ")),
+        "# Pack Knowledge",
+    )
+    out = {
+        "category": "pack-knowledge",
+        "path": doc["path"],
+        "sections": selected_titles,
+        "content": h1 + "\n\n" + "\n\n".join(chunks).strip(),
+        "source_hash": doc["source_hash"],
+    }
+    if doc.get("redacted"):
+        out["redacted"] = True
+        out["redaction_findings"] = doc.get("redaction_findings", [])
+    return out
+
+
+def _finalize_budget_report(budget_report: Dict, referenced_docs: List[Dict],
+                            static_docs: List[Dict]) -> Dict:
+    def summarize(docs: Iterable[Dict]) -> Tuple[int, Dict[str, int]]:
+        total = 0
+        by_category: Dict[str, int] = {}
+        for doc in docs:
+            tokens = _estimate_tokens(doc.get("content", ""))
+            total += tokens
+            category = str(doc.get("category", "unknown"))
+            by_category[category] = by_category.get(category, 0) + tokens
+        return total, dict(sorted(by_category.items()))
+
+    referenced_tokens, referenced_by_category = summarize(referenced_docs)
+    static_tokens, static_by_category = summarize(static_docs)
+    compiled_docs: List[Dict] = []
+    seen: set[str] = set()
+    overlap = 0
+    for doc in static_docs + referenced_docs:
+        path = str(doc.get("path") or "")
+        if path and path in seen:
+            overlap += 1
+            continue
+        if path:
+            seen.add(path)
+        compiled_docs.append(doc)
+    total_tokens, total_by_category = summarize(compiled_docs)
+
+    out = dict(budget_report)
+    out.update({
+        # Preserve the v1 field while making it reflect the actual sliced
+        # referenced payload rather than each candidate's full source file.
+        "estimated_tokens_selected": referenced_tokens,
+        "estimated_tokens_by_category": referenced_by_category,
+        "static_docs": len(static_docs),
+        "compiled_docs": len(compiled_docs),
+        "deduplicated_overlap_docs": overlap,
+        "estimated_tokens_referenced": referenced_tokens,
+        "estimated_tokens_static": static_tokens,
+        "estimated_tokens_total": total_tokens,
+        "estimated_tokens_static_by_category": static_by_category,
+        "estimated_tokens_total_by_category": total_by_category,
+    })
+    return out
+
+
+def _selected_state_warnings(docs: List[Dict]) -> List[str]:
+    warnings: List[str] = []
+    for doc in docs:
+        state = doc.get("synapse") or {}
+        node_id = state.get("node_id")
+        if not node_id:
+            continue
+        lifecycle = state.get("lifecycle")
+        freshness = state.get("freshness")
+        if lifecycle and lifecycle != "active":
+            warnings.append(
+                f"Selected {lifecycle} knowledge node {node_id} ({doc['path']})."
+            )
+        if freshness == "stale":
+            review = f"; review_by={state['review_by']}" if state.get("review_by") else ""
+            warnings.append(
+                f"Selected stale knowledge node {node_id} ({doc['path']}{review})."
+            )
+    return warnings
+
+
+def _context_projection(synapse: Dict, docs: List[Dict]) -> Dict:
+    selected_states = [
+        doc["synapse"] for doc in docs if doc.get("synapse")
+    ]
+    selected_ids = sorted({state["node_id"] for state in selected_states})
+    selected_set = set(selected_ids)
+    relevant_edges = [
+        edge for edge in synapse.get("edges", [])
+        if edge.get("source") in selected_set and edge.get("target") in selected_set
+    ]
+    return {
+        "artifact_type": "contextd_context_projection.v1",
+        "version": "1",
+        "memory_class": "context",
+        "source_synapse_hash": synapse["synapse_hash"],
+        "policy_version": synapse["policy_version"],
+        "selected_node_ids": selected_ids,
+        "selected_states": sorted(selected_states, key=lambda item: item["node_id"]),
+        "edges": relevant_edges,
+    }
+
+
+def _load_index(
+    index_path: Path,
+    wiki_root: Optional[Path] = None,
+    source_records: Optional[Mapping[str, synapse_engine.SourceRecord]] = None,
+) -> Dict[str, str]:
+    source = None
+    if wiki_root is not None and source_records is not None:
+        relative = _rel(index_path, wiki_root)
+        source = source_records.get(relative)
+        if source is None and _is_workspace_source_ref(relative):
+            return {}
+    data = source.text if source is not None else _read(index_path)
     if data is None:
         return {}
     try:
@@ -1095,28 +1509,91 @@ def _contracts_touched(docs: List[Dict]) -> List[str]:
     return sorted(set(out))
 
 
-def _collect_static_context(wiki_root: Path, workspace: str, packs: List[str]) -> List[Dict]:
+def _collect_static_context(
+    wiki_root: Path,
+    workspace: str,
+    packs: List[str],
+    components: Optional[List[str]] = None,
+    source_records: Optional[Mapping[str, synapse_engine.SourceRecord]] = None,
+) -> List[Dict]:
     """Collect deterministic non-volatile sources for materialized packs."""
+    components = components or []
     sources: List[Tuple[Path, str]] = [
         (wiki_root / "workspaces" / workspace / "workspace.md", "workspace-profile"),
         (wiki_root / "agents" / "system-prompt.md", "engine-guidance"),
         (wiki_root / "agents" / "constraints.md", "engine-rule"),
+        (wiki_root / "agents" / "coding-rules.md", "engine-rule"),
         (wiki_root / "agents" / "pipeline" / "validator-rules.md", "engine-rule"),
+        (
+            wiki_root / "workspaces" / workspace / "agents" / "constraints.md",
+            "workspace-rule",
+        ),
+        (
+            wiki_root / "workspaces" / workspace / "agents" / "coding-rules.md",
+            "workspace-rule",
+        ),
+        (
+            wiki_root
+            / "workspaces"
+            / workspace
+            / "agents"
+            / "pipeline"
+            / "validator-rules.md",
+            "workspace-rule",
+        ),
     ]
-    for pack_name in packs:
-        pack_dir = wiki_root / "packs" / pack_name
-        sources.extend([
-            (pack_dir / "pack.yaml", "pack-rule"),
-            (pack_dir / "agents" / "constraints.md", "pack-rule"),
-            (pack_dir / "agents" / "coding-rules.md", "pack-rule"),
-            (pack_dir / "agents" / "common-pitfalls.md", "pack-rule"),
-        ])
 
     docs: List[Dict] = []
     for path, category in sources:
-        item = _doc(path, category, wiki_root)
+        item = _doc(path, category, wiki_root, source_records=source_records)
         if item is not None:
             docs.append(_slice_doc(item))
+
+    for pack_name in packs:
+        pack_dir = wiki_root / "packs" / pack_name
+        manifest_path = pack_dir / "pack.yaml"
+        manifest = _load_pack_manifest(manifest_path)
+        manifest_item = _doc(
+            manifest_path,
+            "pack-rule",
+            wiki_root,
+            source_records=source_records,
+        )
+        if _uses_canonical_pack_knowledge(manifest):
+            if manifest_item is not None:
+                docs.append(_slice_pack_manifest(manifest_item, manifest, components))
+            files = manifest.get("files") or {}
+            knowledge_rel = files.get("knowledge") if isinstance(files, dict) else None
+            if (
+                isinstance(knowledge_rel, str)
+                and knowledge_rel
+                and not Path(knowledge_rel).is_absolute()
+                and ".." not in Path(knowledge_rel).parts
+            ):
+                knowledge_item = _doc(
+                    pack_dir / knowledge_rel,
+                    "pack-knowledge",
+                    wiki_root,
+                    source_records=source_records,
+                )
+                if knowledge_item is not None:
+                    docs.append(_slice_pack_knowledge(
+                        knowledge_item,
+                        manifest.get("components") or [],
+                        components,
+                    ))
+            continue
+
+        legacy_sources = [
+            (manifest_path, "pack-rule"),
+            (pack_dir / "agents" / "constraints.md", "pack-rule"),
+            (pack_dir / "agents" / "coding-rules.md", "pack-rule"),
+            (pack_dir / "agents" / "common-pitfalls.md", "pack-rule"),
+        ]
+        for path, category in legacy_sources:
+            item = _doc(path, category, wiki_root, source_records=source_records)
+            if item is not None:
+                docs.append(_slice_doc(item))
     return docs
 
 
@@ -1127,7 +1604,16 @@ def _build_context_pack(
     static_docs: Optional[List[Dict]] = None,
 ) -> Dict:
     static_docs = static_docs or []
-    pack_sources = docs + static_docs
+    pack_sources: List[Dict] = []
+    seen_paths: set[str] = set()
+    # Materialization uses the same order. Static guidance owns a duplicate
+    # path so the source manifest, budget report, and compiled markdown agree.
+    for doc in static_docs + docs:
+        path = str(doc.get("path") or "")
+        if not path or path in seen_paths:
+            continue
+        seen_paths.add(path)
+        pack_sources.append(doc)
     static = [
         {
             "path": doc["path"],
@@ -1140,6 +1626,7 @@ def _build_context_pack(
             "architecture", "decision", "runbook", "product", "requirement",
             "design", "quality", "evidence", "pitfalls", "common-pitfalls",
             "workspace-profile", "engine-guidance", "engine-rule", "pack-rule",
+            "workspace-rule", "pack-metadata", "pack-knowledge",
         }
     ]
     payload = {
@@ -1161,7 +1648,7 @@ def _build_context_pack(
     }
 
 
-def build_context_artifact(
+def build_context_snapshot(
     task: str,
     wiki_root: Path,
     workspace: str,
@@ -1169,8 +1656,19 @@ def build_context_artifact(
     project_dir: Optional[Path] = None,
     warnings: Optional[List[str]] = None,
     include_selection_trace: bool = False,
-) -> Dict:
-    """Build the canonical JSON context artifact."""
+    synapse_as_of: Optional[date] = None,
+) -> Tuple[Dict, Dict]:
+    """Build one immutable context artifact + synapse snapshot pair.
+
+    Both outputs share the same full-workspace synapse build. Callers that
+    materialize should pass the returned synapse to ``materialize_context`` so
+    writing artifacts never rescans or rehashes workspace source files.
+    """
+    workspace_dir = synapse_engine.resolve_workspace_dir(wiki_root, workspace)
+    if workspace_dir is None or not workspace_dir.is_dir():
+        raise ValueError(
+            f"Invalid or missing workspace {workspace!r}; context build refused."
+        )
     warnings_out = list(warnings or [])
     intent_scores = _intent_scores(task)
     intent_type = _pick_by_precedence(intent_scores, INTENT_PRECEDENCE, "implement_feature")
@@ -1179,6 +1677,12 @@ def build_context_artifact(
     workstream_scores = _workstream_scores(task, packs, components)
     workstream = _pick_by_precedence(workstream_scores, WORKSTREAM_PRECEDENCE, "engineering")
     meta = WORKSTREAM_PRIORITY.get(workstream, WORKSTREAM_PRIORITY["engineering"])
+    synapse_build = synapse_engine.build_synapse_snapshot(
+        wiki_root,
+        workspace,
+        as_of=synapse_as_of,
+    )
+    synapse = synapse_build.graph
     candidates, gaps = _collect_candidates(
         intent_type,
         wiki_root,
@@ -1188,12 +1692,36 @@ def build_context_artifact(
         domain=domain,
         project=scope,
         warnings=warnings_out,
+        source_records=synapse_build.sources_by_path,
+    )
+    _attach_synapse_metadata(candidates, synapse_build.lookups)
+    candidates = _expand_replacement_candidates(
+        candidates,
+        synapse_build.lookups,
+        wiki_root,
+        gaps,
+        warnings_out,
+        source_records=synapse_build.sources_by_path,
     )
     selected, selection_trace, budget_report = _rank_budget_trace(
         candidates, task, components, workstream=workstream,
     )
     docs = [_slice_doc(doc) for doc in selected]
-    static_docs = _collect_static_context(wiki_root, workspace, packs)
+    static_docs = _collect_static_context(
+        wiki_root,
+        workspace,
+        packs,
+        components=components,
+        source_records=synapse_build.sources_by_path,
+    )
+    _attach_synapse_metadata(static_docs, synapse_build.lookups)
+    budget_report = _finalize_budget_report(budget_report, docs, static_docs)
+    warnings_out.extend(_selected_state_warnings(docs))
+    for diagnostic in synapse.get("diagnostics", []):
+        if diagnostic.get("severity") == "error":
+            warnings_out.append(
+                f"Synapse {diagnostic['code']}: {diagnostic['message']}"
+            )
     context_pack = _build_context_pack(workspace, packs, docs, static_docs)
     source_hashes = {
         doc["path"]: doc["source_hash"]
@@ -1229,6 +1757,17 @@ def build_context_artifact(
         "static_context": static_docs,
         "gaps": gaps,
         "warnings": warnings_out,
+        "synapse": {
+            "artifact_type": "contextd_synapse_ref.v1",
+            "version": "1",
+            "policy_version": synapse["policy_version"],
+            "synapse_hash": synapse["synapse_hash"],
+            "as_of": synapse["as_of"],
+            "ref": None,
+            "status": "not_materialized",
+            "summary": synapse["summary"],
+        },
+        "context_projection": _context_projection(synapse, docs),
         "contextPack": context_pack,
         "retrieval_policy": {
             "mode": "deterministic-file-backed",
@@ -1236,6 +1775,11 @@ def build_context_artifact(
             "priority": meta["priority"],
             "max_docs": 7,
             "rag_policy": "advisory-only-disabled-by-default",
+            "lifecycle_policy": {
+                "version": synapse["policy_version"],
+                "score_adjustments": dict(SYNAPSE_SCORE_ADJUSTMENTS),
+                "replacement_traversal_depth": 1,
+            },
         },
         "budget_report": budget_report,
         "source_hashes": source_hashes,
@@ -1248,6 +1792,30 @@ def build_context_artifact(
     )
     if include_selection_trace:
         artifact["_selection_trace"] = selection_trace
+    return artifact, synapse
+
+
+def build_context_artifact(
+    task: str,
+    wiki_root: Path,
+    workspace: str,
+    packs: List[str],
+    project_dir: Optional[Path] = None,
+    warnings: Optional[List[str]] = None,
+    include_selection_trace: bool = False,
+    synapse_as_of: Optional[date] = None,
+) -> Dict:
+    """Build the canonical JSON context artifact without exposing build state."""
+    artifact, _ = build_context_snapshot(
+        task=task,
+        wiki_root=wiki_root,
+        workspace=workspace,
+        packs=packs,
+        project_dir=project_dir,
+        warnings=warnings,
+        include_selection_trace=include_selection_trace,
+        synapse_as_of=synapse_as_of,
+    )
     return artifact
 
 
@@ -1278,6 +1846,7 @@ def build_context_explanation(
         "gap_count": len(artifact["gaps"]),
         "warning_count": len(artifact["warnings"]),
         "context_pack_key": artifact["contextPack"]["packKey"],
+        "synapse_hash": artifact["synapse"]["synapse_hash"],
         "budget_report": artifact.get("budget_report", {}),
     }
     return {
@@ -1307,14 +1876,35 @@ def render_markdown(artifact: Dict) -> str:
         f"- **Workspace**: `{artifact['workspace']}`",
         f"- **Context Pack**: `{artifact['contextPack']['packKey']}` "
         f"({artifact['contextPack']['status']})",
-        "",
-        "## Relevant Knowledge",
-        "",
     ]
+    synapse_ref = artifact.get("synapse") or {}
+    if synapse_ref.get("synapse_hash"):
+        lines.append(
+            f"- **Synapse**: `{synapse_ref['synapse_hash'][:16]}` "
+            f"({synapse_ref.get('status', 'unknown')})"
+        )
+    budget = artifact.get("budget_report") or {}
+    if budget:
+        lines.append(
+            "- **Estimated Context**: "
+            f"~{budget.get('estimated_tokens_referenced', 0)} referenced + "
+            f"~{budget.get('estimated_tokens_static', 0)} static = "
+            f"~{budget.get('estimated_tokens_total', 0)} total tokens"
+        )
+    lines.extend(["", "## Relevant Knowledge", ""])
     for doc in artifact.get("referenced_docs", []):
         sections = ", ".join(doc.get("sections") or ["all"])
         lines.append(f"### [{doc['category']}] {doc['path']}")
-        lines.append(f"_Sections: {sections}; sha256: {doc['source_hash'][:12]}_")
+        state = doc.get("synapse") or {}
+        state_text = ""
+        if state:
+            state_text = (
+                f"; node: {state['node_id']}; lifecycle: {state['lifecycle']}"
+                f"; freshness: {state['freshness']}"
+            )
+        lines.append(
+            f"_Sections: {sections}; sha256: {doc['source_hash'][:12]}{state_text}_"
+        )
         lines.append("")
         lines.append(doc.get("content", "").strip())
         lines.append("")
@@ -1364,8 +1954,72 @@ def _pack_markdown(artifact: Dict) -> str:
     return "\n".join(lines)
 
 
-def materialize_context(artifact: Dict, project_dir: Path) -> Dict:
-    """Write current-task JSON/Markdown and compiled static context pack."""
+def _same_knowledge_root(artifact: Dict, synapse_snapshot: Dict) -> bool:
+    artifact_root = artifact.get("knowledge_root")
+    snapshot_root = synapse_snapshot.get("knowledge_root")
+    if not isinstance(artifact_root, str) or not isinstance(snapshot_root, str):
+        return False
+    try:
+        return Path(artifact_root).resolve() == Path(snapshot_root).resolve()
+    except (OSError, RuntimeError):
+        return False
+
+
+def _artifact_sources_match_snapshot(artifact: Dict, synapse_snapshot: Dict) -> bool:
+    """Verify workspace docs in the artifact came from the supplied graph."""
+    workspace = artifact.get("workspace")
+    if not isinstance(workspace, str) or not workspace:
+        return False
+    prefix = f"workspaces/{workspace}/"
+    nodes = synapse_engine.nodes_by_path(synapse_snapshot)
+    referenced_docs = artifact.get("referenced_docs") or []
+    static_context = artifact.get("static_context") or []
+    if not isinstance(referenced_docs, list) or not isinstance(static_context, list):
+        return False
+    docs = referenced_docs + static_context
+    expected_source_hashes: Dict[str, str] = {}
+    for doc in docs:
+        if not isinstance(doc, dict):
+            return False
+        path = doc.get("path")
+        source_hash = doc.get("source_hash")
+        if not isinstance(path, str) or not isinstance(source_hash, str):
+            return False
+        expected_source_hashes[path] = source_hash
+        if not path.startswith(prefix):
+            continue
+        node = nodes.get(path)
+        if node is None or node.get("source_hash") != source_hash:
+            return False
+        if doc.get("synapse") != _synapse_state(node):
+            return False
+    return artifact.get("source_hashes") == expected_source_hashes
+
+
+def _artifact_projection_matches_snapshot(artifact: Dict, synapse_snapshot: Dict) -> bool:
+    referenced_docs = artifact.get("referenced_docs")
+    if not isinstance(referenced_docs, list):
+        return False
+    try:
+        expected = _context_projection(synapse_snapshot, referenced_docs)
+    except (KeyError, TypeError):
+        return False
+    return artifact.get("context_projection") == expected
+
+
+def materialize_context(
+    artifact: Dict,
+    project_dir: Path,
+    *,
+    synapse_snapshot: Optional[Dict] = None,
+) -> Dict:
+    """Write context outputs from an already-built immutable snapshot.
+
+    Materialization is intentionally write-only: it never rescans canonical
+    workspace sources. Callers that need ``synapse.json`` pass the graph
+    returned by ``build_context_snapshot``. Without it, the task artifacts are
+    still materialized and the synapse reference remains not_materialized.
+    """
     context_dir = project_dir / ".contextd" / "context"
     packs_dir = context_dir / "packs"
     packs_dir.mkdir(parents=True, exist_ok=True)
@@ -1378,15 +2032,49 @@ def materialize_context(artifact: Dict, project_dir: Path) -> Dict:
     artifact["contextPack"]["compiledRef"] = rel_pack
     artifact["contextPack"]["status"] = "materialized"
 
+    synapse_ref = artifact.get("synapse") or {}
+    synapse_path: Optional[Path] = None
+    if synapse_snapshot is not None:
+        snapshot_matches = (
+            synapse_snapshot.get("artifact_type") == "contextd_synapse.v1"
+            and synapse_snapshot.get("workspace") == artifact.get("workspace")
+            and _same_knowledge_root(artifact, synapse_snapshot)
+            and synapse_snapshot.get("synapse_hash") == synapse_ref.get("synapse_hash")
+            and synapse_snapshot.get("as_of") == synapse_ref.get("as_of")
+            and synapse_snapshot.get("policy_version") == synapse_ref.get("policy_version")
+            and (artifact.get("context_projection") or {}).get("source_synapse_hash")
+            == synapse_ref.get("synapse_hash")
+            and synapse_engine.compute_synapse_hash(synapse_snapshot)
+            == synapse_snapshot.get("synapse_hash")
+            and _artifact_sources_match_snapshot(artifact, synapse_snapshot)
+            and _artifact_projection_matches_snapshot(artifact, synapse_snapshot)
+        )
+        if snapshot_matches:
+            synapse_path = synapse_engine.materialize_synapse(synapse_snapshot, project_dir)
+            synapse_ref["ref"] = synapse_path.relative_to(project_dir).as_posix()
+            synapse_ref["status"] = "materialized"
+        else:
+            synapse_ref["ref"] = None
+            synapse_ref["status"] = "drifted"
+            artifact.setdefault("warnings", []).append(
+                "Synapse snapshot does not match the context artifact; "
+                "materialization refused. Rerun contextd context."
+            )
+    else:
+        synapse_ref["ref"] = None
+        synapse_ref["status"] = "not_materialized"
+
     json_path = context_dir / "current-task.json"
     md_path = context_dir / "current-task.md"
-    atomic_write_text(json_path, json.dumps(artifact, indent=2, ensure_ascii=False) + "\n")
-    atomic_write_text(md_path, render_markdown(artifact))
     artifact["materialized"] = {
         "json": json_path.relative_to(project_dir).as_posix(),
         "markdown": md_path.relative_to(project_dir).as_posix(),
         "pack": rel_pack,
     }
+    if synapse_path is not None:
+        artifact["materialized"]["synapse"] = synapse_path.relative_to(project_dir).as_posix()
+    atomic_write_text(json_path, json.dumps(artifact, indent=2, ensure_ascii=False) + "\n")
+    atomic_write_text(md_path, render_markdown(artifact))
     return artifact
 
 

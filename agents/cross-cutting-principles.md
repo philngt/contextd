@@ -1,6 +1,8 @@
 # Cross-Cutting Principles
 
-Index của các nguyên tắc xuất hiện ở nhiều pack với cách áp dụng (rule cụ thể) khác nhau theo domain. Doc này KHÔNG thay thế pack constraints — chỉ giúp tra cứu nhanh "nguyên tắc X được pack nào áp dụng cụ thể thế nào".
+Index của các nguyên tắc xuất hiện ở nhiều pack với cách áp dụng khác nhau theo
+domain. Doc này KHÔNG thay thế canonical pack knowledge (v3) hoặc compatibility
+constraints (v2) — chỉ giúp tra cứu nhanh.
 
 Mỗi nguyên tắc bên dưới có:
 - Tên + 1 dòng giải thích
@@ -82,8 +84,23 @@ Bounded resource consumption — không để unbounded.
 
 ---
 
+## 7. Human steering and decision ownership
+
+AI có thể tìm facts, phân tích và đề xuất, nhưng material direction/risk decisions
+phải còn visible và steerable bởi operator.
+
+| Pack | Áp dụng cho | Rule cụ thể |
+|---|---|---|
+| pack-operator-steering | Người dùng mất phương hướng hoặc không biết tiếp tục/dừng | Inspect facts, dựng decision frontier, đưa recommendation và chốt `continue|pause|pivot|stop` mà không chiếm quyền quyết định. [knowledge.md#component-operator-wayfinding](../packs/pack-operator-steering/knowledge.md#component-operator-wayfinding) |
+| pack-agentic | Effectful/destructive/irreversible tool call | Risk metadata + approval policy hoặc human checkpoint. [constraints.md#tool-use](../packs/pack-agentic/agents/constraints.md) |
+| pack-solo-builder | High-impact domain automation | Qualified review, human checkpoint và audit evidence trước final decision automation. [constraints.md#safety--evidence-boundary](../packs/pack-solo-builder/agents/constraints.md) |
+
+---
+
 ## How to use
 
-- Khi viết feature → check pack đang active trong workspace (`workspace.md#Packs`) → đọc constraints.md của mỗi pack đó.
+- Khi viết feature → resolve effective packs từ project config/workspace default
+  → đọc v3 Global Principles + matched component sections (hoặc v2 declared rule
+  files) của mỗi pack.
 - Khi feature span nhiều domain (vd web API gọi LLM) → check doc này để thấy nguyên tắc nào áp dụng ở cả 2 layer.
 - Khi propose constraint mới — nếu đã có nguyên tắc tương đương ở doc này → mở rộng bảng thay vì tạo rule độc lập.

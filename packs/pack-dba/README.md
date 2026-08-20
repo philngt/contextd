@@ -33,3 +33,22 @@ Enable when workspace cần:
 
 - Pack mechanism: [`packs/README.md`](../README.md)
 - Cross-cutting principles: [`agents/cross-cutting-principles.md`](../../agents/cross-cutting-principles.md)
+
+## When not to enable
+
+- Task chỉ thay đổi application repository/query builder mà không chạm migration, plan hoặc vận hành DB.
+- Provision database infrastructure; dùng `pack-devops-iac` và chỉ thêm pack này khi có nghĩa vụ schema/restore.
+
+## Retrieval behavior
+
+Pack route theo bốn workflow độc lập: schema change, query evidence, backup/restore, và operational guardrail. Quyết định dựa trên lock/plan/RPO/RTO thực đo, không dựa trên ngưỡng row-count cố định.
+
+## Verification
+
+```bash
+contextd pack-validate --pack pack-dba --format text
+contextd context "Review online schema migration and rollback" --preview --format json
+python scripts/validate.py --file <migration-fixture> --workspace <workspace-with-pack>
+```
+
+Engine behavior phải được kiểm tra theo version đang chạy. Ví dụ, [MySQL/InnoDB tự tạo index cần thiết cho referencing foreign key khi chưa có](https://dev.mysql.com/doc/refman/8.0/en/create-table-foreign-keys.html); pack yêu cầu verify actual catalog thay vì áp một giả định cross-engine.

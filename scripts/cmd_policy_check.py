@@ -10,11 +10,10 @@ from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
-sys.path.insert(0, str(SCRIPT_DIR / "lib"))
 
 import cmd_resolve  # noqa: E402
-import task_context_engine  # noqa: E402
-from stdio import configure_stdio  # noqa: E402
+from lib import task_context_engine  # noqa: E402
+from lib.stdio import configure_stdio  # noqa: E402
 
 
 def _render_text(report: dict) -> str:
@@ -64,7 +63,12 @@ def _resolve_task(task: str, workspace: str | None, cwd: str | None) -> tuple[di
     if not ws:
         raise RuntimeError("No workspace resolved.")
     if workspace:
-        packs, _ = cmd_resolve.get_effective_packs({}, wiki_root / "workspaces" / ws / "workspace.md")
+        ws_dir = cmd_resolve.resolve_workspace_dir(wiki_root, ws)
+        if ws_dir is None or not ws_dir.is_dir():
+            raise ValueError(
+                f"Invalid or missing workspace {ws!r}; context build refused."
+            )
+        packs, _ = cmd_resolve.get_effective_packs({}, ws_dir / "workspace.md")
     else:
         packs = resolved.get("packs") or []
     artifact = task_context_engine.build_context_artifact(
@@ -85,7 +89,7 @@ def run(task: str, workspace: str | None = None, cwd: str | None = None,
         return 1
     try:
         artifact, _, _, _ = _resolve_task(task, workspace, cwd)
-    except RuntimeError as exc:
+    except (RuntimeError, ValueError) as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
     report = artifact.get("governance_report") or {}

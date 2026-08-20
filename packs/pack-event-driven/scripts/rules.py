@@ -4,7 +4,7 @@
 pack-event-driven — Layer 1 validator rules.
 
 Loaded dynamically by `scripts/validate.py` via `scripts/pack_loader.py` when
-the active workspace opts into this pack (in workspace.md `## Packs` section).
+the resolved codebase opts into this pack through canonical effective-pack resolution.
 
 Each rule is a function:
     rule_<id>(file_path: Path, lines: List[str], ctx: Dict) -> List[Dict]

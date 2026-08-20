@@ -1,33 +1,33 @@
 # pack-ai-app — Constraints
 
-## Prompt & Context
+## Prompt & Context (`pack-ai-app-prompt-context`)
 
 - **Prompt versioning** — every system/user prompt template lives in code with a version tag (constant name, file path, hoặc semver). KHÔNG inline magic-string prompt scattered.
-- **Prompt cache cho long static context** — Anthropic SDK: `cache_control` cho system prompt > ~1024 tokens. Cache hit rate tracked.
-- **Token budget enforced** — `max_tokens` set explicitly per call. Không để default unbounded.
+- **Provider-aware cache policy** — enable prompt caching only for stable, eligible content according to the configured provider/model contract; record cache read/write tokens and invalidate on prompt/source version change. Không hardcode một ngưỡng token dùng cho mọi provider.
+- **Output budget enforced** — set an explicit application-level output ceiling using the provider's current parameter (`max_tokens`, `max_completion_tokens`, `max_output_tokens`, or equivalent).
 - **No PII in logs** — never `log.info(prompt)` / `print(prompt)` containing raw user input. Mask hoặc log only metadata (length, hash, request ID).
 
-## Model & Provider
+## Model & Provider (`pack-ai-app-model-provider`)
 
-- **Model ID from config**, not hardcoded. Easy to upgrade Opus 4.6 → 4.7 hoặc swap provider.
-- **Retry với exponential backoff** + circuit breaker on provider 5xx / rate limit. Don't tight-loop.
-- **Streaming preferred** for user-facing response > 1s; non-streaming chỉ cho batch/job.
+- **Model ID/snapshot from config**, not scattered literals. Pin production snapshots where supported and run evals before model/provider changes.
+- **Retry policy is provider/operation aware** — retry only documented transient outcomes, respect `Retry-After`, cap attempts/deadline and handle ambiguous completion/billing/idempotency. Circuit breaking/load shedding follows measured failure mode; never tight-loop.
+- **Delivery mode is intentional** — choose streaming/non-streaming from UX, moderation, retry, and structured-output requirements; record the trade-off instead of using a global latency threshold.
 
-## Structured Output
+## Structured Output (`pack-ai-app-structured-output`)
 
-- **Schema validation** cho output expected là JSON/structured. Use `tool_choice` (Anthropic) / `response_format` (OpenAI) / function calling, KHÔNG parse text với regex.
-- **Hallucination guardrail** — response từ RAG MUST cite source (chunk ID / doc ID); response without grounding flagged.
+- **Schema validation** cho output expected là structured. Use the pinned provider's supported structured-output/tool schema path, validate locally, and define refusal/truncation/parse-failure behavior; text parsing is fallback only with fixtures and failure limits.
+- **Grounding contract** — evidence-backed/RAG response cites source IDs and distinguishes supported facts, inference, and insufficient evidence. Tasks that intentionally do not require grounding must declare that mode.
 
-## Eval
+## Eval (`pack-ai-app-eval`)
 
-- **Golden test set** trước khi merge prompt change. Min metrics: accuracy on golden tasks, p95 latency, p95 cost.
+- **Representative eval set** trước khi merge prompt/model/retrieval change. Metrics and slices derive from the task contract (quality/safety/grounding/latency/cost as applicable), with sample size and uncertainty.
 - **A/B compare** old prompt vs new prompt trên cùng golden set.
 - **No prompt deploy without eval pass** — CI gate.
 
-## Cost & Observability
+## Cost & Observability (`pack-ai-app-cost-observability`)
 
-- **Token usage logged per request** — input tokens, output tokens, cache_hit_tokens, model. Aggregate per user/feature/day.
-- **Cost alarm** khi spike (>2x baseline).
+- **Usage telemetry normalized per request** — provider/model/endpoint, input/output and cache/reasoning/tool usage fields when available; preserve raw provider request ID for debugging and aggregate only on privacy-approved dimensions.
+- **Cost alarm** uses a configured budget/SLO and workload-normalized baseline; threshold ownership and response action must be explicit.
 - **Trace** mỗi LLM call: prompt hash, model, latency, status. KHÔNG log raw prompt body.
 
 > Anti-patterns lặp lại trong domain này: xem [common-pitfalls.md](common-pitfalls.md) (Top 10 với rule/why/detect/severity).

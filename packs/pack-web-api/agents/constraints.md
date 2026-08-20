@@ -2,31 +2,31 @@
 
 Hard rules cho REST/GraphQL/gRPC API. Additive trên engine constraints.
 
-## API Boundary
+## API Boundary (`pack-web-api-boundary`)
 
-- **Validate input at the boundary** — every endpoint validates payload + query + header before touching business logic. Use framework validation (`@Valid`, Pydantic, Zod, schema), not ad-hoc `if` checks.
+- **Validate consumed untrusted input at the boundary** — payload/query/path/header fields used by the endpoint get schema + semantic validation before business logic; do not require meaningless validation for untouched headers.
 - **Error response has a contract** — never return raw exception message or stack trace to client. Map exceptions to structured error response (`{code, message, requestId}`).
 - **Auth check precedes business logic** — guard with middleware/interceptor/decorator, not inline `if user.role == ...` scattered across handlers.
 
-## Idempotency
+## Idempotency (`pack-web-api-idempotency`)
 
-- **Mutating endpoints (POST/PUT/PATCH/DELETE) MUST be idempotent** when client retry is plausible (mobile/offline/3rd-party webhook). Either: (a) idempotency key header + dedup store, (b) upsert semantics on the underlying record.
+- **Retry behavior for mutations is explicit** when clients/intermediaries may retry. Use an idempotency key + durable outcome record, conditional request/version, natural operation ID, upsert/state-machine semantics, or an explicit non-retryable contract with reconciliation. Handle ambiguous completion, retention and concurrent duplicates.
 - **GET MUST be safe** — no side-effects on read paths. No "track-and-update last-seen" type writes inline with GET.
 
-## Versioning
+## Versioning (`pack-web-api-versioning`)
 
-- **Do not break a published API contract** — version in path/header before changing shape. Versioning strategy chosen per workspace, recorded in `{ws}/decisions/`.
+- **Do not break a published API contract silently** — prefer compatible evolution; when a real break is required, use the workspace version/migration strategy (path/header/media/schema revision as appropriate) and record it in `{ws}/decisions/`.
 - **Do not remove fields** from response without deprecation period documented.
 
-## Information Leak
+## Information Leak (`pack-web-api-information-leak`)
 
 - **Do not log raw request body** containing PII/secrets. Mask field-by-field per data classification.
 - **Do not include stack traces** in 5xx responses sent to public clients. Log with correlationId, return only `{code: "INTERNAL_ERROR", requestId}`.
 - **Do not expose internal endpoint paths** (admin, debug, actuator) through public ingress without explicit allow-list.
 
-## Rate Limiting & Abuse
+## Rate Limiting & Abuse (`pack-web-api-abuse-controls`)
 
-- **Public endpoints have rate limit** — per IP/per token. Limit values from config, not hardcoded.
-- **Heavy endpoints have circuit breaker** to downstream — avoid thundering herd on outage.
+- **Abusable/costly endpoints have an explicit abuse-control policy** — choose quota/rate/concurrency limits and identity key from threat/workload evidence; values from config.
+- **Downstream failure strategy is explicit** — timeout, retry, concurrency cap, circuit breaker or load shedding chosen from idempotency and failure-mode analysis, không bắt buộc một pattern cho mọi endpoint.
 
 > Anti-patterns lặp lại trong domain này: xem [common-pitfalls.md](common-pitfalls.md) (Top 10 với rule/why/detect/severity).

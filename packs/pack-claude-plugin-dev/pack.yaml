@@ -1,6 +1,14 @@
 name: pack-claude-plugin-dev
-version: 1.0.0
+manifest_version: 2
+version: 1.1.0
 description: Build Claude Code plugins per Anthropic standards — plugin manifest, slash commands, subagents, skills, hooks, MCP servers
+status: stable
+category: developer-tooling
+reviewed_on: 2026-08-20
+audiences: [engineering, ops, security]
+task_types: [implement_feature, fix_bug, design, review]
+scope_includes: [Claude Code plugin packaging, plugin commands and agents, plugin skills and hooks, plugin MCP configuration]
+scope_excludes: [project-local Claude configuration, generic MCP application design]
 
 components:
   - plugin
@@ -12,10 +20,10 @@ components:
 
 keywords:
   plugin: [plugin, ".claude-plugin", "plugin.json", marketplace, "claude code plugin"]
-  command: ["slash command", ".claude/commands", "/command", "command frontmatter", "argument-hint", "allowed-tools"]
-  subagent: [subagent, ".claude/agents", "agent frontmatter", "Task tool", "agent definition"]
-  skill: [skill, "SKILL.md", ".claude/skills", "skill frontmatter", trigger]
-  hook: [hook, "PreToolUse", "PostToolUse", "UserPromptSubmit", "SessionStart", "settings.json hooks"]
+  command: ["plugin command", "commands/", "/command", "command frontmatter", "argument-hint", "allowed-tools"]
+  subagent: ["plugin agent", "plugin subagent", "agents/", "agent frontmatter", "agent definition"]
+  skill: ["plugin skill", "SKILL.md", "skills/", "skill frontmatter", "skill trigger"]
+  hook: ["plugin hook", "hooks/hooks.json", "PreToolUse", "PostToolUse", "UserPromptSubmit", "SessionStart"]
   plugin-mcp: ["mcp server config", ".mcp.json", "mcp settings", "stdio mcp"]
 
 files:

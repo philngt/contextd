@@ -46,10 +46,10 @@ import json
 import re
 import sys
 from pathlib import Path
-from typing import Any
 from urllib.parse import unquote, urlparse
 
 from lib import contextd_resolver
+from lib.frontmatter import parse_yaml_subset, split_frontmatter
 from lib.stdio import configure_stdio
 
 # Markdown inline link: [text](target)
@@ -79,142 +79,6 @@ OKF_NON_CONCEPT_NAMES = frozenset({
     "workspace.md", "knowledge-map.md",
 })
 FOOTNOTE_RE = re.compile(r"\[\^([^\]]+)\]")
-
-
-def parse_yaml_subset(text: str) -> dict:
-    """Parse the YAML subset used in OKF frontmatter (stdlib only).
-
-    Handles the constructs this project emits: `key: scalar`, flow
-    collections `[a, b]` / `{k: v, k2: v2}`, and block lists of dicts
-    (e.g. `sources:` with `- id: ...` + indented continuation lines).
-    Anything beyond that is best-effort; unknown keys are preserved as
-    scalars and never rejected.
-    """
-    data: dict = {}
-    lines = text.split("\n")
-    i, n = 0, len(lines)
-    while i < n:
-        stripped = lines[i].strip()
-        if not stripped or stripped.startswith("#"):
-            i += 1
-            continue
-        key, _, rest = stripped.partition(":")
-        key = key.strip()
-        if not rest.strip():
-            value, i = _parse_block(lines, i + 1)
-            data[key] = value
-            continue
-        data[key] = _parse_flow(rest)
-        i += 1
-    return data
-
-
-def _parse_flow(value: str):
-    """Parse an inline YAML scalar or flow collection."""
-    value = value.strip()
-    if value.startswith("[") and value.endswith("]"):
-        inner = value[1:-1].strip()
-        return [_scalar(x) for x in inner.split(",") if x.strip()] if inner else []
-    if value.startswith("{") and value.endswith("}"):
-        inner = value[1:-1].strip()
-        out: dict = {}
-        if not inner:
-            return out
-        for pair in inner.split(","):
-            k, _, v = pair.partition(":")
-            out[k.strip()] = _scalar(v)
-        return out
-    return _scalar(value)
-
-
-def _scalar(s: str) -> str:
-    s = s.strip()
-    if len(s) >= 2 and s[0] == s[-1] and s[0] in ("\"", "'"):
-        return s[1:-1]
-    # YAML inline comment: ` #` after the value (never strip quoted values)
-    ci = s.find(" #")
-    if ci != -1:
-        s = s[:ci].strip()
-    return s
-
-
-def _parse_block(lines: list[str], i: int) -> tuple[Any, int]:
-    """Parse an indented block under a key. Returns (value, next_i)."""
-    n = len(lines)
-    indent: int | None = None
-    items: list = []
-    is_list = False
-    while i < n:
-        line = lines[i]
-        if not line.strip():
-            i += 1
-            continue
-        cur_indent = len(line) - len(line.lstrip())
-        if indent is None:
-            indent = cur_indent
-            is_list = line.strip().startswith("- ")
-            if not is_list:
-                return _parse_dict_block(lines, i, cur_indent)
-        if cur_indent < indent:
-            break
-        s = line.strip()
-        if not is_list or not s.startswith("- "):
-            break
-        item = s[2:].strip()
-        if ":" in item:
-            entry: dict = {}
-            k, _, v = item.partition(":")
-            entry[k.strip()] = _parse_flow(v)
-            j = i + 1
-            while j < n and lines[j].strip():
-                if len(lines[j]) - len(lines[j].lstrip()) <= indent:
-                    break
-                sk = lines[j].strip()
-                if sk.startswith("- "):
-                    break
-                skk, _, skv = sk.partition(":")
-                entry[skk.strip()] = _parse_flow(skv)
-                j += 1
-            items.append(entry)
-            i = j
-        else:
-            items.append(_scalar(item))
-            i += 1
-    return items, i
-
-
-def _parse_dict_block(lines: list[str], i: int, indent: int) -> tuple[dict, int]:
-    d: dict = {}
-    n = len(lines)
-    while i < n:
-        line = lines[i]
-        if not line.strip():
-            i += 1
-            continue
-        if len(line) - len(line.lstrip()) < indent:
-            break
-        s = line.strip()
-        if s.startswith("- "):
-            break
-        k, _, rest = s.partition(":")
-        k = k.strip()
-        if rest.strip():
-            d[k] = _parse_flow(rest)
-            i += 1
-        else:
-            value, i = _parse_block(lines, i + 1)
-            d[k] = value
-    return d, i
-
-
-def split_frontmatter(text: str) -> tuple[dict | None, str]:
-    """Split md text into (frontmatter_dict|None, body). None => no/closed-fence missing."""
-    if not text.startswith("---\n"):
-        return None, text
-    end = text.find("\n---", 4)
-    if end == -1:
-        return None, text  # opening fence without closing — not a valid frontmatter
-    return parse_yaml_subset(text[4:end]), text[end + 4:]
 
 
 def check_okf_file(file: Path, findings: list[dict]) -> None:

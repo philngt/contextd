@@ -65,3 +65,20 @@ workspaces/{ws}/product/
 ```
 
 > Folder `product/` song song với `platform/`, `domains/`, `projects/`. Engineers đọc `platform/`, PMs đọc `product/`. Cả hai liên kết qua `domains/` (business rules dùng chung).
+
+## When not to enable
+
+- Task thuần implementation đã có product brief và success metric rõ.
+- Market claim/persona chưa có evidence; pack không biến giả định thành user research.
+
+## Retrieval behavior
+
+Routing phân biệt brief, OKR, roadmap, persona, journey và metric. Từ khóa gợi ý artifact cụ thể; agent phải ưu tiên product evidence trong active workspace và báo gap khi thiếu nguồn.
+
+## Verification
+
+```bash
+contextd pack-validate --pack pack-product --format text
+contextd context "Review product brief success metric and persona" --preview --format json
+python scripts/validate.py --file <product-fixture> --workspace <workspace-with-pack>
+```

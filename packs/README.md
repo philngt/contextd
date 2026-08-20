@@ -1,182 +1,207 @@
 # Domain Packs
 
-## Purpose
+Packs are opt-in context modules. Each pack adds domain-specific decision
+guidance, retrieval routes, and optional deterministic validators on top of the
+stack-agnostic contextd engine.
 
-The wiki-template core engine is **stack-agnostic** — it only keeps workspace isolation, retrieval pipeline, evidence pipeline, and generic rules (no-hardcoded-config, constructor-injection, domain-no-new-states, ...).
+Enable the smallest set that owns the task. A pack does not automatically make
+context cheaper. Manifest v3 makes its cost bounded and visible: runtime loads
+compact metadata, Global Principles, and only the component sections selected by
+the task. Precise components/keywords still matter; enabling every pack “just in
+case” increases noise and can create conflicting mental models.
 
-Stack-specific knowledge (Kafka/MQTT, REST, frontend, mobile, AI/agentic, ...) lives in **packs** — modular bundles that can be enabled/disabled per workspace.
+## Resolution and precedence
 
-## Pack structure
+Effective packs resolve in this order:
 
+1. If `<codebase>/.contextd/config.json#packs` is an array, it replaces the
+   workspace default, including an empty array.
+2. Otherwise contextd reads `workspaces/{ws}/workspace.md#Packs`.
+3. Legacy adapters are accepted only during migration.
+
+Rules remain additive and strict-only:
+
+```text
+engine  →  effective packs (alphabetical)  →  workspace
 ```
+
+No later layer may relax an earlier constraint. `conflicts_with` is fail-fast
+when incompatible packs are enabled together.
+
+Per-codebase selection:
+
+```json
+{
+  "workspace": "default",
+  "knowledge_root": ".",
+  "packs": ["pack-web-api", "pack-security"]
+}
+```
+
+Workspace default:
+
+```md
+## Packs
+
+- pack-web-api
+- pack-security
+```
+
+See [workspace resolution](../agents/pipeline/workspace-resolution.md) for the
+complete canonical/legacy fallback rules.
+
+## Pack manifest v3 and v2 compatibility
+
+New packs use `manifest_version: 3`. It keeps the v2 metadata contract and adds
+two authoring constraints:
+
+- `pack.yaml#retrieval` is the canonical component-to-doc mapping.
+- `knowledge.md` is the canonical guidance source, organized as Global
+  Principles plus component-scoped Mental Model, Standards, Failure Signals,
+  and Evidence And Stop Conditions.
+
+The runtime compiles two planes:
+
+```text
+always loaded: compact pack metadata + Global Principles
+task selected: matched Component sections + matched workspace documents
+```
+
+The metadata contract shared by v2 and v3 includes:
+
+- Semver `version`, maturity `status`, `category`, and ISO `reviewed_on`.
+- Runtime `audiences` and `task_types`.
+- Explicit `scope_includes` and `scope_excludes`.
+- At least three specific, unique routing keywords for every component.
+- Complete declarations for the files required by that manifest version.
+
+Existing v2 packs remain fully supported while they are migrated. Their seven
+prose/runtime files retain their current strict semantics. Legacy v1 manifests
+remain loadable and receive an informational migration notice. New/scaffolded
+packs must use v3. The schema is
+[`templates/pack.schema.json`](../templates/pack.schema.json).
+
+`reviewed_on` records an evidence review; it is not a promise that an external
+framework can never change. Provider/framework-specific packs should link their
+official baseline and pin the version used by each workspace.
+
+## Required structure
+
+Manifest v3:
+
+```text
 packs/{pack-name}/
-├── pack.yaml                          # manifest
-├── README.md                          # docs
-├── agents/
-│   ├── constraints.md                 # additive constraints (hard rules)
-│   ├── coding-rules.md                # additive working rules; filename kept for compatibility
-│   ├── common-pitfalls.md             # Top 10 anti-patterns (rule/why/detect/severity)
-│   └── pipeline/
-│       ├── validator-rules.md         # rule table (prefix pack-{name}-)
-│       ├── retrieval-map.md           # component → file map
-│       └── prompt-overrides.md        # self-check additions (refs common-pitfalls.md)
+├── pack.yaml
+├── README.md
+├── knowledge.md
 └── scripts/
-    └── rules.py                       # Layer-1 rule functions for validate.py
+    └── rules.py
 ```
 
-## Lifecycle
+Manifest v2 retains `agents/constraints.md`, `coding-rules.md`,
+`common-pitfalls.md`, `pipeline/validator-rules.md`, `retrieval-map.md`, and
+`prompt-overrides.md`. A v3 pack may keep those files as migration adapters, but
+they must not become a second or weaker source of truth.
 
-1. **Workspace opt-in**: add the pack to the `## Packs` section in `workspaces/{ws}/workspace.md`:
-   ```md
-   ## Packs
+Each pack README must explain when to enable it, when not to enable it, how
+retrieval behaves, and how to verify a representative task. Standards use stable
+`pack-{name}-...` IDs. Every executable validator ID must be documented in the
+canonical knowledge source.
 
-   - pack-event-driven
-   ```
-2. **Pipeline resolution**:
-   - Engine constraints/rules are **always** loaded first (immutable).
-   - Each pack is loaded sequentially (alphabetical) — additive.
-   - Workspace-level overrides (`{ws}/agents/...`) are loaded last — additive.
-3. **Validator**: `scripts/validate.py` resolves active packs from the workspace, dynamically imports each pack’s `scripts/rules.py`, and appends them to `ALL_RULES`.
+### Migrating a v2 pack
 
-## Naming conventions
+1. Inventory constraints, working rules, pitfalls, self-checks, validator IDs,
+   and component routes; resolve contradictions before moving text.
+2. Move durable cross-component rules to Global Principles. For each component,
+   keep only its Mental Model, Standards, Failure Signals, and Evidence And Stop
+   Conditions. Leave project-specific implementation detail in workspace docs.
+3. Move retrieval rows into `pack.yaml#retrieval`; keep the old retrieval table
+   equivalent while adapters are supported.
+4. Keep v0.x legacy filenames as marked adapters; do not delete or rename them
+   before the planned v1.0 migration boundary.
+5. Prove positive/negative routing, validator parity, golden tasks, and the
+   referenced/static/total token budget before changing the manifest to v3.
 
-| Layer | Rule prefix |
-|-------|-------------|
-| Engine | (none) — e.g. `no-hardcoded-config` |
-| Pack | `pack-{name}-` — e.g. `pack-event-driven-kafka-no-hardcoded-topic` |
-| Workspace | `ws-` — e.g. `ws-no-mongodb-direct` |
+## Maturity model
 
-The loader is fail-fast when duplicate rule names are found across layers.
+| Status | Meaning |
+|---|---|
+| `stable` | Public scope/IDs are expected to remain compatible within a major version; runtime and representative tasks are covered. |
+| `beta` | Useful and validated, but scope or heuristics may still change before v1. |
+| `experimental` | Evaluation only; activation should be narrow and explicitly accepted. |
+| `deprecated` | Kept for migration; do not enable in new workspaces. |
 
-## Conflict & priority
-
-- **Strict-only direction**: pack/workspace can only ADD or tighten rules. They cannot relax engine rules.
-- Pack manifests may declare `conflicts_with: [other-pack]` — the loader fails fast if both are enabled in the same workspace.
-- Constraints are expressed additively — all active rules must hold at the same time.
-
-## Create a new pack
-
-**Fast path** — use the scaffold generator:
-```bash
-python scripts/scaffold-pack.py pack-{your-name}
-```
-This generates all 8 files (pack.yaml, README, 5 agent docs, scripts/rules.py with built-in `_vio()` helper). Then customize: `pack.yaml` components + keywords, `constraints.md`, retrieval map, and add rule functions to the `RULES` list in `rules.py`.
-
-`agents/coding-rules.md` is a compatibility filename. Non-code packs should treat it as **working rules** for product, BA, QC, UX, security, ops, or domain-research writing.
-
-**Manual path** (when you need fine-grained control):
-
-1. Copy `templates/pack.yaml` → `packs/{your-pack}/pack.yaml`.
-2. Create the folder structure above.
-3. Write constraints/rules with prefix `pack-{your-pack}-`.
-4. Test with `python scripts/validate.py --file <fixture> --workspace <ws-with-pack>`.
+Maturity describes the pack contract, not the maturity of every external
+technology mentioned by the pack.
 
 ## Current catalog
 
-| Pack | Status | Best for |
-|------|--------|----------|
-| [pack-event-driven](pack-event-driven/) | stable (v1.0) | Kafka, MQTT, RabbitMQ, NATS, batch processing |
-| [pack-web-api](pack-web-api/) | stable (v1.0) | REST/GraphQL/gRPC APIs — input validation, error shape, idempotency, no info leak |
-| [pack-frontend-react](pack-frontend-react/) | stable (v1.0) | React + Next.js — hooks rules, a11y, effect cleanup, list keys, server/client boundary |
-| [pack-ai-app](pack-ai-app/) | stable (v1.0) | LLM apps — prompt caching, structured output, eval harness, no PII leak |
-| [pack-agentic](pack-agentic/) | stable (v1.0) | Agent loops, tool use, MCP, multi-agent — bounded steps, idempotent tools, human-in-the-loop |
-| [pack-claude-plugin-dev](pack-claude-plugin-dev/) | stable (v1.0) | Build Claude Code plugins — plugin manifest, slash commands, subagents, skills, hooks, MCP servers per Anthropic standards |
-| [pack-operator-steering](pack-operator-steering/) | beta (v0.1) | Agent-operator steering — context audits, drift checks, remediation plans, decision ledgers, handoff quality, workflow mental models |
-| [pack-product](pack-product/) | beta (v0.1) | Product/business knowledge — briefs, OKRs, roadmap, personas, journeys, metrics. For **non-technical contributors** (PM, business). Pairs with `/product-brief`, `/business-view`, `/contextd-explain` |
-| [pack-qc](pack-qc/) | beta (v0.2) | Quality control + performance optimization — test design/execution, defect triage, regression & release gates, baseline metrics, bottleneck profiling, safe optimization, regression guards. Absorbs former `pack-optimize` |
-| [pack-ba](pack-ba/) | beta (v0.1) | Business analysis knowledge — requirements modeling, acceptance criteria, process mapping, stakeholder alignment. For **BA** users needing requirement clarity/testability |
-| [pack-security](pack-security/) | beta (v0.2) | Security engineering + authorized pentest — threat modeling, authz boundaries, secret hygiene, logging redaction, scope discipline, evidence-based findings, risk rating, remediation reporting. Absorbs former `pack-pentest` |
-| [pack-dba](pack-dba/) | beta (v0.1) | Database administration knowledge — migration rollback safety, query evidence, backup/restore readiness, DB operational guardrails |
-| [pack-devops-iac](pack-devops-iac/) | beta (v0.1) | DevOps + infrastructure as code — Terraform dependency safety, Kubernetes workload readiness, CI/CD plan gates, promotion, drift, and rollback controls |
-| [pack-solo-builder](pack-solo-builder/) | beta (v0.1) | For **non-technical domain experts** (mechanical, accounting, healthcare, ...) using Claude Code as a "no-code IDE" — tool design coach + cross-platform tech recipe library (Linux native + Windows Docker). Pairs with `/tool-design`, `/tool-list`, `/tool-extend` |
-| [pack-ui-ux](pack-ui-ux/) | beta (v0.1) | UI/UX design — design system, design tokens, WCAG 2.1 AA accessibility, user flows, UX writing conventions. Pairs with `pack-frontend-react` (design doc ↔ code impl) |
+| Pack | Category | Status | Best for |
+|---|---|---|---|
+| [pack-agentic](pack-agentic/) | agent runtime | stable 1.1.0 | Bounded agent loops, tool effects, MCP, handoffs, runtime/long-term memory boundaries |
+| [pack-ai-app](pack-ai-app/) | engineering | stable 1.1.0 | Provider-aware LLM calls, prompt lifecycle, RAG/embedding, evals, data/cost controls |
+| [pack-claude-plugin-dev](pack-claude-plugin-dev/) | developer tooling | stable 1.1.0 | Claude Code plugin-root packaging, commands, agents, skills, hooks, and plugin MCP |
+| [pack-event-driven](pack-event-driven/) | engineering | stable 1.1.0 | Kafka/MQTT/event delivery, retry/DLQ, offset and batch semantics |
+| [pack-frontend-react](pack-frontend-react/) | engineering | stable 1.1.0 | Current Rules of React, Hooks/effects, JSX accessibility, pinned Next.js router boundaries |
+| [pack-web-api](pack-web-api/) | engineering | stable 1.1.0 | REST/GraphQL/gRPC boundaries, validation, retry safety, errors and abuse controls |
+| [pack-ba](pack-ba/) | product | beta 0.2.0 | Requirements, acceptance criteria, process maps and stakeholder decisions |
+| [pack-dba](pack-dba/) | operations | beta 0.2.0 | Evidence-based schema changes, query plans, restore proof and DB operations |
+| [pack-devops-iac](pack-devops-iac/) | operations | beta 0.2.0 | Terraform/OpenTofu, Kubernetes, CI/CD promotion, drift and rollback |
+| [pack-operator-steering](pack-operator-steering/) | agent runtime | beta 0.4.0 | Recover direction, retain human decision ownership, audit drift/context, and decide continue/pause/pivot/stop |
+| [pack-product](pack-product/) | product | beta 0.2.0 | Briefs, outcomes, roadmaps, evidence-backed personas and journeys |
+| [pack-qc](pack-qc/) | quality | beta 0.3.0 | Test/defect/release evidence plus measured, guarded performance optimization |
+| [pack-security](pack-security/) | security | beta 0.3.0 | Threat/control review and explicitly authorized evidence-based security validation |
+| [pack-solo-builder](pack-solo-builder/) | enablement | beta 0.2.0 | Recipe-driven single-purpose tools for non-technical domain experts |
+| [pack-ui-ux](pack-ui-ux/) | design | beta 0.2.0 | Design systems, WCAG 2.2, stateful user flows and UX writing |
 
-Roadmap (Phase 3+): `pack-mobile-react-native`, `pack-mobile-flutter`, `pack-mobile-ios-swift`, `pack-mobile-android-kotlin`, `pack-data-engineering`, `pack-ml-training`.
+## Selection guide
 
-## Composition examples
+Start from the artifact or boundary being changed:
 
-**Solo fullstack dev (webapp + AI feature)**:
-```md
-## Packs
+| Task signal | Start with | Add only when |
+|---|---|---|
+| HTTP/GraphQL/gRPC boundary | `pack-web-api` | `pack-security` for a real trust/sensitive-data concern; `pack-qc` for release/perf evidence |
+| Broker consumer/producer | `pack-event-driven` | `pack-dba` for schema/restore obligations; `pack-agentic` only for an actual agent runtime |
+| React/Next implementation | `pack-frontend-react` | `pack-ui-ux` when design/a11y/flow artifacts are also in scope |
+| LLM/RAG application | `pack-ai-app` | `pack-agentic` for loop/tool/orchestration behavior |
+| Claude Code plugin package | `pack-claude-plugin-dev` | `pack-agentic` for MCP tool runtime behavior, not packaging alone |
+| Product discovery to release | `pack-product`, `pack-ba` | `pack-ui-ux`, then `pack-qc` as those artifacts enter scope |
+| Infrastructure release | `pack-devops-iac` | `pack-dba` for DB changes; `pack-security` for IAM/secrets/threat controls |
+| Lost direction, unclear next step, or long-running agent operation | `pack-operator-steering` | relevant domain pack for the work being steered |
 
-- pack-web-api
-- pack-frontend-react
-- pack-ai-app
+Use `contextd explain` to inspect what a candidate combination actually loads:
+
+```bash
+contextd context "Review retry-safe payment endpoint" --preview --format json
+contextd explain "Review retry-safe payment endpoint" --format text
 ```
 
-**AI agent product (MCP server + frontend)**:
-```md
-## Packs
+## Create or upgrade a pack
 
-- pack-ai-app
-- pack-agentic
-- pack-web-api
-- pack-frontend-react
+Fast path:
+
+```bash
+python scripts/scaffold-pack.py pack-{your-name}
 ```
 
-**Backend microservices (event-driven + REST gateway)**:
-```md
-## Packs
+Before enabling it:
 
-- pack-event-driven
-- pack-web-api
+1. Complete manifest scope, audiences, task types, components, and specific keywords.
+2. Give every component one manifest retrieval row scoped to the active workspace.
+3. Write Global Principles and each component's Mental Model, Standards, Failure
+   Signals, and Evidence And Stop Conditions in `knowledge.md`.
+4. Use stable standard IDs; keep validators narrow and document every executable
+   rule ID in `knowledge.md`.
+5. Add representative positive/negative routing tasks, a context-budget
+   assertion, and a validator fixture when executable rules exist.
+6. Run the quality gates below.
+
+```bash
+contextd pack-validate --pack pack-{your-name} --format text
+contextd context "{representative task}" --preview --format json
+contextd explain "{representative task}" --format text
+python scripts/validate.py --file <fixture> --workspace <workspace-with-pack>
 ```
 
-**Claude Code plugin developer**:
-```md
-## Packs
-
-- pack-claude-plugin-dev
-- pack-agentic       # if the plugin ships an MCP server with tool implementations
-```
-
-**Product team with BA + QC collaboration**:
-```md
-## Packs
-
-- pack-product
-- pack-ba
-- pack-qc
-```
-
-**Security-heavy backend**:
-```md
-## Packs
-
-- pack-web-api
-- pack-security
-```
-
-**Defensive validation flow** (security + pentest now combined):
-```md
-## Packs
-
-- pack-security
-```
-
-**Performance hardening flow** (qc + optimize now combined):
-```md
-## Packs
-
-- pack-web-api
-- pack-qc
-- pack-security
-```
-
-**Product + design team (BA, UX, frontend)**:
-```md
-## Packs
-
-- pack-ba
-- pack-product
-- pack-ui-ux
-- pack-frontend-react
-```
-
-**Agent operator / long-running AI work**:
-```md
-## Packs
-
-- pack-operator-steering
-- pack-agentic       # if the project builds agent loops/tools
-```
+Full validation semantics and exit codes are documented in
+[`docs/pack-validation.md`](../docs/pack-validation.md).

@@ -8,7 +8,10 @@ Single-stop spec cho 2 việc liên quan chặt: (1) parse user task thành **in
 
 **Canonical schema**: [`templates/run-trace.schema.json`](../../templates/run-trace.schema.json) — `oneOf[0]` (stage `01-planner`), under `properties.intent`. To add/remove/rename a field, edit schema.json first; this doc only documents **resolution semantics** for the field set, not the field list itself.
 
-Active packs are surfaced separately in `02-context.referenced_docs[].category == "pitfalls"`, not as a field on `intent` (planner reads `workspace.md ## Packs` to know which to consult). This doc still discusses pack-driven retrieval below.
+Effective packs are resolved from project config/workspace defaults and surfaced
+through the context artifact's static pack guidance and component routes, not as
+an inferred field on intent. Manifest-v3 guidance uses `pack-metadata` and
+`pack-knowledge`; v2 compatibility content retains its legacy categories.
 
 ### Field resolution
 
@@ -27,7 +30,9 @@ During migration, legacy adapters `<cwd>/.claude/wiki.json.workspace`, `<cwd>/.C
 - `scope` ∈ subdirs của `{ws}/projects/`.
 - Không khớp → `null`, ghi vào `gaps[]` trong `current-task.json`.
 
-**Active packs** = list pack từ `{ws}/workspace.md ## Packs` (verify mỗi pack có `packs/{name}/pack.yaml`). Planner đọc trực tiếp từ workspace.md; **không** persist vào `intent` JSON (giảm drift surface).
+**Active packs** = `.contextd/config.json#packs` when it is an array, otherwise
+`{ws}/workspace.md ## Packs` (verify every pack has `packs/{name}/pack.yaml`).
+Use the shared resolver; do not implement another pack-selection path.
 
 Optional first-class non-code fields:
 - `workstream`: `engineering | product | business_analysis | quality | security | design | ops | domain_research`.
@@ -76,7 +81,9 @@ Example (`pack-event-driven` active):
 
 Mọi path prefix `{ws} = workspaces/{intent.workspace}/`. KHÔNG retrieve ngoài `{ws}/`.
 
-Engine baseline (`agents/constraints.md`, `agents/coding-rules.md`) luôn load cho mọi intent + **out-of-budget** — xem [context-filter.md → Baseline](context-filter.md#baseline-out-of-budget-docs).
+Engine baseline (`agents/constraints.md`, `agents/coding-rules.md`) luôn load cho
+mọi intent. Chúng nằm ngoài retrieved-doc slot count nhưng vẫn nằm trong total
+token budget — xem [context-filter.md → Baseline](context-filter.md#baseline-static-docs).
 
 ### By intent type
 
@@ -88,15 +95,27 @@ Engine baseline (`agents/constraints.md`, `agents/coding-rules.md`) luôn load c
 | `incident` | `{ws}/runbooks/` | `{ws}/projects/{scope}/services/{service}.md` |
 | `review` | `agents/constraints.md`*, `agents/coding-rules.md`*, `{ws}/platform/patterns/` (+ `{ws}/agents/constraints.md`* nếu có) | `{ws}/domains/{domain}/workflow.md`, `{ws}/platform/contracts/` |
 
-> *Baseline — tracked nhưng out-of-budget per [context-filter.md](context-filter.md#baseline-out-of-budget-docs).*
+> *Baseline — outside the retrieved-doc slot count, included in static/total
+> token estimates per [context-filter.md](context-filter.md#baseline-static-docs).*
 
-### Pack common-pitfalls (mọi intent)
+### Pack static guidance (mọi intent)
 
-Mọi pack active luôn cung cấp `packs/{name}/agents/common-pitfalls.md` (Top 10 anti-pattern). Pipeline PHẢI include file này vào static context pack cho **mọi intent** (`implement_feature | fix_bug | design | incident | review`), surface trong `.contextd/context/current-task.json` / markdown render. Mỗi pitfall có Layer-1 rule ID (regex-detectable) hoặc Layer-2 self-check (design-only).
+- Manifest v3: include compact manifest metadata and
+  `knowledge.md#Global Principles` for every intent. Append only the
+  `## Component: ...` sections matched by the current task.
+- Manifest v2: preserve static manifest, constraints, coding rules, and
+  common-pitfalls inputs. Retrieval maps route referenced docs; declared
+  validator scripts run in the validation layer. Prompt-overrides remain an
+  authoring adapter, not a hidden second plane in the canonical artifact.
+
+Both planes are included in the final context budget report. A static file is
+not “free” merely because it sits outside `referenced_docs`.
 
 ### By component (pack-driven)
 
-Engine KHÔNG hardcode stack-specific `component → file` map. Mỗi pack khai báo trong `packs/{name}/agents/pipeline/retrieval-map.md`. Pipeline merge map của tất cả pack active.
+Engine KHÔNG hardcode stack-specific `component → file` map. Manifest-v3 packs
+declare the canonical map in `pack.yaml#retrieval`; manifest-v2 packs use
+`agents/pipeline/retrieval-map.md`. Pipeline merges only effective packs.
 
 Retrieval-map rows may point to workspace docs (`product/`, `requirements/`, `platform/design/`, `quality/`, `runbooks/`, `evidence/`), plus pack/template docs. `{domain}` and `{project}` placeholders expand only when detected; otherwise the artifact emits an explicit non-blocking gap.
 
@@ -110,8 +129,14 @@ Ví dụ với `pack-event-driven`:
 | `mqtt` | `{ws}/platform/patterns/mqtt-routing.md`, `{ws}/platform/contracts/mqtt-topic-contract.md` |
 | `batch` | `{ws}/platform/patterns/kafka-event-processing.md` (batch section) |
 
-- File không tồn tại trong `{ws}/` → ghi Knowledge Gaps. KHÔNG fallback workspace khác/pack docs.
+- Workspace file không tồn tại trong `{ws}/` → ghi Knowledge Gaps. KHÔNG
+  fallback workspace khác. A route may intentionally name a file inside its own
+  active pack or `templates/`; it may never read another pack.
 - Component không thuộc pack active → bỏ qua, ghi Knowledge Gaps gợi ý pack có thể bật.
+- Exact files từ matched component route mang explicit route provenance và được
+  ưu tiên hơn incidental text overlap; directory expansions chỉ nhận tie-break
+  nhỏ. Tất cả vẫn chịu category/max-doc budget. Điều này giữ owner template/map
+  ổn định giữa các ngôn ngữ mà không cho một thư mục pack chiếm toàn context.
 
 ### By domain & scope
 

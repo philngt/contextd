@@ -12,25 +12,25 @@ Nếu task liên quan UI/UX, ưu tiên: (1) design token consistency — không 
 ### Design System (pack-ui-ux)
 - Color/spacing/font reference token name từ tokens.md, không literal
 - Token name tồn tại trong catalog (không tự sáng tạo)
-- Component spec có Anatomy → Variants → States → A11y note → Token usage
+- Component spec cover anatomy/variants/states/a11y/token concerns relevant với component contract; không tạo section rỗng
 
 ### Accessibility (pack-ui-ux)
-- Mọi interactive element có keyboard interaction spec (Tab/Enter/Space/Escape/Arrow)
+- Interactive element có keyboard behavior theo native semantic/APG pattern; chỉ liệt kê keys thực sự áp dụng
 - Visible focus indicator được đề cập
 - Contrast ratio ≥ 4.5:1 text, ≥ 3:1 UI component — có note tại color pair
-- Image/icon có alt text spec; decorative có aria-hidden note
+- Meaningful image/icon có accessible alternative; decorative asset bị bỏ khỏi accessibility tree bằng mechanism phù hợp
 - Form label association rõ — không chỉ placeholder
 
 ### User Flows (pack-ui-ux)
 - Flow identify persona/role ở header
-- Happy path + ≥ 2 edge/error path (empty state, validation fail, permission, timeout)
+- Cover các state relevant từ requirement/state matrix (success, loading/empty, validation, permission, timeout/recovery)
 - Mọi decision point có tất cả branch được label
-- Diagram dùng Mermaid stateDiagram-v2 hoặc flowchart (có fallback numbered list)
+- Chọn diagram hoặc numbered state/step list theo độ phức tạp; format không quan trọng bằng branch/state completeness
 
 ### UX Writing (pack-ui-ux)
-- Error message: What happened + Why + What to do (không có stack trace/error code)
-- CTA là verb phrase cụ thể (không "OK"/"Submit"/"Yes")
-- Empty state có action hướng dẫn bước tiếp theo
+- Error message actionable và an toàn: điều xảy ra + next step; chỉ nêu nguyên nhân khi biết chắc
+- CTA mô tả action/outcome trong context; generic label chỉ dùng khi surrounding semantics làm intent rõ
+- Empty state hướng dẫn bước tiếp theo khi user có thể hành động
 - Copy không chứa field name / technical term backend
 
 ### Design Decisions (pack-ui-ux)
@@ -44,8 +44,8 @@ Nếu task liên quan UI/UX, ưu tiên: (1) design token consistency — không 
 ### UI/UX
 - Token usage: không có color/spacing literal ngoài tokens.md
 - A11y: keyboard nav spec + focus indicator + contrast note
-- Flow: edge/error paths ≥ 2, persona identified
-- Copy: error message 3-element, CTA verb phrase, no jargon
+- Flow: relevant states/branches covered, persona/role identified
+- Copy: actionable safe error, contextual CTA, no backend jargon
 - Design decision lớn: ADR file tồn tại
 ```
 

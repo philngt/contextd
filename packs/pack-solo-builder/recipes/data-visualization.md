@@ -18,10 +18,10 @@ Không phải:
 
 | Component | Chọn | Note |
 |-----------|------|------|
-| Language | Python 3.11+ | Ecosystem chart mạnh nhất |
-| Framework | `streamlit` (cho dashboard) hoặc `matplotlib` (cho chart 1 lần) | Streamlit nếu cần interactive; matplotlib nếu chỉ render PNG |
-| Plot library | `plotly` (interactive) hoặc `matplotlib` (static) | Plotly đẹp + zoom được; matplotlib in PDF/PNG tốt |
-| Data | `pandas` | Standard cho data manipulation |
+| Language | Workspace-supported Python, pinned | Phù hợp với pandas/Plotly stack trong recipe; verify bằng dataset thật |
+| Framework | `streamlit` (dashboard) hoặc direct render | Chọn theo interaction/deployment contract |
+| Plot library | `plotly` (interactive) hoặc `matplotlib` (static) | Verify accessibility, export/font and dataset-size behavior |
+| Data | `pandas` candidate | Validate schema/types/units before aggregation |
 
 ### Linux/macOS
 
@@ -41,27 +41,29 @@ pip install streamlit pandas plotly openpyxl
 streamlit run dashboard.py
 ```
 
-### Windows + Docker (nếu share team)
+### Container option (nếu share/dependency isolation có rationale)
 
 ```yaml
 services:
   dashboard:
-    image: python:3.11-slim
+    build:
+      context: .
+      args:
+        PYTHON_BASE: ${PYTHON_IMAGE:?set a tested Python image tag or digest}
     working_dir: /app
-    volumes: [".:/app"]
     ports: ["8501:8501"]
-    command: bash -c "pip install -q streamlit pandas plotly openpyxl && streamlit run dashboard.py --server.address=0.0.0.0"
+    command: streamlit run dashboard.py --server.address=0.0.0.0
 ```
 
 ## Trade-offs
 
-**Vì sao Streamlit + Plotly**: dashboard trong 30-50 dòng Python, chart zoom/hover/filter ngay. So với Excel chart: code reproducible, version-control, share link không gửi file.
+**Vì sao Streamlit + Plotly**: phù hợp dashboard Python nhỏ cần filter/hover và versioned transformations; verify keyboard/screen-reader fallback và static export nếu audience cần.
 
 **Vì sao KHÔNG**:
-- **Excel chart**: nhanh ban đầu nhưng manual, không update tự động khi data đổi.
-- **Power BI / Tableau**: tốt nhưng đắt, học mất tuần, vendor lock-in.
-- **D3.js**: cực mạnh nhưng cần JS expert, overkill.
-- **Grafana**: chuyên cho metric/time-series, overkill cho ad-hoc chart.
+- **Spreadsheet chart**: hợp exploratory/manual ownership; compare refresh/reproducibility/collaboration needs.
+- **BI platform**: hợp governed multi-source analytics nếu organization đã sở hữu access/model/deployment stack.
+- **D3/custom web**: hợp specialized interaction/visual grammar khi team owns web implementation.
+- **Grafana/observability UI**: hợp operational time-series and alerts; không mặc định cho business dataset.
 - **matplotlib alone**: static — không interactive. OK nếu chỉ cần PNG/PDF.
 
 ## Skeleton
@@ -87,6 +89,16 @@ if not uploaded:
 
 df = pd.read_excel(uploaded) if uploaded.name.endswith(".xlsx") else pd.read_csv(uploaded)
 
+required = {"month", "product", "revenue"}
+missing = required - set(df.columns)
+if missing:
+    st.error(f"Missing required columns: {', '.join(sorted(missing))}")
+    st.stop()
+df["revenue"] = pd.to_numeric(df["revenue"], errors="coerce")
+if df["revenue"].isna().any():
+    st.error("Column 'revenue' contains invalid numeric values")
+    st.stop()
+
 # Filters
 col1, col2 = st.columns(2)
 months = col1.multiselect("Month", sorted(df["month"].unique()), default=list(df["month"].unique()))
@@ -97,8 +109,8 @@ filtered = df[df["month"].isin(months) & df["product"].isin(products)]
 st.subheader("KPIs")
 k1, k2, k3 = st.columns(3)
 k1.metric("Total revenue", f"{filtered['revenue'].sum():,.0f}")
-k2.metric("Avg order", f"{filtered['revenue'].mean():,.0f}")
-k3.metric("Orders", len(filtered))
+k2.metric("Average revenue per input row", f"{filtered['revenue'].mean():,.0f}")
+k3.metric("Input rows", len(filtered))
 
 # Charts
 st.subheader("Revenue by month")
@@ -116,7 +128,7 @@ st.plotly_chart(fig2, use_container_width=True)
 - Data đã có (CSV/Excel/SQLite)
 - Cần xem trend / compare / distribution
 - OK với browser-based dashboard
-- 1-3 chart đủ
+- Visual/state complexity vẫn phù hợp một small dashboard và có accessible data-table fallback
 
 ❌ **KHÔNG match KHI**:
 - Cần PDF report fix layout → `pdf-report-generator`

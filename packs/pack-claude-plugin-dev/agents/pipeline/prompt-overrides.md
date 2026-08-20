@@ -4,15 +4,16 @@
 
 ```
 ### Claude Code Plugin (pack-claude-plugin-dev)
-- Plugin manifest exists with name (kebab-case), version (semver), description (>=20 chars), author
-- Every slash command has description: frontmatter (single action-verb sentence)
+- Plugin-root layout uses `.claude-plugin/plugin.json` plus `commands/`, `agents/`, `skills/`, `hooks/`, `.mcp.json` as needed
+- Manifest has required name; distribution metadata follows marketplace policy
+- Every slash command has concise, specific description frontmatter
 - argument-hint set when command takes args; allowed-tools restricts to minimum
 - Every subagent has explicit tools: list (no wildcard / no missing field)
-- Subagent model: chosen per task complexity (haiku/sonnet/opus)
-- Every skill description >= 50 chars with TRIGGER when: phrase for auto-invoke
+- Subagent model override is compatible with pinned host and backed by eval; otherwise inherit/default
+- Every skill description states what it does + when to use/skip, without magic length rules
 - No hardcoded API key / token anywhere (sk-, ghp_, AKIA, AIzaSy, xoxb-)
-- Hook script idempotent, <2s, errors to stderr, exit 0 on non-critical fail
-- MCP server config uses env vars for credentials
+- Hook script idempotent, within configured timeout, and follows event-specific exit/JSON semantics
+- MCP/hook paths use `${CLAUDE_PLUGIN_ROOT}`; credentials come from environment/secret manager
 - README install instructions + min Claude Code version
 - CHANGELOG entry for each version with breaking changes flagged
 ```

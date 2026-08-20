@@ -18,10 +18,10 @@ Không phải:
 
 | Component | Chọn | Note |
 |-----------|------|------|
-| Language | Python 3.11+ | |
+| Language | Workspace-supported Python, pinned | Pin cùng SQLite/ORM/UI dependencies đã test |
 | Database | `sqlite3` (built-in) | File `.db` đơn lẻ |
 | ORM (optional) | `sqlmodel` hoặc `peewee` | Nếu nhiều bảng/relation. Bỏ qua nếu 1 bảng đơn giản. |
-| UI | `streamlit` | CRUD form trong 100 dòng Python |
+| UI | `streamlit` | Giảm phần frontend custom cho form CRUD nội bộ |
 | Migration | `alembic` (nếu dùng SQLAlchemy/sqlmodel) | Nếu schema sẽ đổi qua thời gian |
 
 ### Linux/macOS/Windows native
@@ -33,26 +33,28 @@ pip install streamlit pandas sqlmodel
 streamlit run tool.py
 ```
 
-### Windows + Docker (recommend nếu share)
+### Container option (chỉ khi share/dependency isolation có rationale)
 
 ```yaml
 services:
   db-manager:
-    image: python:3.11-slim
+    build:
+      context: .
+      args:
+        PYTHON_BASE: ${PYTHON_IMAGE:?set a tested Python image tag or digest}
     working_dir: /app
     volumes:
-      - .:/app
       - ./data:/app/data    # SQLite file persist
     ports: ["8501:8501"]
-    command: bash -c "pip install -q streamlit pandas sqlmodel && streamlit run tool.py --server.address=0.0.0.0"
+    command: streamlit run tool.py --server.address=0.0.0.0
 ```
 
 ## Trade-offs
 
 **Vì sao SQLite + Streamlit**:
-- SQLite: 0 setup, file copy đi đâu cũng chạy, backup = copy file
-- Streamlit: form CRUD trong 100 dòng, không cần HTML
-- Cross-platform (Linux/Windows/macOS)
+- SQLite: không cần DB server cho local/low-concurrency workflow; schema, migration và backup vẫn phải explicit.
+- Streamlit: giảm phần frontend custom cho form CRUD nội bộ đơn giản.
+- Target OS chỉ được claim sau khi setup/test trên target đó.
 
 **Vì sao KHÔNG**:
 - **Excel làm DB**: dễ hỏng khi nhiều dòng, không có constraint, không multi-user.
@@ -129,7 +131,8 @@ with tab_list:
     st.subheader("Xoá part")
     if not df.empty:
         del_id = st.selectbox("Chọn part để xoá", options=df["id"], format_func=lambda x: f"#{x} {df[df['id']==x]['name'].iloc[0]}")
-        if st.button("Xoá", type="primary"):
+        confirm_delete = st.checkbox("Tôi đã kiểm tra record và muốn xoá")
+        if st.button("Xoá", type="primary", disabled=not confirm_delete):
             delete(del_id)
             st.success(f"Đã xoá part #{del_id}")
             st.rerun()
@@ -164,21 +167,21 @@ with tab_edit:
 
 ## Backup strategy
 
-SQLite = 1 file. Backup = `cp data/inventory.db data/inventory-{date}.db`. Recommend:
-- **Daily auto backup**: pair với recipe `scheduled-recurring-task`
-- **Trước migration schema**: backup tay
-- **Cloud backup** (optional): rclone đẩy `data/*.db` lên cloud storage
+SQLite lưu trong một file nhưng copy khi đang có write có thể tạo snapshot không nhất quán. Dùng SQLite backup API (hoặc stop/quiesce writes), verify restore trên file tách biệt và ghi retention/owner theo mức quan trọng của dữ liệu:
+- **Scheduled backup**: pair với recipe `scheduled-recurring-task`, nhưng success chỉ khi restore check pass.
+- **Trước migration schema/destructive action**: tạo verified snapshot + rollback instruction.
+- **Off-device backup**: chỉ dùng storage đã được user/workspace approve và mã hoá theo data classification.
 
 ## Decision tree
 
 ✅ **Match recipe này KHI**:
 - Cần CRUD records cấu trúc (có schema)
-- 1-3 user dùng (single-user là chính)
-- Records ≤ 100k rows (SQLite handle tốt)
+- Single-user/local workflow là chính; write concurrency phải benchmark trên target
+- Single-user/local workflow với write concurrency thấp; dataset/query latency được đo trên máy mục tiêu
 - OK với web UI
 
 ❌ **KHÔNG match KHI**:
 - Concurrent write nhiều user → Postgres
 - Records không có schema cố định → cân nhắc JSON file hoặc document DB
 - Cần auth user riêng + permission → ngoài scope solo builder
-- Records > 1M rows → cân nhắc Postgres / specialized DB
+- Nhiều concurrent writers, remote multi-user access, strict availability/backup policy, hoặc query/SLO không đạt trong benchmark → cân nhắc Postgres / specialized DB

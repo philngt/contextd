@@ -1,0 +1,105 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "contextd-synapse",
+  "title": "contextd Synapse",
+  "description": "Deterministic lifecycle graph over canonical workspace knowledge.",
+  "type": "object",
+  "required": [
+    "artifact_type",
+    "version",
+    "policy_version",
+    "generated_at",
+    "as_of",
+    "workspace",
+    "knowledge_root",
+    "synapse_hash",
+    "nodes",
+    "edges",
+    "diagnostics",
+    "summary"
+  ],
+  "properties": {
+    "artifact_type": { "const": "contextd_synapse.v1" },
+    "version": { "const": "1" },
+    "policy_version": { "const": "synapse-lifecycle.v1" },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "as_of": { "type": "string", "format": "date" },
+    "workspace": { "type": "string", "minLength": 1 },
+    "knowledge_root": { "type": "string", "minLength": 1 },
+    "synapse_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "nodes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id", "workspace", "kind", "title", "path", "source_hash",
+          "memory_class", "lifecycle", "freshness", "review_by", "id_source"
+        ],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "workspace": { "type": "string", "minLength": 1 },
+          "kind": { "type": "string", "minLength": 1 },
+          "title": { "type": "string" },
+          "path": { "type": "string", "minLength": 1 },
+          "source_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+          "memory_class": { "const": "long_term" },
+          "lifecycle": { "enum": ["draft", "active", "deprecated", "superseded"] },
+          "freshness": { "enum": ["fresh", "stale", "unknown"] },
+          "review_by": { "type": ["string", "null"], "format": "date" },
+          "id_source": { "enum": ["frontmatter", "path"] },
+          "requested_node_id": { "type": "string" }
+        },
+        "additionalProperties": true
+      }
+    },
+    "edges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "type", "source", "target"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-f0-9]{20}$" },
+          "type": {
+            "enum": [
+              "supersedes", "supports", "contradicts", "implements",
+              "depends_on", "derived_from", "related_to"
+            ]
+          },
+          "source": { "type": "string", "minLength": 1 },
+          "target": { "type": "string", "minLength": 1 }
+        },
+        "additionalProperties": false
+      }
+    },
+    "diagnostics": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["severity", "code", "message"],
+        "properties": {
+          "severity": { "enum": ["info", "warning", "error"] },
+          "code": { "type": "string", "minLength": 1 },
+          "message": { "type": "string", "minLength": 1 },
+          "path": { "type": "string" }
+        },
+        "additionalProperties": true
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": ["nodes", "edges", "diagnostics", "errors", "warnings", "lifecycle", "freshness", "edge_types"],
+      "properties": {
+        "nodes": { "type": "integer", "minimum": 0 },
+        "edges": { "type": "integer", "minimum": 0 },
+        "diagnostics": { "type": "integer", "minimum": 0 },
+        "errors": { "type": "integer", "minimum": 0 },
+        "warnings": { "type": "integer", "minimum": 0 },
+        "lifecycle": { "type": "object", "additionalProperties": { "type": "integer" } },
+        "freshness": { "type": "object", "additionalProperties": { "type": "integer" } },
+        "edge_types": { "type": "object", "additionalProperties": { "type": "integer" } }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

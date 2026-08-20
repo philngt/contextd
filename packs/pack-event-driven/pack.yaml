@@ -1,6 +1,14 @@
 name: pack-event-driven
-version: 1.0.0
+manifest_version: 2
+version: 1.1.0
 description: Kafka, MQTT, and event-driven backend patterns (DLQ, offset commit, idempotent consumer, batch processing)
+status: stable
+category: engineering
+reviewed_on: 2026-08-20
+audiences: [engineering, ops]
+task_types: [implement_feature, fix_bug, design, incident, review]
+scope_includes: [event broker producers and consumers, MQTT routing, message batch processing, delivery and retry semantics]
+scope_excludes: [synchronous HTTP API design, generic scheduled jobs without messaging]
 
 components:
   - kafka

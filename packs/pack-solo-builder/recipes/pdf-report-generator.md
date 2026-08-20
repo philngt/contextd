@@ -25,58 +25,45 @@ Không phải:
 
 | Component | Chọn | Note |
 |-----------|------|------|
-| Language | Python 3.11+ | |
+| Language | Workspace-supported Python, pinned | Verify compatibility với renderer/system libraries |
 | HTML template | `jinja2` (cho weasyprint) | Render dynamic data vào HTML |
-| PDF library | `weasyprint` (recommend) | HTML + CSS → PDF, layout giống browser print |
+| PDF library | `weasyprint` candidate | HTML + print CSS; pin release and compare golden PDFs on target |
 | Alternative | `reportlab` | Code Python trực tiếp draw PDF |
 
-### Linux/macOS
+### Native target
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-# WeasyPrint cần system libs (Pango, Cairo)
-# Ubuntu/Debian:
-sudo apt install libpango-1.0-0 libpangoft2-1.0-0
-pip install weasyprint jinja2
+# Install system libraries using the official guide for the pinned
+# WeasyPrint + OS version, then install from a lock file.
+pip install -r requirements.lock
+weasyprint --info
 ```
 
-### Windows native — KHÔNG recommend
+On Windows, the current official guide may recommend a release executable for CLI use. Library embedding has different prerequisites. Record `weasyprint --info` and render a multilingual/font fixture before accepting the setup.
 
-WeasyPrint trên Windows native rất khó install (cần GTK runtime). **Chuyển sang Docker**.
+### Container option
 
-### Windows + Docker (recommend)
+Use a reviewed base image/Dockerfile that installs the exact system packages required by the pinned WeasyPrint release. Do not install OS/Python dependencies on every container start. `compose.yaml` should build that image and run only the renderer:
 
 ```yaml
-# docker-compose.yml
+# compose.yaml
 services:
   report-gen:
-    image: python:3.11-slim
+    build:
+      context: .
+      args:
+        PYTHON_BASE: ${PYTHON_IMAGE:?set a tested Python image tag or digest}
     working_dir: /app
     volumes:
       - .:/app
       - ./output:/output
-    command: bash -c "
-      apt-get update && apt-get install -y libpango-1.0-0 libpangoft2-1.0-0 &&
-      pip install -q weasyprint jinja2 &&
-      python tool.py
-    "
+    command: python tool.py
 ```
 
 ```bash
 docker compose run --rm report-gen
-```
-
-Hoặc dùng Python image có pre-installed deps:
-
-```yaml
-services:
-  report-gen:
-    image: python:3.11
-    # full python image (không -slim) đã có nhiều system libs
-    working_dir: /app
-    volumes: [".:/app", "./output:/output"]
-    command: bash -c "pip install -q weasyprint jinja2 && python tool.py"
 ```
 
 ### Alternative: ReportLab (đơn giản hơn nếu OK với layout cơ bản)
@@ -85,7 +72,7 @@ services:
 pip install reportlab
 ```
 
-ReportLab pure-Python, không system deps → chạy native mọi OS không cần Docker.
+ReportLab có distribution/runtime contract riêng; pin/test trên target thay vì giả định không có system dependency.
 
 ## Trade-offs
 
@@ -95,11 +82,12 @@ ReportLab pure-Python, không system deps → chạy native mọi OS không cầ
 - Output PDF chất lượng print
 
 **Vì sao KHÔNG**:
-- **Microsoft Word + Mail Merge**: GUI, khó automate, không version-control template.
-- **LibreOffice headless**: được nhưng setup phức tạp, render quirks.
-- **HTML → wkhtmltopdf**: deprecated, nhiều bug, không support modern CSS.
-- **Pure ReportLab**: code dài, mỗi pixel phải tự đặt — không hợp cho layout phức tạp.
-- **LaTeX**: render đẹp nhất nhưng học mất tuần.
+- **Word/Mail Merge hoặc LibreOffice**: hợp khi business users own templates; compare automation, diffability và render consistency.
+- **Other HTML/PDF engines**: compare maintained status, CSS/font support, sandboxing và target packaging before choosing.
+- **ReportLab**: hợp programmatic/simple layout; HTML/CSS template thường dễ handoff hơn cho design-heavy documents.
+- **LaTeX**: hợp typography/math workflows khi team already supports its toolchain.
+
+Security boundary: render only trusted/sanitized templates and explicitly allowed local assets. Restrict network/file URL fetching to avoid turning user-controlled HTML into an SSRF/local-file read path. Golden fixtures must verify page count, fonts, key text and visual diff for important documents.
 
 ## Skeleton — WeasyPrint approach
 

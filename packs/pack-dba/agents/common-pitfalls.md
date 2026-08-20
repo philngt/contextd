@@ -6,7 +6,7 @@ Anti-pattern lặp lại với schema / query / backup. Additive trên [constrai
 - **NG**: PR `ALTER TABLE ... DROP COLUMN` không nêu rollback.
 - **OK**: doc rollback (down-migration) hoặc forward-fix strategy.
 - **Why**: prod fail → không revert được.
-- **Detect**: Layer-1 `pack-dba-migration-no-rollback` (đã có).
+- **Detect**: Layer-1 `pack-dba-migration-no-rollback`.
 - **Severity**: error
 
 ## P02 — ALTER blocking lock không announce
@@ -20,21 +20,21 @@ Anti-pattern lặp lại với schema / query / backup. Additive trên [constrai
 - **NG**: "thêm index cho fast" mà không EXPLAIN / metric.
 - **OK**: kèm EXPLAIN before/after, p95 query metric.
 - **Why**: index thừa = write slow, storage tốn.
-- **Detect**: Layer-1 `pack-dba-query-no-evidence` (đã có).
+- **Detect**: Layer-1 `pack-dba-query-no-evidence`.
 - **Severity**: warn
 
 ## P04 — SELECT * trong production query
 - **NG**: `SELECT * FROM orders WHERE ...` từ application.
 - **OK**: liệt kê column cần.
 - **Why**: payload bloat, break khi schema đổi, index không cover được.
-- **Detect**: Layer-1 `pack-dba-select-star` (new) — regex `SELECT\s+\*` ngoài migration/script ad-hoc.
+- **Detect**: Layer-1 `pack-dba-select-star` (regex heuristic ngoài migration/admin context).
 - **Severity**: warn
 
 ## P05 — Backup thiếu restore verification
 - **NG**: backup chạy mỗi đêm nhưng chưa từng restore thử.
-- **OK**: monthly drill; automated restore-test môi trường staging.
+- **OK**: automated restore-test theo RPO/RTO + risk policy; log recovered point, duration và verification queries.
 - **Why**: ngày cần restore mới biết backup hỏng.
-- **Detect**: Layer-1 `pack-dba-no-restore-verification` (đã có).
+- **Detect**: Layer-1 `pack-dba-no-restore-verification`.
 - **Severity**: error
 
 ## P06 — Schema change không version
@@ -44,11 +44,11 @@ Anti-pattern lặp lại với schema / query / backup. Additive trên [constrai
 - **Detect**: Layer-2 — repo có migration folder + tool config.
 - **Severity**: error
 
-## P07 — Foreign key thiếu index
-- **NG**: `FK orders.user_id → users.id` không có index trên `orders.user_id`.
-- **OK**: index FK column (MySQL không auto-index FK như Postgres).
-- **Why**: delete parent → full scan child; deadlock spike.
-- **Detect**: Layer-2 — schema review.
+## P07 — Không verify foreign-key access path
+- **NG**: giả định mọi engine xử lý FK/index giống nhau, hoặc tạo index trùng mà không xem column order/query plan.
+- **OK**: inspect engine-generated/declared indexes trên referencing và referenced columns; verify delete/update/query plan và redundancy.
+- **Why**: missing/wrong-order index gây scan/lock; redundant index tăng write/storage cost. MySQL/InnoDB có thể tự tạo index cần cho FK.
+- **Detect**: Layer-2 — compare actual catalog/index order với FK và workload.
 - **Severity**: warn
 
 ## P08 — Transaction quá dài
@@ -62,7 +62,7 @@ Anti-pattern lặp lại với schema / query / backup. Additive trên [constrai
 - **NG**: doc "backup mỗi ngày" nhưng không nêu RPO/RTO.
 - **OK**: RPO (max data loss), RTO (max recovery time) explicit + monitored.
 - **Why**: SLA không đo được; expectation không khớp business.
-- **Detect**: Layer-1 `pack-dba-backup-no-rpo-rto` (đã có).
+- **Detect**: Layer-1 `pack-dba-backup-no-rpo-rto`.
 - **Severity**: error
 
 ## P10 — Không monitor slow query
@@ -79,7 +79,7 @@ Anti-pattern lặp lại với schema / query / backup. Additive trên [constrai
 | P01 rollback | `pack-dba-migration-no-rollback` | ✓ |
 | P02 blocking-lock | — | ✓ |
 | P03 evidence | `pack-dba-query-no-evidence` | ✓ |
-| P04 select-* | `pack-dba-select-star` (new) | ✓ |
+| P04 select-* | `pack-dba-select-star` | ✓ |
 | P05 restore-verify | `pack-dba-no-restore-verification` | ✓ |
 | P06 ver-mig | — | ✓ |
 | P07 fk-idx | — | ✓ |

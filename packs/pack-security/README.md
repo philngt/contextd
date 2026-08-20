@@ -37,3 +37,22 @@ Pentest workflow: `attack-surface-mapping`, `finding-validation`, `exploit-safet
 
 - Pack mechanism: [packs/README.md](../README.md)
 - Cross-cutting principles: [agents/cross-cutting-principles.md](../../agents/cross-cutting-principles.md)
+
+## When not to enable
+
+- Pentest hoặc exploit validation chưa có explicit authorization và in-scope target.
+- Generic code quality review không chạm threat, trust boundary, sensitive data hoặc security control.
+
+## Retrieval behavior
+
+Security-by-design và authorized validation route thành component riêng. Finding phải mang evidence, current scoring vector và local impact; retrieval không được vượt active workspace hay mở rộng scope kiểm thử.
+
+## Verification
+
+```bash
+contextd pack-validate --pack pack-security --format text
+contextd context "Review authorized authz finding and remediation" --preview --format json
+python scripts/validate.py --file <security-fixture> --workspace <workspace-with-pack>
+```
+
+Standards baseline được review ngày `2026-08-20`: [FIRST CVSS v4.0](https://www.first.org/cvss/v4.0/) và [OWASP Secrets Management Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html). Workspace policy vẫn là source-of-truth cho SLA, jurisdiction và approved crypto baseline.

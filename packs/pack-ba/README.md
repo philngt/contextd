@@ -33,3 +33,20 @@ Enable when workspace cần:
 
 - Pack mechanism: [`packs/README.md`](../README.md)
 - Cross-cutting principles: [`agents/cross-cutting-principles.md`](../../agents/cross-cutting-principles.md)
+
+## When not to enable
+
+- Task đã có requirement/acceptance contract rõ và chỉ cần implement code.
+- Thiết kế kiến trúc kỹ thuật hoặc test automation; dùng engineering pack hoặc `pack-qc`.
+
+## Retrieval behavior
+
+Mỗi component route tới knowledge BA tương ứng: requirement, acceptance criteria, process map, hoặc stakeholder decision. Nếu workspace thiếu doc được map, runtime phải báo gap thay vì mượn tài liệu từ workspace khác.
+
+## Verification
+
+```bash
+contextd pack-validate --pack pack-ba --format text
+contextd context "Review acceptance criteria for refund workflow" --preview --format json
+python scripts/validate.py --file <requirement-fixture> --workspace <workspace-with-pack>
+```

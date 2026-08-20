@@ -27,12 +27,18 @@ Active workspace is **per-codebase**, stored in `<cwd>/.contextd/config.json`; l
 
 ## Resolution Order
 
-Rules (constraints, coding-rules, validator-rules, retrieval-map) resolve in 3 additive layers, **strict-only** (only tighten, never loosen):
+Guidance resolves in 3 additive layers, **strict-only** (only tighten, never loosen):
 
 ```
 engine  →  packs  →  workspace
 agents/    packs/{name}/    workspaces/{ws}/agents/...
 ```
+
+Manifest-v3 packs use `knowledge.md` plus `pack.yaml#retrieval` as their
+canonical layer. Manifest-v2 packs retain `agents/constraints.md`,
+`coding-rules.md`, validator docs, and `retrieval-map.md` as compatibility
+inputs. Runtime loads v3 Global Principles plus matched component sections, not
+the entire pack corpus.
 
 **Effective packs**: `.contextd/config.json#packs` (per-codebase override, replace semantics; legacy adapters still accepted during migration) IF array ELSE `workspace.md ## Packs`. See [agents/pipeline/workspace-resolution.md](agents/pipeline/workspace-resolution.md).
 
@@ -89,7 +95,11 @@ Run [agents/pipeline/validator-rules.md](agents/pipeline/validator-rules.md) + e
 
 ## Hard Constraints
 
-Canonical list with stable rule IDs: **[agents/constraints.md](agents/constraints.md)** (engine baseline) + each active pack's `agents/constraints.md` + `workspaces/{ws}/agents/constraints.md` (workspace overrides). Cross-domain features → [agents/cross-cutting-principles.md](agents/cross-cutting-principles.md).
+Canonical list with stable rule IDs: **[agents/constraints.md](agents/constraints.md)**
+(engine baseline) + each active v3 pack's `knowledge.md` (or v2
+`agents/constraints.md`) + `workspaces/{ws}/agents/constraints.md` (workspace
+overrides). Cross-domain features →
+[agents/cross-cutting-principles.md](agents/cross-cutting-principles.md).
 
 Reference rules by ID (e.g. `engine-no-hardcoded-config`). Do not restate rule prose here — that creates drift. When a rule blocks the task, follow the conflict format in [agents/constraints.md#when-a-constraint-cannot-be-met](agents/constraints.md#when-a-constraint-cannot-be-met).
 

@@ -49,3 +49,20 @@ Layer-1 validators intentionally cover only reliable textual signals. They do no
 
 - Pack mechanism: [`packs/README.md`](../README.md)
 - Cross-cutting principles: [`agents/cross-cutting-principles.md`](../../agents/cross-cutting-principles.md)
+
+## When not to enable
+
+- Task chỉ sửa application behavior và không thay đổi infrastructure, deployment hoặc promotion.
+- Schema migration/restore internals hoặc security assessment; dùng pack sở hữu domain đó.
+
+## Retrieval behavior
+
+Keyword route riêng Terraform/OpenTofu, Kubernetes, CI/CD, promotion, drift, và rollback. Retrieval map chỉ nạp tài liệu workspace liên quan component được phát hiện; Helm/template phức tạp vẫn cần Layer-2 review sau khi render.
+
+## Verification
+
+```bash
+contextd pack-validate --pack pack-devops-iac --format text
+contextd context "Review Terraform production rollout and rollback" --preview --format json
+python scripts/validate.py --file <iac-fixture> --workspace <workspace-with-pack>
+```

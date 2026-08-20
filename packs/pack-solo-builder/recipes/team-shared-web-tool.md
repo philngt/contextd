@@ -19,26 +19,28 @@ Không phải:
 | Component | Chọn | Note |
 |-----------|------|------|
 | Web framework | `streamlit` | Build web app cực nhanh từ Python |
-| Container | `docker` + `docker-compose` | 1-command deploy |
-| Reverse proxy | `nginx` (optional) | Nếu cần custom domain hoặc HTTPS |
-| Storage | SQLite trong volume | Persistent, backup = copy file |
+| Container | Docker + Compose (optional) | Reproducible deploy khi server/container target đã được chốt |
+| Reverse proxy / identity | Workspace-approved gateway | TLS, authentication và access logs theo network/data policy |
+| Storage | SQLite hoặc server DB theo measured concurrency | Backup/restore và write behavior phải verify |
 
 Recipe này = wrapper trên recipe khác (vd `daily-form-with-history`, `data-visualization`) + Docker deploy + multi-user consideration.
 
-### Setup chung (Linux + Windows + macOS)
+### Container deployment example
 
 ```yaml
-# docker-compose.yml
+# compose.yaml
 services:
   web-tool:
-    image: python:3.11-slim
+    build:
+      context: .
+      args:
+        PYTHON_BASE: ${PYTHON_IMAGE:?set a tested Python image tag or digest}
     working_dir: /app
     volumes:
-      - .:/app
       - tool-data:/app/data    # SQLite/output persist
     ports:
       - "8501:8501"
-    command: bash -c "pip install -q -r requirements.txt && streamlit run app.py --server.address=0.0.0.0 --server.port=8501"
+    command: streamlit run app.py --server.address=0.0.0.0 --server.port=8501
     restart: unless-stopped
 
 volumes:
@@ -53,85 +55,41 @@ docker compose up -d
 - Linux/macOS: `ip addr` hoặc `ifconfig`
 - Windows: `ipconfig` (xem IPv4 Address)
 
-### Multi-user consideration
+### Multi-user and trust boundary
 
-Streamlit mặc định là **single-user session per browser tab**. Nếu cần:
-- **Phân biệt user**: thêm field "Tên người dùng" vào form, lưu cùng record. KHÔNG dùng auth thật cho tool nội bộ team trust nhau.
-- **Concurrent edit**: SQLite handle concurrent reads tốt, write thì khoảng 1-2 user đồng thời OK. Nhiều hơn → cân nhắc Postgres.
-- **Quota / rate limit**: Streamlit không có built-in. Tool nội bộ thường không cần.
+- Một field "Tên người dùng" chỉ là metadata, **không phải authentication**. Nếu identity/permissions/audit quan trọng, đặt app sau approved identity-aware proxy hoặc chuyển sang architecture có auth contract.
+- Benchmark concurrent reads/writes trên target workload. SQLite có serialized write behavior; không dùng số user cố định để quyết định DB.
+- LAN không tự động là trusted. Chốt network exposure, data classification, session isolation, CSRF/upload limits, rate/abuse controls và audit retention theo risk.
 
-### HTTPS / custom domain (optional)
+### HTTPS / custom domain
 
-Nếu cần `https://tools.local/myapp`:
-
-```yaml
-# docker-compose.yml extended
-services:
-  web-tool:
-    # ... như trên
-    expose: ["8501"]
-    # bỏ ports mapping ra ngoài
-
-  nginx:
-    image: nginx:alpine
-    ports: ["443:443"]
-    volumes:
-      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
-      - ./certs:/etc/nginx/certs:ro
-    depends_on: [web-tool]
-```
-
-`nginx.conf`:
-```nginx
-server {
-    listen 443 ssl;
-    server_name tools.local;
-    ssl_certificate /etc/nginx/certs/cert.pem;
-    ssl_certificate_key /etc/nginx/certs/key.pem;
-    location / {
-        proxy_pass http://web-tool:8501;
-        proxy_set_header Host $host;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-    }
-}
-```
-
-Self-signed cert cho LAN:
-```bash
-mkdir -p certs
-openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-  -keyout certs/key.pem -out certs/cert.pem \
-  -subj "/CN=tools.local"
-```
+Không copy một TLS snippet cố định từ recipe. Dùng reverse proxy/certificate/identity mechanism đã được workspace hoặc platform owner approve; pin image/config, validate forwarded headers/origin, document certificate renewal và test access-denied paths. Nếu chưa có owner cho phần này, giới hạn app ở localhost hoặc giữ spec `draft`.
 
 ## Trade-offs
 
 **Vì sao Docker + Streamlit**:
-- 1 file `docker-compose.yml` deploy được cả Linux + Windows server
+- `compose.yaml` mô tả cùng service/dependency contract trên target có Docker Compose đã test
 - User chỉ cần browser, không cài gì
 - Update tool: `git pull && docker compose up -d --build`
-- Backup: copy folder volume
+- Backup: application-consistent snapshot + restore test, không chỉ copy live volume
 
 **Vì sao KHÔNG**:
 - **Cài Python trên từng máy đồng nghiệp**: maintenance nightmare khi version Python khác nhau.
-- **Streamlit Cloud (cloud free tier)**: cloud lock-in, dữ liệu rời máy team — không OK với data nhạy cảm.
-- **Heroku / Render**: cost + cloud lock-in.
-- **Build SPA (React) + REST API**: 10x effort cho cùng UX.
+- **Managed cloud**: có thể phù hợp nếu data residency, auth, cost và retention được approve; không reject chỉ vì là cloud.
+- **SPA + API**: hợp khi UX/API ownership, authz hoặc scale cần boundary riêng; không cần cho form nội bộ nhỏ.
 
 ## Skeleton
 
 `app.py` — copy từ recipe `daily-form-with-history` hoặc `data-visualization`, không cần đổi gì khác. Streamlit chạy trong Docker giống y native.
 
-`requirements.txt`:
+`requirements.lock` (resolved versions from the tested build):
 ```
 streamlit
 pandas
 # + thư viện của tool gốc
 ```
 
-`docker-compose.yml`: như trên.
+`compose.yaml`: như trên. Pin dependencies bằng lock file và validate resolved Compose config trước deploy.
 
 Deploy 1 lần, dùng nhiều ngày:
 ```bash
@@ -152,9 +110,9 @@ docker compose logs -f
 
 ✅ **Match recipe này KHI**:
 - Tool đã build và chạy local OK
-- Cần ≥ 2 người dùng
+- Cần share qua browser và có owner cho network/data access
 - Mạng LAN OK (không cần internet public)
-- Data không quá nhạy cảm (auth nghiêm = ngoài scope)
+- Data/access risk phù hợp với controls đã thiết kế; nếu cần authz/audit nghiêm thì add engineering/security review
 
 ❌ **KHÔNG match KHI**:
 - Tool GUI native (Tkinter, ...) — không web-able → giữ recipe gốc, không share

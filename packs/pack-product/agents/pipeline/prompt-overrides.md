@@ -11,7 +11,7 @@
 - Roadmap commitment link brief tương ứng
 - KHÔNG có jargon kỹ thuật trong main body (controller, schema, deployment, ...)
 - KHÔNG dictate implementation (no "use Postgres", "build REST API", ...)
-- Brief KHÔNG dài hơn 1 trang đọc (≤ 800 từ) — nếu dài hơn, tách brief
+- Brief đủ ngắn để người quyết định scan; tách khi chứa nhiều outcome/owner/metric lifecycle độc lập, không theo word quota cố định
 ```
 
 ## Output style override

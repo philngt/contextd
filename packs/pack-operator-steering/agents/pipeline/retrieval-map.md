@@ -1,6 +1,7 @@
 # pack-operator-steering — Retrieval Map
 
-Component → wiki doc mapping for this pack. Merged into engine retrieval map by pipeline.
+> Manifest-v2 compatibility adapter. `pack.yaml#retrieval` is canonical in v3;
+> pack validation fails if this table drifts from it.
 
 | Component | Docs to retrieve |
 |-----------|------------------|
@@ -10,5 +11,6 @@ Component → wiki doc mapping for this pack. Merged into engine retrieval map b
 | `decision-ledger` | `packs/pack-operator-steering/templates/decision-note.md`, `decisions/`, `projects/{project}/knowledge-map.md` |
 | `handoff-quality` | `packs/pack-operator-steering/templates/handoff-brief.md`, `decisions/`, `projects/{project}/knowledge-map.md`, `evidence/` |
 | `workflow-mental-model` | `packs/pack-operator-steering/templates/workflow-mental-model.md`, `projects/{project}/knowledge-map.md`, `domains/{domain}/`, `decisions/` |
+| `operator-wayfinding` | `packs/pack-operator-steering/templates/wayfinding-checkpoint.md`, `projects/{project}/knowledge-map.md`, `decisions/`, `evidence/`, `runbooks/` |
 
 Components must match `pack.yaml#components`. Pipeline fail-fast nếu mismatch.

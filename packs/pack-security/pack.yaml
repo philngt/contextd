@@ -1,6 +1,14 @@
 name: pack-security
-version: 0.2.0
+manifest_version: 2
+version: 0.3.0
 description: Security engineering + authorized pentest pack — threat modeling, secure design review, vulnerability management, control verification, scope discipline, evidence-based findings, risk rating, and remediation reporting.
+status: beta
+category: security
+reviewed_on: 2026-08-20
+audiences: [security, engineering, ops]
+task_types: [fix_bug, design, incident, review]
+scope_includes: [threat modeling, security control review, authorized vulnerability validation, remediation reporting]
+scope_excludes: [testing without explicit authorization, destructive exploitation and persistence]
 
 components:
   - threat-modeling

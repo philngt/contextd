@@ -2,6 +2,7 @@
   "id": "agent-context-input-demo",
   "task": "Write a product brief, acceptance criteria, and design system flow for agent-context-demo reliable agent inputs",
   "workspace": "default",
+  "as_of": "2026-08-20",
   "packs": ["pack-product", "pack-ba", "pack-ui-ux"],
   "expected_docs": [
     "workspaces/default/product/briefs/agent-context-build.md",

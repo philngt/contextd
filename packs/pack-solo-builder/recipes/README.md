@@ -7,8 +7,8 @@ Mỗi recipe = 1 stack đề xuất cho 1 kiểu task. Slash `/tool-design` đ�
 5 section bắt buộc:
 
 1. **When to use** — task signals (user trả lời discovery như nào thì match recipe này)
-2. **Tech Stack** — Linux + Windows variants, có Docker note nếu phù hợp
-3. **Trade-offs** — vì sao chọn cái này, vì sao không alternative
+2. **Tech Stack** — target environments thực tế, version/dependency đã test, container chỉ khi có rationale
+3. **Trade-offs** — lý do chọn cho target hiện tại; chỉ so sánh alternative material
 4. **Skeleton commands** — copy-paste để start ngay
 5. **Decision tree mini** — match recipe này KHI ... và KHÔNG match KHI ...
 
@@ -35,10 +35,34 @@ Mỗi recipe = 1 stack đề xuất cho 1 kiểu task. Slash `/tool-design` đ�
 3. Add row vào table phía trên
 4. (Optional) Add signal vào `agents/pipeline/retrieval-map.md` Recipe Match table
 
-## Cross-platform principle
+## Platform and evidence principle
 
-Mọi recipe PHẢI cover:
-- **Linux/macOS**: native venv (đơn giản nhất)
-- **Windows**: native venv NẾU không có deps phức tạp; Docker + docker-compose NẾU có deps phức tạp (image, PDF, share)
+- Recipe phải nêu environment đã test và cách pin runtime/dependencies; không claim cross-platform nếu chưa verify trên các target đó.
+- Native setup là lựa chọn hợp lệ trên mọi OS. Container/Compose chỉ thêm khi isolation, portability, deployment hoặc system dependency tạo lợi ích rõ.
+- Công thức, regulation, scraping/API policy và high-impact workflow phải cite authority bên ngoài recipe; unresolved evidence giữ tool spec ở trạng thái `draft`.
+- Nếu một target không được hỗ trợ hoặc chưa test, ghi rõ thay vì copy setup boilerplate.
 
-Nếu recipe không apply được cross-platform (vd GUI native), note rõ trong file.
+## Container baseline (when a recipe justifies it)
+
+Install dependencies at image build time from a reviewed lock file; container startup runs only the tool. Set `PYTHON_IMAGE` to a workspace-tested tag or digest and keep the resolved value in build/release evidence.
+
+```dockerfile
+ARG PYTHON_BASE
+FROM ${PYTHON_BASE}
+WORKDIR /app
+COPY requirements.lock .
+RUN python -m pip install --no-cache-dir -r requirements.lock
+COPY . .
+```
+
+```yaml
+# compose.yaml
+services:
+  tool:
+    build:
+      context: .
+      args:
+        PYTHON_BASE: ${PYTHON_IMAGE:?set a tested Python image tag or digest}
+```
+
+Do not `pip install` on every `docker compose up`; it makes startup network-dependent and silently changes dependencies.

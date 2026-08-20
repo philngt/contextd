@@ -18,12 +18,14 @@ Không phải:
 
 Recipe này = wrapper trên recipe khác (`bulk-file-processing`, `api-data-fetcher`, ...) + scheduler.
 
-| Scheduler | Linux/macOS | Windows native | Docker (cross-platform) |
-|-----------|-------------|----------------|-------------------------|
-| Đơn giản | `cron` | Task Scheduler (GUI) | Docker container với restart-policy + Python `schedule` |
-| Phức tạp | `systemd timer` | Task Scheduler XML | `cron` trong container |
+| Target | Preferred owner | Notes |
+|--------|-----------------|-------|
+| Linux host | `systemd timer` hoặc managed cron | One-shot process, logs/exit status, overlap policy |
+| macOS host | `launchd` (cron only when already governed) | Explicit environment, working directory and timezone |
+| Windows host | Task Scheduler | Export/version task definition; set account/credential policy |
+| Container/platform | Platform scheduler; persistent in-process scheduler only with owner | Container restart policy is not a schedule |
 
-### Linux/macOS — cron
+### Cron example (only on a host where cron is the approved scheduler)
 
 Edit crontab:
 ```bash
@@ -48,17 +50,31 @@ GUI:
    - Start in: `D:\myapp`
 4. Settings → tick "Run whether user is logged on or not"
 
-### Windows + Docker (recommend — đồng nhất với Linux)
+### Persistent container option (only when an always-on scheduler process is justified)
 
-`docker-compose.yml`:
+`compose.yaml`:
 ```yaml
 services:
   scheduled-tool:
-    image: python:3.11-slim
+    build:
+      context: .
+      args:
+        PYTHON_BASE: ${PYTHON_IMAGE:?set a tested Python image tag or digest}
     working_dir: /app
-    volumes: [".:/app", "./output:/output"]
-    command: bash -c "pip install -q -r requirements.txt && python scheduler.py"
+    volumes: ["./output:/app/output"]
+    command: python scheduler.py
     restart: unless-stopped
+```
+
+```dockerfile
+# Dockerfile
+ARG PYTHON_BASE
+FROM ${PYTHON_BASE}
+WORKDIR /app
+COPY requirements.lock .
+RUN python -m pip install --no-cache-dir -r requirements.lock
+COPY scheduler.py tool.py ./
+CMD ["python", "scheduler.py"]
 ```
 
 `scheduler.py` — Python in-process scheduler:
@@ -66,10 +82,18 @@ services:
 import schedule
 import time
 import subprocess
+import sys
 
 def run_task():
     print("[scheduler] Running tool.py")
-    subprocess.run(["python", "tool.py"], check=False)
+    completed = subprocess.run(["python", "tool.py"], check=False)
+    if completed.returncode != 0:
+        # Report the failed run without killing the scheduler loop. Production
+        # code should also persist run status and alert on this event.
+        print(
+            f"[scheduler] tool.py failed with exit code {completed.returncode}",
+            file=sys.stderr,
+        )
 
 schedule.every().day.at("08:00").do(run_task)
 # Hoặc: schedule.every().hour.do(run_task)
@@ -81,7 +105,7 @@ while True:
     time.sleep(30)
 ```
 
-`requirements.txt`:
+`requirements.lock` (pin the tested scheduler/runtime versions):
 ```
 schedule
 # + dependencies của tool.py
@@ -94,26 +118,26 @@ docker compose logs -f
 
 ## Trade-offs
 
-**Vì sao Docker container + Python `schedule`** (cho cross-platform):
-- Đồng nhất Linux/Windows — 1 cách deploy
-- Container restart-policy = tool tự chạy lại nếu máy reboot
-- Không phải nhớ "máy này dùng cron, máy kia dùng Task Scheduler"
+**Khi nào container + in-process scheduler hợp lý**:
+- Target đã vận hành container continuously và có owner cho restart/log/upgrade.
+- Runtime/dependencies cần pin giống nhau giữa hosts.
+- Misfire, timezone/DST, duplicate instance và overlap semantics đã được chốt/test.
 
 **Vì sao KHÔNG**:
-- **Cron-only Linux**: tốt nhưng không cross-platform.
-- **Task Scheduler Windows GUI**: GUI dễ click nhầm, khó version-control config.
-- **Airflow / Prefect**: enterprise scheduler, overkill cho 1 task chạy daily.
-- **AWS Lambda / Cloud Functions**: cloud lock-in, cost, học cloud setup.
+- **Native scheduler**: thường ít moving parts nhất cho một host; khác config giữa OS nhưng process chỉ chạy khi đến lịch.
+- **Workflow orchestrator/managed scheduler**: hợp khi cần dependency graph, distributed execution, retries/audit/SLA; thêm vận hành cho task local nhỏ.
+- **Cloud scheduler/function**: đánh giá theo data residency, networking, cost và existing platform ownership; không loại chỉ vì cloud.
 
 ## Skeleton — full Docker setup
 
 Folder structure:
 ```
 my-scheduled-tool/
-├── docker-compose.yml
+├── compose.yaml
+├── Dockerfile
 ├── scheduler.py
 ├── tool.py            # logic thực — pull API, process file, etc
-├── requirements.txt
+├── requirements.lock
 └── output/            # output ghi ra đây, persist ở host
 ```
 
@@ -157,16 +181,17 @@ docker compose down
 
 ✅ **Match recipe này KHI**:
 - Tool đã hoạt động khi chạy thủ công, giờ cần tự động
-- Task chạy ≤ vài giờ
+- Task duration/timeout nhỏ hơn interval hoặc có explicit overlap/queue policy
 - 1 máy chạy là đủ (không cần distributed)
 
 ❌ **KHÔNG match KHI**:
 - Cần trigger event-based (vd file mới upload thì chạy) → cân nhắc file watcher (`watchdog`)
 - Cần distributed → ngoài scope solo builder
-- Task chạy giờ-ngày liên tục → cân nhắc dedicated server / cloud
+- Task long-running/continuous → dùng service supervision hoặc platform phù hợp, không giả scheduler là worker
 
 ## Note quan trọng
 
-- **Log mọi run** ra file/output — nếu cron chạy ngầm và lỗi không log, bạn không biết tool đã fail.
-- **Tool phải idempotent** — chạy 2 lần vẫn safe. Vì cron có thể trigger overlap nếu run trước chưa xong.
+- **Mỗi run có run ID, start/end/status/duration và durable output/error destination**; monitoring phải phát hiện cả “không chạy”.
+- **Chốt delivery semantics**: idempotent/re-entrant hoặc lock/dedupe/transaction; document misfire, retry và overlap behavior.
+- **Timezone/DST explicit**; test clock changes và máy sleep/reboot nếu relevant.
 - **Test thủ công TRƯỚC khi đặt scheduler** — confirm tool.py chạy chuẩn rồi mới schedule.

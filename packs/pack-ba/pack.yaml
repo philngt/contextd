@@ -1,6 +1,14 @@
 name: pack-ba
-version: 0.1.0
+manifest_version: 2
+version: 0.2.0
 description: Business analysis pack — requirements modeling, acceptance criteria, process mapping, and stakeholder alignment.
+status: beta
+category: product
+reviewed_on: 2026-08-20
+audiences: [ba, product, qc, engineering]
+task_types: [design, review]
+scope_includes: [business requirements, acceptance criteria, process maps, stakeholder decisions]
+scope_excludes: [technical architecture implementation, executable test automation]
 
 components:
   - requirements-modeling
@@ -12,7 +20,7 @@ keywords:
   requirements-modeling: [requirement, business requirement, functional requirement, non-functional requirement, brd]
   acceptance-criteria: [acceptance criteria, done criteria, user story, scenario, gherkin]
   process-mapping: [process map, as-is, to-be, workflow map, swimlane]
-  stakeholder-alignment: [stakeholder, alignment, sign-off, dependency, handoff]
+  stakeholder-alignment: [stakeholder, alignment, sign-off, dependency, "stakeholder handoff"]
 
 files:
   constraints: agents/constraints.md

@@ -24,7 +24,7 @@ Không phải:
 
 | Component | Chọn | Note |
 |-----------|------|------|
-| Language | {Python 3.11+ / Node / ...} | |
+| Language/runtime | {runtime + tested version/profile} | Pin from the target environment, not from this template |
 | {Component 2} | {choice} | {1-line note} |
 | {Component 3} | {choice} | |
 
@@ -40,16 +40,29 @@ Không phải:
 {install commands}
 ```
 
-### Windows + Docker (recommend nếu deps phức tạp)
+### Container target (optional; only when the deployment/runtime owner requires it)
 
 ```yaml
-# docker-compose.yml
+# compose.yaml
 services:
   {service-name}:
-    image: python:3.11-slim
+    build:
+      context: .
+      args:
+        RUNTIME_BASE: ${RUNTIME_IMAGE:?set a tested image tag or digest}
     working_dir: /app
-    volumes: [".:/app"]
-    command: bash -c "pip install -q {deps} && python tool.py"
+    command: python tool.py
+```
+
+```dockerfile
+# Dockerfile
+ARG RUNTIME_BASE
+FROM ${RUNTIME_BASE}
+WORKDIR /app
+COPY requirements.lock .
+RUN python -m pip install --no-cache-dir -r requirements.lock
+COPY . .
+CMD ["python", "tool.py"]
 ```
 
 ## Trade-offs
@@ -58,10 +71,8 @@ services:
 - {Lý do 1 — concrete benefit}
 - {Lý do 2}
 
-**Vì sao KHÔNG alternative**:
-- **{Alternative 1}**: {1 câu lý do không chọn}
-- **{Alternative 2}**: {1 câu lý do}
-- **{Alternative 3}**: {1 câu lý do}
+**Material alternatives đã cân nhắc**:
+- **{Alternative}**: {trade-off hoặc lý do không chọn cho target hiện tại}
 
 ## Skeleton
 

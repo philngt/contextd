@@ -42,11 +42,14 @@ Always resolve in this order **trong scope của workspace active**. If a contra
 
 ## Pack Resolution
 
-Workspace có thể opt-in vào các **pack** (stack-specific knowledge bundle) qua section `## Packs` trong `workspaces/{ws}/workspace.md`. Khi pipeline build context:
+Workspace có thể opt-in vào các **pack**; project config có replace semantics,
+workspace `## Packs` là fallback. Khi pipeline build context:
 
 1. Engine layer load trước (universal — `agents/constraints.md`, `agents/coding-rules.md`, `agents/pipeline/...`).
-2. Pack layer (additive, alphabetical): mỗi pack contribute constraints, coding rules, validator rules, retrieval map, prompt overrides.
-3. Workspace layer (additive, last): `{ws}/agents/...` overrides.
+2. Pack layer (additive, alphabetical): v3 compile compact metadata + Global
+   Principles + matched component knowledge and manifest retrieval; v2 preserves
+   its static rule/retrieval compatibility inputs.
+3. Workspace layer (additive, last): `{ws}/agents/...` strict-only overrides.
 
 Tất cả layer là **additive, strict-only direction** — pack/workspace có thể THÊM/làm chặt, KHÔNG được nới lỏng engine. Xem [`packs/README.md`](../packs/README.md) cho chi tiết.
 

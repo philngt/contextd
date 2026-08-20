@@ -9,11 +9,10 @@ from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
-sys.path.insert(0, str(SCRIPT_DIR / "lib"))
 
 import cmd_resolve  # noqa: E402
-import task_context_engine  # noqa: E402
-from stdio import configure_stdio  # noqa: E402
+from lib import task_context_engine  # noqa: E402
+from lib.stdio import configure_stdio  # noqa: E402
 
 
 def run(
@@ -49,24 +48,40 @@ def run(
 
     # If workspace is overridden, resolve packs from that workspace's workspace.md
     if workspace:
-        ws_md = wiki_root / "workspaces" / workspace / "workspace.md"
+        ws_dir = cmd_resolve.resolve_workspace_dir(wiki_root, workspace)
+        if ws_dir is None or not ws_dir.is_dir():
+            print(
+                f"Error: Invalid or missing workspace {workspace!r}; "
+                "context build refused.",
+                file=sys.stderr,
+            )
+            return 1
+        ws_md = ws_dir / "workspace.md"
         packs, _ = cmd_resolve.get_effective_packs({}, ws_md)
     else:
         packs = resolved.get("packs") or []
 
     project_dir = Path(resolved.get("project_dir") or ".").resolve()
-    artifact = task_context_engine.build_context_artifact(
-        task=task,
-        wiki_root=wiki_root,
-        workspace=ws,
-        packs=packs,
-        project_dir=project_dir,
-        warnings=resolved.get("warnings") or [],
-    )
+    try:
+        artifact, synapse_snapshot = task_context_engine.build_context_snapshot(
+            task=task,
+            wiki_root=wiki_root,
+            workspace=ws,
+            packs=packs,
+            project_dir=project_dir,
+            warnings=resolved.get("warnings") or [],
+        )
+    except ValueError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return 1
 
     if materialize:
         target_dir = Path(output_dir).resolve() if output_dir else project_dir
-        artifact = task_context_engine.materialize_context(artifact, target_dir)
+        artifact = task_context_engine.materialize_context(
+            artifact,
+            target_dir,
+            synapse_snapshot=synapse_snapshot,
+        )
 
     if fmt == "json":
         import json

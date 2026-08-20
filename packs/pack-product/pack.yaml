@@ -1,6 +1,14 @@
 name: pack-product
-version: 0.1.0
+manifest_version: 2
+version: 0.2.0
 description: Product/business knowledge pack — product briefs, OKR, roadmap, personas, customer journey, success metrics. For non-tech contributors (PM, business, stakeholder).
+status: beta
+category: product
+reviewed_on: 2026-08-20
+audiences: [product, ba, design, engineering]
+task_types: [design, review]
+scope_includes: [product briefs, measurable outcomes, roadmaps, personas and customer journeys]
+scope_excludes: [technical implementation design, unsupported market research claims]
 
 components:
   - brief
@@ -11,7 +19,7 @@ components:
   - metric
 
 keywords:
-  brief: [brief, product brief, prd, requirement, feature spec, feature request]
+  brief: [brief, product brief, prd, "product requirement", feature spec, feature request]
   okr: [okr, objective, key result, kpi, target, goal]
   roadmap: [roadmap, milestone, quarter, q1, q2, q3, q4, release plan]
   persona: [persona, user persona, customer profile, ICP, ideal customer]

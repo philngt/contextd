@@ -1,6 +1,14 @@
 name: pack-ui-ux
-version: 0.1.0
+manifest_version: 2
+version: 0.2.0
 description: UI/UX pack — design system, accessibility (WCAG), user flows, và UX writing conventions.
+status: beta
+category: design
+reviewed_on: 2026-08-20
+audiences: [design, product, ba, engineering]
+task_types: [implement_feature, design, review]
+scope_includes: [design systems, WCAG accessibility, interaction flows, interface microcopy]
+scope_excludes: [framework-specific component code, product strategy and roadmap]
 
 components:
   - design-system

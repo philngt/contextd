@@ -35,19 +35,19 @@ Mỗi item: rule (NG → OK), why, detect, severity.
 - **NG**: `e.printStackTrace()` hoặc `return { error: e.toString() }`.
 - **OK**: log full với correlationId, response `{code: "INTERNAL_ERROR", requestId}`.
 - **Why**: information disclosure → recon vector.
-- **Detect**: Layer-1 `pack-web-api-print-stack-trace` (đã có).
+- **Detect**: Layer-1 `pack-web-api-print-stack-trace`.
 - **Severity**: error
 
-## P06 — Missing idempotency on POST/PUT
+## P06 — Undefined retry semantics on mutation
 - **NG**: `POST /payments` retry tạo 2 charge.
-- **OK**: idempotency-key header + dedup store, hoặc upsert semantics.
+- **OK**: durable idempotency/outcome record, conditional/state-machine semantics, or explicit reconciliation/non-retry contract chosen from operation risk.
 - **Why**: client retry plausible (mobile/webhook) → duplicate side-effects.
 - **Detect**: Layer-2 — review mutating endpoint có dedup strategy.
 - **Severity**: error
 
 ## P07 — Missing rate limit trên auth/expensive endpoint
 - **NG**: `/login`, `/forgot-password`, `/search` không giới hạn.
-- **OK**: per-IP + per-account rate limit từ config; circuit breaker tới downstream.
+- **OK**: abuse policy chọn identity key, quota/rate/concurrency/challenge and downstream protection từ threat/workload evidence; values từ config.
 - **Why**: credential stuffing, scraping, thundering herd.
 - **Detect**: Layer-2 — list endpoint nhạy cảm, check middleware.
 - **Severity**: error
@@ -63,14 +63,14 @@ Mỗi item: rule (NG → OK), why, detect, severity.
 - **NG**: `fetch("https://api.partner.com/v1/...")` ngay trong code.
 - **OK**: config-driven URL, env-specific.
 - **Why**: không deploy được sang staging/prod khác môi trường.
-- **Detect**: Layer-1 `pack-web-api-hardcoded-base-url` (đã có).
+- **Detect**: Layer-1 `pack-web-api-hardcoded-base-url`.
 - **Severity**: warn
 
 ## P10 — Broad `catch (Exception e)` swallow
 - **NG**: `catch (Exception e) { log.error(e); }` rồi return 200/null.
 - **OK**: catch specific exception, rethrow domain error, return đúng status code.
 - **Why**: bug ẩn, mismatch HTTP semantics, debugging vô vọng.
-- **Detect**: Layer-1 `pack-web-api-broad-exception-catch` (đã có).
+- **Detect**: Layer-1 `pack-web-api-broad-exception-catch`.
 - **Severity**: warn
 
 ## Mapping to validator
@@ -80,7 +80,7 @@ Mỗi item: rule (NG → OK), why, detect, severity.
 | P01 N+1 | — (design) | ✓ |
 | P02 pagination | — | ✓ |
 | P03 DTO | — | ✓ |
-| P04 mass-assign | `pack-web-api-mass-assignment` (new) | ✓ |
+| P04 mass-assign | `pack-web-api-mass-assignment` | ✓ |
 | P05 stack-trace | `pack-web-api-print-stack-trace` | ✓ |
 | P06 idempotency | — | ✓ |
 | P07 rate-limit | — | ✓ |

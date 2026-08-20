@@ -19,7 +19,7 @@ Không phải:
 
 | Component | Chọn | Note |
 |-----------|------|------|
-| Language | Python 3.11+ | Streamlit là Python framework |
+| Language | Workspace-supported Python, pinned | Pin version đã test cùng Streamlit/SQLite |
 | UI Framework | `streamlit` | Web app build cực nhanh, không cần HTML/CSS |
 | Database | `sqlite3` (built-in Python) | File `.db` đơn lẻ, copy đi đâu cũng chạy |
 | Date/time | `datetime` (built-in) | Đủ cho daily log |
@@ -44,20 +44,22 @@ pip install streamlit pandas
 streamlit run tool.py
 ```
 
-### Windows + Docker (recommend nếu share đồng nghiệp)
+### Container option (chỉ khi share/dependency isolation đã được chốt)
 
 ```yaml
-# docker-compose.yml
+# compose.yaml
 services:
   daily-form:
-    image: python:3.11-slim
+    build:
+      context: .
+      args:
+        PYTHON_BASE: ${PYTHON_IMAGE:?set a tested Python image tag or digest}
     working_dir: /app
     volumes:
-      - .:/app
       - ./data:/app/data    # SQLite file persist ở host
     ports:
       - "8501:8501"
-    command: bash -c "pip install -q streamlit pandas && streamlit run tool.py --server.address=0.0.0.0"
+    command: streamlit run tool.py --server.address=0.0.0.0
 ```
 
 ```bash
@@ -68,13 +70,13 @@ docker compose up
 ## Trade-offs
 
 **Vì sao Streamlit + SQLite**:
-- Streamlit: viết Python thuần, ra web app trong < 50 dòng. Không cần HTML/CSS/JS.
-- SQLite: 0 setup, 0 server, file nhỏ, backup = copy 1 file.
+- Streamlit: viết UI/data flow bằng Python, giảm phần frontend custom cho form nội bộ đơn giản.
+- SQLite: không cần DB server cho local workflow; backup phải dùng SQLite backup API hoặc quiesce writes, không copy live file mù quáng.
 
 **Vì sao KHÔNG**:
 - **Google Sheets / Airtable**: cloud lock-in, dữ liệu rời máy, khó offline. Có thể OK nếu OK với cloud.
 - **Excel + macro**: phải mở Excel, không có form UI tốt, dễ corrupt khi nhiều dòng.
-- **Flask/FastAPI**: phải tự viết HTML form + route, mất thêm 4-5 lần thời gian Streamlit.
+- **Flask/FastAPI**: hợp khi cần HTTP contract/UI tách rời; thêm ownership và frontend work không cần thiết cho use case local này.
 - **Postgres**: overkill cho 1 user, cần server.
 - **MongoDB**: không có schema → dễ lỗi data corruption khi fields mismatch.
 
@@ -144,12 +146,12 @@ st.caption(f"Tổng: {len(df)} record")
 
 ✅ **Match recipe này KHI**:
 - 1 user nhập, cần xem lại lịch sử
-- Schema đơn giản (5-15 fields, 1 bảng)
+- Schema/workflow đủ đơn giản để một local app và migration plan nhỏ quản lý được
 - OK với web UI mở trong browser
 - Cần search/filter cơ bản
 
 ❌ **KHÔNG match KHI**:
 - Cần đa user concurrent → cân nhắc Postgres hoặc Airtable
 - Cần GUI native không dùng browser → `desktop-gui-simple`
-- Records cực nhiều bảng (>5 bảng có quan hệ) → cần thiết kế DB nghiêm túc, ngoài recipe
+- Quan hệ/migration/query hoặc concurrency vượt contract local đã benchmark → cần thiết kế DB riêng, ngoài recipe
 - Chỉ 1 lần tính, không lưu → `formula-calculator-cli`

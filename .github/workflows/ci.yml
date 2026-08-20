@@ -1,12 +1,19 @@
 name: CI
 
 on:
+  push:
+    branches:
+      - main
   pull_request:
   workflow_dispatch:
 
 jobs:
   python-checks:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10', '3.12']
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -14,7 +21,13 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install test dependencies
+        run: python -m pip install -e ".[test]"
+
+      - name: Compile Python sources
+        run: python -m compileall -q scripts
 
       - name: Run test_lint_wiki
         run: python scripts/test_lint_wiki.py
@@ -28,5 +41,11 @@ jobs:
       - name: Run test_contextd_runtime
         run: python scripts/test_contextd_runtime.py
 
+      - name: Validate generated artifacts against schemas
+        run: python scripts/test_artifact_schemas.py
+
       - name: Run wiki lint
-        run: python scripts/lint-wiki.py --all-workspaces --wiki-root .
+        run: python scripts/lint-wiki.py --all-workspaces --wiki-root . --strict
+
+      - name: Check pattern indexes
+        run: python scripts/check-patterns-index.py

@@ -19,13 +19,13 @@ Nếu task thuộc QC, ưu tiên evidence-based reasoning, traceability defect�
 ### Defect & Test Design (pack-qc)
 - Bug report có repro/expected/actual/env tối thiểu
 - Severity tách khỏi Priority; matrix per workspace
-- Test ID stable (TC-{epic}-{nn}) + link requirement ID
+- Test ID stable theo workspace convention + requirement/defect trace
 - Test name mô tả intent, không test_1/test_user
-- Negative + boundary case bắt buộc; assertion specific
+- Negative/boundary/recovery coverage theo state và risk; assertion chứng minh business outcome
 
 ### Regression (pack-qc)
 - Scope change → regression scope update
-- Test order-independent (--shuffle pass)
+- Test isolation/order independence verified with a suitable runner strategy when order coupling is plausible
 - Flaky tracker với owner + quarantine deadline
 - Snapshot test có manual review (không auto-update silent)
 
@@ -37,10 +37,10 @@ Nếu task thuộc QC, ưu tiên evidence-based reasoning, traceability defect�
 ### Performance Behavior (pack-qc — perf)
 - Optimize có regression check plan (golden scenarios)
 - Không thay đổi behavior contract dưới danh nghĩa optimize
-- Cache mới có TTL + event invalidation + jitter
+- Cache mới có freshness/invalidation strategy; TTL/jitter/event invalidation chọn theo workload
 
 ### Performance Measurement (pack-qc — perf)
-- Track tail latency (p95/p99/p99.9), không chỉ average
+- Track distribution/tail metric phù hợp SLO và sample volume, không chỉ average
 - Bench reflect prod workload (size, concurrency, network)
 - A/B compare bằng cohort canary, không full rollout
 ```
@@ -53,12 +53,12 @@ Nếu task thuộc QC, ưu tiên evidence-based reasoning, traceability defect�
 - Test traceability: TC ↔ R{equirement} ↔ Defect
 - Negative/edge case coverage; assertion verifies business outcome
 - Flaky test tracked với owner; không silent retry
-- CI phase tách (unit → integration → e2e); fail fast
+- CI stages/fail-fast behavior match feedback speed, dependency cost and diagnostic value
 
 ### Performance Optimization
 - Profile artifact đính kèm cho hotspot claim
 - 1 change per measurement window (no confound)
-- Top-N hotspot (Pareto), không chase < 5% non-hot
+- Ưu tiên hotspot theo measured contribution; threshold thuộc performance target/config
 - Threshold/resource limit từ config
 - Report format: Problem → Hypothesis → Measurement → Change → Result → Tradeoff
 ```

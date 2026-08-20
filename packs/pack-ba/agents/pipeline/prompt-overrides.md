@@ -11,26 +11,26 @@ Nếu task thuộc BA, ưu tiên clarity của requirement, traceability của a
 ```
 ### Requirement (pack-ba)
 - Requirement nêu actor + trigger + action + business outcome
-- ID stable (R-{epic}-{nn}) + source link (interview/ticket/regulation)
-- 1 requirement = 1 testable outcome (no composite and/or)
+- ID stable theo workspace convention + source/evidence ID
+- Requirement independently traceable/testable; split khi outcome có lifecycle độc lập, không chỉ vì câu có and/or
 - Cross-team dependency có DRI per side
 
 ### Acceptance (pack-ba)
 - AC measurable/testable, Gherkin hoặc rule-based
-- ≥ 3 AC per story (happy + edge + error)
+- Coverage theo state/risk: success, boundary, failure và recovery nào relevant
 - Assumption tách section riêng, KHÔNG trộn vào AC
-- NFR section: perf + security + a11y + i18n + compliance
+- NFR/risk review theo domain; item không áp dụng ghi N/A + rationale
 
 ### Process & Terminology (pack-ba)
-- Process map As-Is + To-Be cùng template + gap analysis
-- BPMN swimlane chuẩn (mỗi lane = role)
-- Business term nhất quán trong cùng doc; Glossary section per epic
+- As-Is/To-Be + gap analysis khi task thực sự thay đổi process; không tạo To-Be giả cho documentation-only work
+- Chọn BPMN/swimlane/step table theo audience/tooling; actor ownership và branch phải rõ
+- Business term nhất quán; glossary chỉ chứa term material/ambiguous của scope
 - Acronym expand ở first use
 
 ### Scope & Stakeholder (pack-ba)
-- Non-goals section liệt kê 3-5 điều out-of-scope
-- RACI/DRI cho major decision
-- Sign-off log với version + date + approver
+- Non-goals section nêu các boundary dễ gây scope creep, không quota số dòng
+- Decision ownership theo governance workspace (DRI/RACI khi phù hợp)
+- Sign-off evidence khi policy yêu cầu approval
 - Change log nếu scope thay đổi
 ```
 
@@ -40,9 +40,9 @@ Nếu task thuộc BA, ưu tiên clarity của requirement, traceability của a
 ### Business Analysis
 - Mỗi requirement có Actor/Trigger/Outcome rõ
 - AC không chứa "fast/easy/friendly" thiếu số
-- Process map As-Is ≠ To-Be và có gap analysis
-- Glossary có entry cho mọi business term
-- RACI present cho major decision
+- Process change có As-Is/To-Be/gap evidence khi relevant
+- Material/ambiguous terms được define hoặc link canonical glossary
+- Decision ownership đáp ứng workspace governance; RACI không bắt buộc khi DRI đủ
 - Non-goals enumerated
 ```
 

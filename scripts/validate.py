@@ -56,10 +56,9 @@ from typing import Dict, List, Optional, Tuple
 
 # Pack loader — sibling module
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-sys.path.insert(0, str(Path(__file__).resolve().parent / "lib"))
 import pack_loader  # noqa: E402
-import contextd_resolver  # noqa: E402
-from stdio import configure_stdio  # noqa: E402
+from lib import contextd_resolver  # noqa: E402
+from lib.stdio import configure_stdio  # noqa: E402
 
 
 # ---------------------------------------------------------------------------

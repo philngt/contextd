@@ -2,27 +2,27 @@
 
 ## Component Structure
 
-- One component per file, named after file. Default export cho top-level component.
-- Container/Presenter split khi component có cả data fetching + complex render.
+- Tách file theo cohesion và ownership; không bắt buộc “one component per file” khi helper nhỏ chỉ phục vụ một component.
+- Tách data/loading/error boundary khỏi presentation khi điều đó làm contract dễ test, không áp Container/Presenter máy móc.
 - Compound components cho UI có sub-parts có quan hệ (`<Tabs><Tabs.Item/></Tabs>`).
 
 ## Props & Types
 
-- TypeScript: `interface Props {}` hoặc `type Props =`. Avoid `any` and `React.FC<>` (loses children typing).
+- TypeScript: dùng `interface` hoặc `type` theo local convention; type `children`/callback/ref rõ và tránh `any` không kiểm soát.
 - Optional props với default qua destructuring `({ size = "md" }: Props)`, không qua `defaultProps`.
 - Don't spread arbitrary `{...props}` xuống DOM element — explicit pass.
 
 ## Data Fetching
 
-- TanStack Query / SWR cho client-side data fetching.
-- Next.js: prefer Server Component fetch hoặc server action; client fetch chỉ khi cần real-time / mutation flow.
-- Always handle 3 states: loading / error / data. Default empty state too.
+- Client-side data fetching dùng workspace-approved cache/data layer khi cần dedupe, retry hoặc invalidation.
+- Next.js: chọn Server Component, route handler/action, hoặc client fetch theo pinned router/version, auth boundary và freshness contract.
+- Model các state thực sự có thể xảy ra (loading/pending, error, empty, stale/refresh, success) theo data contract; không ép boilerplate state không reachable.
 
 ## Forms
 
-- Controlled inputs với React Hook Form (RHF) hoặc state-driven controlled component.
-- Validate qua Zod / Yup schema, share schema giữa client + server (single source of truth).
-- Submit handler async + disable button while pending.
+- Chọn controlled/uncontrolled form theo UX và performance; library không bắt buộc nếu native form primitives đủ.
+- Validate client để hỗ trợ UX và luôn validate lại ở trusted server boundary; share schema khi semantics/runtime tương thích.
+- Pending submit phải ngăn duplicate effect theo interaction contract; disable, idempotency key hoặc alternate feedback được chọn theo accessibility/UX.
 
 ## Styling
 
@@ -31,8 +31,8 @@
 
 ## Error Boundary
 
-- Top-level `ErrorBoundary` quanh route/page, hiển thị fallback thay vì white screen.
-- Suspense boundary quanh data fetching để tránh suspending toàn page.
+- Đặt error boundary tại recovery/ownership boundary phù hợp; route-level fallback là baseline khi không có boundary hẹp hơn.
+- Đặt Suspense boundary theo reveal/streaming UX của router đã pin, không bọc máy móc mọi fetch.
 
 ## Testing
 

@@ -6,28 +6,28 @@ Anti-pattern lặp lại với LLM app. Additive trên [constraints.md](constrai
 - **NG**: `logger.info(f"prompt={prompt}")`.
 - **OK**: log `len(prompt)`, hash, request_id; raw body chỉ vào secure store.
 - **Why**: PII leak, secret exposure, compliance fail.
-- **Detect**: Layer-1 `pack-ai-app-log-prompt` (new) — regex `log\.\w+\(.*prompt`.
+- **Detect**: Layer-1 `pack-ai-app-log-raw-prompt` (regex heuristic).
 - **Severity**: error
 
 ## P02 — Hardcoded model ID
 - **NG**: `model="claude-3-5-sonnet-20240620"` rải khắp code.
 - **OK**: `model=config.LLM_MODEL`, version qua env.
-- **Why**: upgrade Opus 4.6 → 4.7 = grep + edit toàn repo.
-- **Detect**: Layer-1 `pack-ai-app-hardcoded-model` (new) — regex `model\s*=\s*["'](claude|gpt|gemini)-`.
+- **Why**: model deprecation/snapshot change becomes a repo-wide edit and cannot be evaluated or rolled back centrally.
+- **Detect**: Layer-1 `pack-ai-app-hardcoded-model-id` (regex heuristic).
 - **Severity**: warn
 
 ## P03 — Unbounded `max_tokens`
 - **NG**: gọi API không set `max_tokens` → response 4k token mặc định.
 - **OK**: set explicit dựa trên use case; alert nếu vượt.
 - **Why**: cost spike, timeout.
-- **Detect**: Layer-2 — call site có `max_tokens=`.
+- **Detect**: Layer-1 `pack-ai-app-no-max-tokens` accepts current max-output parameter variants; Layer-2 checks external generation config.
 - **Severity**: warn
 
-## P04 — Không prompt cache cho long static context
-- **NG**: system prompt 5k token, mỗi call gửi lại không cache.
-- **OK**: Anthropic `cache_control: {type: "ephemeral"}` cho block > 1024 token.
-- **Why**: 90% cost tiết kiệm được; latency giảm.
-- **Detect**: Layer-2 — system prompt > 1k token có `cache_control`.
+## P04 — Không có provider-aware cache policy
+- **NG**: long static context luôn gửi lại, hoặc cache content thay đổi/nhạy cảm mà không xét provider eligibility và retention policy.
+- **OK**: version stable blocks, check current provider/model eligibility, track cache metrics, và disable cache khi data policy yêu cầu.
+- **Why**: cache behavior, minimums, retention, pricing và data controls khác nhau theo provider/model/endpoint.
+- **Detect**: Layer-1 `pack-ai-app-missing-prompt-cache` only for long Anthropic literals; Layer-2 verifies provider contract, invalidation, telemetry và data policy.
 - **Severity**: warn
 
 ## P05 — Regex parse structured output
@@ -76,10 +76,10 @@ Anti-pattern lặp lại với LLM app. Additive trên [constraints.md](constrai
 
 | Pitfall | Layer-1 rule ID | Layer-2 self-check |
 |---|---|---|
-| P01 log-prompt | `pack-ai-app-log-prompt` (new) | ✓ |
-| P02 hardcoded-model | `pack-ai-app-hardcoded-model` (new) | ✓ |
-| P03 max_tokens | — | ✓ |
-| P04 cache | — | ✓ |
+| P01 log-prompt | `pack-ai-app-log-raw-prompt` | ✓ |
+| P02 hardcoded-model | `pack-ai-app-hardcoded-model-id` | ✓ |
+| P03 max-output | `pack-ai-app-no-max-tokens` | ✓ |
+| P04 cache | `pack-ai-app-missing-prompt-cache` | ✓ |
 | P05 regex-parse | — | ✓ |
 | P06 retry | — | ✓ |
 | P07 cost-trace | — | ✓ |

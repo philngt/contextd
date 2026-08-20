@@ -2,6 +2,7 @@
   "id": "example-context-quality",
   "task": "debug context quality",
   "workspace": "default",
+  "as_of": "2026-08-20",
   "packs": [],
   "expected_docs": [
     "workspaces/default/runbooks/context-quality-degradation.md"

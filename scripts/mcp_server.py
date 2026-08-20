@@ -18,16 +18,17 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
-sys.path.insert(0, str(SCRIPT_DIR / "lib"))
 
 import cmd_bundle  # noqa: E402
 import cmd_resolve  # noqa: E402
-import contextd_version  # noqa: E402
-import contextd_resolver  # noqa: E402
-import context_security  # noqa: E402
-import find_engine  # noqa: E402
-import task_context_engine  # noqa: E402
-from stdio import configure_stdio  # noqa: E402
+from lib import (  # noqa: E402
+    context_security,
+    contextd_resolver,
+    contextd_version,
+    find_engine,
+    task_context_engine,
+)
+from lib.stdio import configure_stdio  # noqa: E402
 
 
 LATEST_PROTOCOL_VERSION = "2025-11-25"
@@ -172,9 +173,16 @@ def resolve_state(options: ServerOptions, cwd: Optional[str] = None,
     project_dir_raw = resolved.get("project_dir")
     project_dir = Path(str(project_dir_raw)).expanduser().resolve() if project_dir_raw else start_dir
 
+    safe_workspace_dir: Optional[Path] = None
     if root is not None and selected_workspace:
-        ws_dir = root / "workspaces" / selected_workspace
-        resolved["workspace_dir"] = str(ws_dir) if ws_dir.is_dir() else None
+        safe_workspace_dir = contextd_resolver.resolve_workspace_dir(root, selected_workspace)
+        resolved["workspace_dir"] = (
+            str(safe_workspace_dir)
+            if safe_workspace_dir and safe_workspace_dir.is_dir()
+            else None
+        )
+        if safe_workspace_dir is None:
+            warnings.append(f"Invalid workspace: {selected_workspace!r}")
 
     if require_workspace:
         if root is None:
@@ -194,15 +202,19 @@ def resolve_state(options: ServerOptions, cwd: Optional[str] = None,
                 "available_workspaces": _available_workspaces(root),
                 "warnings": warnings,
             })
-        ws_dir = root / "workspaces" / selected_workspace
-        if not ws_dir.is_dir():
-            raise ToolExecutionError(f"Workspace directory not found: {ws_dir}", {
+        if safe_workspace_dir is None:
+            raise ToolExecutionError(f"Invalid workspace: {selected_workspace!r}", {
+                "workspace": selected_workspace,
+                "available_workspaces": _available_workspaces(root),
+            })
+        if not safe_workspace_dir.is_dir():
+            raise ToolExecutionError(f"Workspace directory not found: {safe_workspace_dir}", {
                 "workspace": selected_workspace,
                 "available_workspaces": _available_workspaces(root),
             })
 
     packs: List[str] = []
-    if root is not None and selected_workspace:
+    if root is not None and selected_workspace and safe_workspace_dir is not None:
         packs, pack_source = _workspace_packs(root, selected_workspace, resolved, workspace_overridden)
         resolved["packs"] = packs
         resolved["pack_source"] = pack_source
@@ -582,7 +594,7 @@ def call_tool(name: str, arguments: Dict[str, Any], options: ServerOptions) -> D
             require_workspace=True,
         )
         assert state.knowledge_root is not None and state.workspace is not None
-        artifact = task_context_engine.build_context_artifact(
+        artifact, synapse_snapshot = task_context_engine.build_context_snapshot(
             task=task,
             wiki_root=state.knowledge_root,
             workspace=state.workspace,
@@ -591,7 +603,11 @@ def call_tool(name: str, arguments: Dict[str, Any], options: ServerOptions) -> D
             warnings=state.warnings,
         )
         if _bool(arguments.get("materialize"), default=False):
-            artifact = task_context_engine.materialize_context(artifact, state.project_dir)
+            artifact = task_context_engine.materialize_context(
+                artifact,
+                state.project_dir,
+                synapse_snapshot=synapse_snapshot,
+            )
         return _tool_content(artifact)
 
     if name == "contextd.contract_path":

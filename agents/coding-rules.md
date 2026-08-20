@@ -1,6 +1,10 @@
 # Coding Rules — Engine (Universal)
 
-> Stack-specific rules belong in **packs** (`packs/{pack-name}/agents/coding-rules.md`) and in workspace overrides (`workspaces/{ws}/agents/coding-rules.md`). This engine file contains only principles that apply to any backend/frontend/mobile/AI app, regardless of language, framework, or messaging stack.
+> Stack-specific rules belong in **packs** (manifest-v3 component sections in
+> `packs/{pack-name}/knowledge.md`, or v2
+> `packs/{pack-name}/agents/coding-rules.md`) and in workspace overrides
+> (`workspaces/{ws}/agents/coding-rules.md`). This engine file contains only
+> principles that apply to any backend/frontend/mobile/AI app.
 >
 > Resolution: engine → packs (additive, alphabetical) → workspace (additive). Pack/workspace may tighten, never relax. See [`agents/constraints.md`](constraints.md#resolution-order) for the full layering rule.
 
@@ -58,7 +62,9 @@
 
 Stack-specific rules live in two layers (additive, never relaxing engine):
 
-- **Pack** (`packs/{pack-name}/agents/coding-rules.md`) — reusable across workspaces. E.g. `pack-event-driven` covers Kafka/MQTT consumer rules; future `pack-frontend-react` covers React-specific rules.
+- **Pack** (`packs/{pack-name}/knowledge.md` for v3; legacy
+  `agents/coding-rules.md` for v2) — reusable across workspaces. Runtime v3 loads
+  Global Principles plus only the matched component standards.
 - **Workspace** (`workspaces/{ws}/agents/coding-rules.md`) — heading prefix `WS:` to disambiguate when merged. Cross-link to relevant platform pattern (`{ws}/platform/patterns/...`) and contract (`{ws}/platform/contracts/...`).
 
 See [`packs/README.md`](../packs/README.md) for the pack system.

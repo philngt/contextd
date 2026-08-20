@@ -37,3 +37,20 @@ Performance optimization: `performance-profiling`, `bottleneck-analysis`, `optim
 
 - Pack mechanism: [packs/README.md](../README.md)
 - Cross-cutting principles: [agents/cross-cutting-principles.md](../../agents/cross-cutting-principles.md)
+
+## When not to enable
+
+- Security testing/pentest; dùng `pack-security` với authorization boundary riêng.
+- “Optimization” chưa có baseline, target, profiler evidence hoặc regression guard.
+
+## Retrieval behavior
+
+Quality workflow và performance workflow có component riêng để task test-case không tự nạp toàn bộ profiling context. Retrieval ưu tiên evidence hiện tại: test result, defect trace, baseline và comparison artifact.
+
+## Verification
+
+```bash
+contextd pack-validate --pack pack-qc --format text
+contextd context "Review regression gate with latency baseline" --preview --format json
+python scripts/validate.py --file <quality-fixture> --workspace <workspace-with-pack>
+```

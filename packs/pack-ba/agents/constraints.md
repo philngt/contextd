@@ -2,36 +2,36 @@
 
 Hard rules cho business analysis (requirement, acceptance, process, stakeholder). Additive trên engine constraints. Strict-only direction.
 
-## Requirement Clarity
+## Requirement Clarity (`pack-ba-requirement-clarity`)
 
 - **Requirement PHẢI mô tả outcome business, actor, và trigger** — không chấp nhận requirement chỉ mô tả solution kỹ thuật.
-- **1 requirement = 1 testable outcome** — chia khi gặp "and"/"or" composite; gắn ID stable (`R-{epic}-{nn}`).
+- **Requirement PHẢI independently traceable/testable** — split only when outcomes can change or be accepted independently; conjunction text alone không phải bằng chứng phải tách.
 - **Requirement có impact cross-team PHẢI nêu dependency/handoff** rõ ràng + DRI per side.
-- **Source attribution bắt buộc** — link interview ID / ticket / Slack thread; KHÔNG "user wants" mơ hồ.
+- **Source attribution bắt buộc** — evidence/decision ID, owner và date; redact/restrict private conversation links theo workspace policy. KHÔNG "user wants" mơ hồ.
 
-## Acceptance Discipline
+## Acceptance Discipline (`pack-ba-acceptance-discipline`)
 
 - **Acceptance criteria PHẢI measurable + testable** — tránh từ mơ hồ ("nhanh", "tốt hơn", "thân thiện") khi không có metric.
 - **KHÔNG trộn assumption ngầm vào acceptance criteria** — assumption ghi rõ và reviewable trong section riêng.
-- **Mỗi user story PHẢI có ≥ 3 AC** (happy + edge + error) format Gherkin/rule-based.
-- **NFR section bắt buộc** trong mọi epic — perf, security, accessibility, i18n, compliance.
+- **Acceptance coverage follows state/risk** — include relevant success, boundary, failure and recovery rules; Gherkin là optional representation, không phải quota.
+- **NFR/risk review bắt buộc** cho epic — performance, security, accessibility, localization, compliance hoặc `N/A` + rationale theo domain.
 
-## Terminology Consistency
+## Terminology Consistency (`pack-ba-terminology-consistency`)
 
 - **Business term chính (entity/process/status) PHẢI nhất quán** trong cùng tài liệu — tránh dùng nhiều tên cho cùng khái niệm.
 - **Khi thay đổi nghĩa của term đã có** — phải nêu migration note cho stakeholder liên quan + version bump.
 - **Acronym PHẢI expand ở first use** trong mọi document; có Glossary section per epic.
 
-## Scope Discipline
+## Scope Discipline (`pack-ba-scope-discipline`)
 
-- **Non-goals section bắt buộc** — liệt kê 3-5 điều không làm trong scope này.
+- **Non-goals/out-of-scope section bắt buộc** — nêu các boundary dễ bị hiểu nhầm hoặc gây scope creep; không quota số dòng.
 - **Scope change PHẢI có change log** — ngày, người, lý do, impact metric/timeline.
 - **KHÔNG silently expand scope** giữa epic — revisit AC + estimate.
 
-## Stakeholder & Sign-off
+## Stakeholder & Sign-off (`pack-ba-stakeholder-signoff`)
 
-- **RACI/DRI PHẢI documented** cho mọi major decision — single accountable owner.
-- **Sign-off log bắt buộc** — ai approve, version nào, ngày nào.
+- **Decision ownership PHẢI documented** cho decision cần approval/handoff; dùng DRI/RACI theo governance của workspace.
+- **Sign-off evidence bắt buộc khi policy yêu cầu approval** — actor, artifact version, date và accepted residual risk.
 
 ## Related
 

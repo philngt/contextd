@@ -6,9 +6,9 @@ Section bổ sung vào `agents/pipeline/prompt-template.md` self-check khi pack 
 
 ```
 ### Kafka (pack-event-driven)
-- Offset committed only after processing completes
-- DLQ path implemented for all failure scenarios
-- Batch processing used when batch mode configured (not per-message loop)
+- Delivery semantics declared (at-least/at-most/exactly-once claim) and progress marker follows required durable outcome
+- Failure taxonomy maps retryable/permanent/poison/unknown outcomes to bounded retry, quarantine/DLQ, stop or operator path
+- Batch size/partial failure/ordering/rebalance behavior follows workload and broker contract
 - No hardcoded topic names — read from config
 
 ### MQTT (pack-event-driven)
@@ -21,9 +21,9 @@ Section bổ sung vào `agents/pipeline/prompt-template.md` self-check khi pack 
 
 ```md
 ### Kafka
-- Offset committed only after processing completes
-- DLQ path implemented for all failure scenarios
-- Batch processing used (not per-message loop)
+- Progress marker/transaction matches declared delivery contract
+- Retry/DLQ/quarantine/stop behavior is explicit per failure class
+- Batch/ordering/idempotency semantics covered by failure-injection tests
 - No hardcoded topic names
 
 ### MQTT

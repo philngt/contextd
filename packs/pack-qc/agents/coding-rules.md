@@ -14,7 +14,7 @@ Idioms cho QC writing — test case, bug report, regression plan, release gate. 
 
 - Mỗi acceptance/test item có **điều kiện vào + kết quả mong đợi** rõ ràng.
 - Negative case có riêng (input invalid, permission denied, timeout) — không gộp vào happy path.
-- Boundary case enumerate: empty, null, max, unicode, concurrent.
+- Derive boundary cases từ input/state/risk model (ví dụ empty, range edge, unicode, concurrency); không copy checklist không liên quan.
 - Assertion specific: `expect(x).toBe(42)` thay vì `expect(x).toBeTruthy()`.
 
 ## Bug Report Format
@@ -29,7 +29,7 @@ Idioms cho QC writing — test case, bug report, regression plan, release gate. 
 
 - Regression suite = test critical path + tests for fixed bugs (regression-of) + smoke.
 - Tag test theo scope: `smoke|regression|critical-path|edge`.
-- Cadence: smoke per build, regression per release, full per major version.
+- Cadence lấy từ release risk, change frequency và CI budget; ghi rõ trigger cho smoke/regression/full suite.
 - Coverage matrix: feature × test type — gap section liệt kê chưa cover.
 
 ## Release Quality Gate
@@ -71,7 +71,7 @@ Idioms cho QC writing — test case, bug report, regression plan, release gate. 
 ## Profile-First
 
 - Profile trước khi guess: pprof / async-profiler / py-spy / clinic.js — share artifact link.
-- Optimize top-N hotspot (Pareto), không chase micro-improvement < 5% trừ khi hot path.
+- Optimize hotspot theo measured contribution và target; micro-optimization chỉ hợp lệ khi evidence cho thấy nó ảnh hưởng SLO/cost/hot path.
 - Document hypothesis trước khi đo: "expect 30% giảm CPU on path X vì Y".
 
 ## Benchmark Design
@@ -83,9 +83,9 @@ Idioms cho QC writing — test case, bug report, regression plan, release gate. 
 ## Cache Pattern
 
 - Cache key format: `{tenant}:{entity}:{version}:{params_hash}` — version để invalidate bulk.
-- TTL > 0 + jitter (±10%) để tránh thundering herd khi expire đồng loạt.
-- Negative cache: TTL ngắn hơn (vd 1/10) để recover nhanh khi upstream fix.
-- Stale-while-revalidate khi tolerable cho UX nhưng critical cho availability.
+- TTL/freshness window lấy từ data contract; dùng jitter hoặc refresh coalescing khi synchronized expiry là risk, không hardcode một tỷ lệ chung.
+- Negative-cache policy phải phân biệt not-found ổn định với transient/auth failure; recovery window dựa trên upstream semantics.
+- Stale-while-revalidate chỉ dùng khi contract cho phép stale data và có upper bound/observability rõ.
 
 ## Hot Path Idioms
 

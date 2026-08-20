@@ -13,6 +13,9 @@ license = {text = "MIT"}
 [project.scripts]
 contextd = "scripts.cli:main"
 
+[project.optional-dependencies]
+test = ["jsonschema>=4.18,<5"]
+
 [tool.setuptools]
 py-modules = []
 packages = ["scripts", "scripts.lib"]

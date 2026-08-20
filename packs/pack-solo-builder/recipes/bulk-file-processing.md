@@ -19,11 +19,11 @@ Không phải:
 
 | Component | Chọn | Note |
 |-----------|------|------|
-| Language | Python 3.11+ | Có sẵn library xử lý mọi format file |
-| Excel | `openpyxl` (đọc/ghi `.xlsx`) | KHÔNG dùng `xlrd` (deprecated cho .xlsx) |
+| Language | Workspace-supported Python, pinned | Chọn version tương thích với các parser thực sự dùng |
+| Excel | `openpyxl` (đọc/ghi `.xlsx`) | Pin/test với workbook features thực tế (formula, style, macro boundary) |
 | CSV | `pandas` | Built-in `csv` cũng được nhưng pandas tiện filter/group |
-| PDF (extract text) | `pdfplumber` | Tốt hơn `PyPDF2` cho table extraction |
-| PDF (extract images) | `pdf2image` + `Pillow` | Cần Poppler binary (Docker giải quyết hết) |
+| PDF (extract text/table) | `pdfplumber` hoặc parser được fixture chứng minh | OCR/scanned/layout-heavy PDF cần path khác |
+| PDF (render pages/images) | `pdf2image` + `Pillow` | Cần compatible Poppler binary trên target |
 | CLI args | `argparse` (built-in) | Không cần thư viện thêm |
 
 ### Linux/macOS setup
@@ -42,25 +42,27 @@ python -m venv .venv
 pip install pandas openpyxl
 ```
 
-### Windows + Docker (recommend nếu đụng PDF)
+### Container option (khi Poppler/system dependency khó pin native)
 
-PDF processing trên Windows native cần install Poppler thủ công — Docker tránh hết.
+Container có thể pin system dependency cho target đã có Docker; native install vẫn hợp lệ. Không thêm container nếu chỉ xử lý CSV/XLSX hoặc target chưa được test với Docker.
 
 ```yaml
-# docker-compose.yml
+# compose.yaml
 services:
   bulk-tool:
-    image: python:3.11-slim
+    build:
+      context: .
+      args:
+        PYTHON_BASE: ${PYTHON_IMAGE:?set a tested Python image tag or digest}
     working_dir: /app
     volumes:
-      - .:/app
       - ./input:/input
       - ./output:/output
-    command: bash -c "pip install -q -r requirements.txt && python tool.py"
+    command: python tool.py /input --output /output
 ```
 
 ```txt
-# requirements.txt
+# requirements.lock (pin resolved versions used by the tested fixture)
 pandas
 openpyxl
 pdfplumber
@@ -72,13 +74,13 @@ docker compose run --rm bulk-tool
 
 ## Trade-offs
 
-**Vì sao Python**: ngôn ngữ có ecosystem mạnh nhất cho file processing. Pandas + openpyxl + pdfplumber là combo cover 90% bulk task.
+**Vì sao Python**: pandas/openpyxl/pdfplumber có adapter phù hợp với các format trong recipe này; chỉ cài parser cho input đã chốt và verify trên fixture đại diện.
 
 **Vì sao KHÔNG**:
 - **Excel macro VBA**: chỉ chạy trong Excel, không reuse cho CSV/PDF, khó automate.
-- **Power Query / Power Automate**: GUI tốt nhưng vendor lock-in Microsoft, học thêm mất 1 tuần, không version-control được logic.
+- **Power Query / Power Automate**: hợp khi organization đã quản trị Microsoft stack; so sánh portability, reviewability và operator skill thực tế.
 - **Bash + awk/sed**: nhanh cho text thuần nhưng không xử lý Excel/PDF native.
-- **Node.js**: được, nhưng library Excel/PDF không bằng Python.
+- **Node.js**: hợp nếu runtime/team hiện hữu và chosen parser pass fixtures; không đổi stack theo claim ecosystem chung.
 
 ## Skeleton
 

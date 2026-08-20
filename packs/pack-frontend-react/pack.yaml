@@ -1,6 +1,14 @@
 name: pack-frontend-react
-version: 1.0.0
+manifest_version: 2
+version: 1.1.0
 description: React/Next.js frontend patterns — hooks rules, a11y, effect cleanup, list keys, no direct state mutation
+status: stable
+category: engineering
+reviewed_on: 2026-08-20
+audiences: [engineering, design]
+task_types: [implement_feature, fix_bug, design, review]
+scope_includes: [React component implementation, React hooks, JSX accessibility, Next.js routing boundaries]
+scope_excludes: [framework-neutral visual design, React Native mobile implementation]
 
 components:
   - react
@@ -9,9 +17,9 @@ components:
   - nextjs
 
 keywords:
-  react: [react, component, jsx, tsx, "useState", "useEffect", "useMemo", "useCallback", props]
-  hooks: [hook, "use[A-Z]", custom hook]
-  jsx: [jsx, tsx, render, element]
+  react: [react, "react component", "useState", "useEffect", "useMemo", "useCallback", "react props"]
+  hooks: ["rules of hooks", "custom hook", "hook dependency", "effect cleanup"]
+  jsx: [jsx, tsx, "jsx accessibility", "list key", "semantic html"]
   nextjs: [nextjs, "next.js", "app router", "server component", "use client", "use server", "getServerSideProps", "getStaticProps"]
 
 files:

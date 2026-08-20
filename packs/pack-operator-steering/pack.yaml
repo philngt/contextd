@@ -1,6 +1,14 @@
 name: pack-operator-steering
-version: 0.1.0
-description: Agent-operator steering pack — context audit, drift checks, remediation planning, decision logs, handoff quality, and workflow mental models.
+manifest_version: 3
+version: 0.4.0
+description: Agent-operator steering pack — wayfinding, context audits, drift checks, remediation, durable decisions, handoffs, and workflow mental models.
+status: beta
+category: agent-runtime
+reviewed_on: 2026-08-20
+audiences: [engineering, product, ba, qc, security, design, ops, domain]
+task_types: [implement_feature, fix_bug, design, incident, review]
+scope_includes: [operator wayfinding and thinking recovery, context quality audits, task drift diagnosis, remediation planning, durable decisions and handoffs]
+scope_excludes: [implementation-domain coding rules, autonomous agent loop mechanics, personal wellbeing or clinical guidance]
 
 components:
   - context-audit
@@ -9,22 +17,28 @@ components:
   - decision-ledger
   - handoff-quality
   - workflow-mental-model
+  - operator-wayfinding
 
 keywords:
-  context-audit: ["context audit", "context quality", "context gap", "assumption leak", "skill stack", "skill mismatch", audit, "đánh giá context quality", "danh gia context quality", "kiểm tra context quality", "kiem tra context quality"]
+  context-audit: ["context audit", "context quality audit", "audit context quality", "context gap review", "assumption leak", "skill stack audit", "skill mismatch review", "đánh giá context quality", "danh gia context quality", "kiểm tra context quality", "kiem tra context quality"]
   drift-check: ["drift check", drift, "context drift", "goal drift", "scope drift", "operator drift", "lệch hướng", "lech huong", "trôi context", "troi context"]
-  remediation-planning: [remediation, "remediation plan", "root cause", "acceptance criteria", "verification method", "kế hoạch", "ke hoach", "khắc phục", "khac phuc", "nghiệm thu", "nghiem thu"]
-  decision-ledger: ["decision log", "decision ledger", ADR, "accepted decision", "revisit trigger", "quyết định", "quyet dinh", "cam kết", "cam ket"]
-  handoff-quality: [handoff, "session brief", "next agent", "transfer context", "bàn giao", "ban giao", "tiếp quản", "tiep quan"]
-  workflow-mental-model: ["mental model", "workflow model", "stage map", "quality gate", "failure mode", "mô hình", "mo hinh", "quy trình", "quy trinh"]
+  remediation-planning: ["remediation plan", "propose remediation", "đề xuất remediation", "de xuat remediation", "root cause remediation", "remediation acceptance", "verification method missing", "kế hoạch khắc phục", "ke hoach khac phuc", "nghiệm thu khắc phục", "nghiem thu khac phuc"]
+  decision-ledger: ["decision log", "decision ledger", ADR, "accepted decision", "revisit trigger", "ghi quyết định", "ghi quyet dinh", "quyết định cần lưu", "quyet dinh can luu"]
+  handoff-quality: ["handoff brief", "agent handoff", "session brief", "next agent context", "transfer context", "bàn giao agent", "ban giao agent", "bàn giao phiên", "ban giao phien"]
+  workflow-mental-model: ["workflow mental model", "workflow model", "stage map", "quality gate map", "failure mode map", "mô hình quy trình", "mo hinh quy trinh", "bản đồ quy trình", "ban do quy trinh"]
+  operator-wayfinding: ["what should I do next", "should I stop", "I am lost", "lost direction", "losing direction", "decision paralysis", "không biết làm gì tiếp", "khong biet lam gi tiep", "có nên dừng lại", "co nen dung lai", "bị lạc hướng", "bi lac huong", "mất phương hướng", "mat phuong huong", "AI quyết định thay", "AI quyet dinh thay"]
+
+retrieval:
+  context-audit: ["packs/pack-operator-steering/templates/context-audit-report.md", "runbooks/context-quality-degradation.md", "projects/{project}/knowledge-map.md", "decisions/", "evidence/"]
+  drift-check: ["packs/pack-operator-steering/templates/drift-report.md", "decisions/", "projects/{project}/knowledge-map.md", "runbooks/", "evidence/"]
+  remediation-planning: ["packs/pack-operator-steering/templates/remediation-plan.md", "runbooks/", "projects/{project}/knowledge-map.md", "evidence/"]
+  decision-ledger: ["packs/pack-operator-steering/templates/decision-note.md", "decisions/", "projects/{project}/knowledge-map.md"]
+  handoff-quality: ["packs/pack-operator-steering/templates/handoff-brief.md", "decisions/", "projects/{project}/knowledge-map.md", "evidence/"]
+  workflow-mental-model: ["packs/pack-operator-steering/templates/workflow-mental-model.md", "projects/{project}/knowledge-map.md", "domains/{domain}/", "decisions/"]
+  operator-wayfinding: ["packs/pack-operator-steering/templates/wayfinding-checkpoint.md", "projects/{project}/knowledge-map.md", "decisions/", "evidence/", "runbooks/"]
 
 files:
-  constraints: agents/constraints.md
-  coding_rules: agents/coding-rules.md
-  validator_rules: agents/pipeline/validator-rules.md
+  knowledge: knowledge.md
   validator_script: scripts/rules.py
-  retrieval_map: agents/pipeline/retrieval-map.md
-  prompt_overrides: agents/pipeline/prompt-overrides.md
-  common_pitfalls: agents/common-pitfalls.md
 
 conflicts_with: []
