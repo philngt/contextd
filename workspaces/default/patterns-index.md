@@ -31,6 +31,7 @@ Quick lookup table for AI agents. Find the pattern name, follow the link, read b
 | `source-yaml-schema` | Required + conditional fields cho `source.yaml`. Workspace lock invariant via `workspace_at_ingest`. | [platform/contracts/source-yaml-schema.md](platform/contracts/source-yaml-schema.md) |
 | `sub-agent-frontmatter-schema` | Required frontmatter (name, description, tools, model) cho `.claude/agents/*.md`. Convention (non-binding): description chứa `DÙNG KHI` + `KHÔNG DÙNG`. | [platform/contracts/sub-agent-frontmatter-schema.md](platform/contracts/sub-agent-frontmatter-schema.md) |
 | `synapse-node-edge-schema` | Deterministic node/edge, lifecycle/freshness, workspace isolation, and task context projection invariants. PAIR with `synapse-context-projection`. | [platform/contracts/synapse-node-edge-schema.md](platform/contracts/synapse-node-edge-schema.md) |
+| `graph-projection` | Experimental read-only seed traversal, semantic roles, region boundaries and dependency-gap reporting. | [platform/contracts/graph-projection.md](platform/contracts/graph-projection.md) |
 
 ## Domain Workflows
 
