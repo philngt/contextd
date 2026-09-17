@@ -1,6 +1,6 @@
 name: pack-agentic
 manifest_version: 2
-version: 1.1.0
+version: 1.1.1
 description: Agent loops, tool use, multi-agent orchestration, MCP servers — bounded steps, idempotent tools, human-in-the-loop checkpoints
 status: stable
 category: agent-runtime

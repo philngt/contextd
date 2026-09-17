@@ -1,0 +1,76 @@
+{
+  "baseline_commit": "303bb1a6a3860a6cea5e8673360e0afb106278f3",
+  "ui_v2_static_tokens": 2876,
+  "packs": {
+    "pack-agentic": {
+      "contract_sha256": "3c44b695591ad25901cbba35639eddf4f2d8b0503fb417140c7cd3c52c77637d",
+      "validator_sha256": "1f62bcbf8fe61e83408be6b91044afff82bb4b5cf0068c3b1e9443ddedb3960b"
+    },
+    "pack-ai-app": {
+      "contract_sha256": "d3a0af5b3d17f7ca47fed9e7209ea1ff37da92d34882ed57a5223f9884c346ab",
+      "validator_sha256": "31f4cff022620ebe503a508f19a545873ca4c737e576caf540e134121b997e8a"
+    },
+    "pack-ba": {
+      "contract_sha256": "680cf5de3076efa83704472b539f2189b618343e2aa363089c31df9c372c9ac9",
+      "validator_sha256": "109fb979ded78d8365a3cda493889a949e291c37c0bf58f4bebc82f445daf7d4"
+    },
+    "pack-claude-plugin-dev": {
+      "contract_sha256": "5c80b0eeb46397476a12ea2628bb77ef741ea20f94e3ed5c73db268da3d42984",
+      "validator_sha256": "2efe6b99bb32ea6db925cbeaeaeec477c339c1f74e7363e4a9a81018dccb1520"
+    },
+    "pack-dba": {
+      "contract_sha256": "38d31950c45e23467534af60ae8dc4c128e0dc0a60639efde7b8662d41b1a3e2",
+      "validator_sha256": "eca6978cdff016d6706f3c2458c6cb7be4d04ada2928d3c82ad82482a432dcfe"
+    },
+    "pack-devops-iac": {
+      "contract_sha256": "f4cb9f73f1be355348bd3554e3dcaa00b46ea4bf6f36e3fd124c7671fb2d4479",
+      "validator_sha256": "cd8e40ec5de267998133f956997a0e7cd63789510b5a4ba210378b01956b6ac7"
+    },
+    "pack-event-driven": {
+      "contract_sha256": "c896ef173bbaaa5e041814d86410cfcdd4dac0f32c443711b2ccb8d2a67a1480",
+      "validator_sha256": "6941859fbb979f312eabf67ae675ee08f7010ab6f62db2f73e00f140bea756f0"
+    },
+    "pack-frontend-react": {
+      "contract_sha256": "a286dab2d1fc61077af31890a80cb3aebcc0f8c149fdbe9518008f5b73c6389c",
+      "validator_sha256": "7ef44c56c49a2ee5da4e82f86fbc948ad8c4afe16dc987f79b50dc5783af4682"
+    },
+    "pack-operator-steering": {
+      "contract_sha256": "f46025218c22a0b3775becdffaebcff00bf1fc04fdb5791c6d9e375dee4400d0",
+      "validator_sha256": "5aeb36491f595e9b817bb34cc28948ed92dbdfe91847ecac61d99f53fd94da84"
+    },
+    "pack-product": {
+      "contract_sha256": "03effd82c22f6c8d37f99079ad819d1bdb6e66dce0f64d72642890c7b34d3097",
+      "validator_sha256": "da3668da3ae66a87fc83a2b1fe05aaa5103ee254234837f1329a05cbcf44f0ac"
+    },
+    "pack-qc": {
+      "contract_sha256": "c023fdcb974ce6cd2093619b1d20ff5f60261d5b237ab509f30072af4f57981e",
+      "validator_sha256": "b3e01f372b377a93654cd1a3442088463a725c5b0f20763bfbf49a72ea04adbc"
+    },
+    "pack-security": {
+      "contract_sha256": "d30ed7a1605096074d2aa5f228b4dece31cff0523f7e88f14dcbcfefa1c98f9f",
+      "validator_sha256": "b648bda6d131570973e54065813dc03968020f5de4c7cc28926dc8a071cb0c1f"
+    },
+    "pack-solo-builder": {
+      "contract_sha256": "a418199db978efa0533d18622cfc8951a52389a9fa7a090b537a3587cf51f288",
+      "validator_sha256": "888b11d0a0d5cfcc0b0071336c3540576bd8e007203d4a59fe5960a21cd60953"
+    },
+    "pack-ui-ux": {
+      "contract_sha256": "e3d65f0711a380f10652f2d811244b0c2af3251cd2e027415bc12280db358e9e",
+      "validator_sha256": "b850188a5a39de0a705a1a47b116b1716bc22b29dcc44514d2637af70fee567e"
+    },
+    "pack-web-api": {
+      "contract_sha256": "94cf88880421bc2236a0cf718597928d619f021c27fd4f3e5d5d8361d92fbc1a",
+      "validator_sha256": "bbf3ee60744ea70c81bb1cf7bb62f9092b4c8a544c6f1c30f7d2a0cf6d09dd3c"
+    }
+  },
+  "contract_fields": [
+    "components",
+    "keywords",
+    "scope_includes",
+    "scope_excludes",
+    "audiences",
+    "task_types",
+    "reviewed_on",
+    "conflicts_with"
+  ]
+}

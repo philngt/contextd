@@ -1,6 +1,6 @@
 name: pack-operator-steering
 manifest_version: 3
-version: 0.4.0
+version: 0.4.1
 description: Agent-operator steering pack — wayfinding, context audits, drift checks, remediation, durable decisions, handoffs, and workflow mental models.
 status: beta
 category: agent-runtime

@@ -18,12 +18,18 @@ Enable khi workspace cần:
 
 ## What it adds
 
-- **Constraints** (`agents/constraints.md`) — hard rules về token usage, WCAG, keyboard nav, flow coverage
-- **Working rules** (`agents/coding-rules.md`, compatibility filename) — conventions đặt tên token, cấu trúc flow file, accessibility note format
-- **Common pitfalls** (`agents/common-pitfalls.md`) — Top 10 anti-pattern UX/design với detect và severity
-- **Validator rules** (`agents/pipeline/validator-rules.md`) — Layer-1 gates: hardcoded color, missing a11y, flow no error path
-- **Retrieval map** (`agents/pipeline/retrieval-map.md`) — component → workspace doc mapping
-- **Prompt overrides** (`agents/pipeline/prompt-overrides.md`) — self-check bổ sung cho UX tasks
+- **Canonical knowledge** (`knowledge.md`) — inherited constraints, mechanisms,
+  strategy choices, exceptions, failure signals, and evidence/stop conditions.
+- **Manifest routing** (`pack.yaml#retrieval`) — Global Principles plus only the
+  relevant design-system, accessibility, user-flows, or ux-writing section.
+- **Deterministic checks** (`scripts/rules.py`) — the same four validator IDs and
+  severities, with their actual scope and limitations documented in knowledge.
+- **Compatibility adapters** (`agents/`) — existing v0.x filenames are retained;
+  they must not become a competing source of rules or routing.
+
+This v3 migration does not add product-strategy or framework implementation
+scope. A strategy exception never relaxes an inherited hard constraint. Static
+checks and a polished screenshot do not establish usability or WCAG conformance.
 
 ## Workspace paths mới (convention pack này thiết lập)
 
@@ -71,14 +77,22 @@ Enable khi workspace cần:
 
 ## Retrieval behavior
 
+Manifest v3 loads Global Principles and only matched component sections from
+`knowledge.md`; unselected component bodies and legacy static pack files are not
+loaded. The four workspace routes are unchanged.
+
 Design system, accessibility, user flow và UX writing route độc lập. Accessibility baseline dùng WCAG 2.2; workspace có thể siết thêm nhưng không hạ chuẩn bằng override.
 
 ## Verification
 
 ```bash
 contextd pack-validate --pack pack-ui-ux --format text
-contextd context "Review keyboard flow and accessible authentication" --preview --format json
+contextd context "Review keyboard navigation and screen reader behavior" --preview --format json
 python scripts/validate.py --file <design-fixture> --workspace <workspace-with-pack>
 ```
 
 Standards baseline được review ngày `2026-08-20`: [W3C WCAG 2.2 Recommendation](https://www.w3.org/TR/WCAG22/). Workspace có thể thêm platform-specific guidance nhưng không được hạ requirement đã áp dụng.
+
+Migration regression checks: `python scripts/test_pack_cognition.py`. These
+verify routing, budgets, compatibility, and validator behavior, not model design
+quality. See [the evaluation guide](../../docs/domain-cognition-packs.md).

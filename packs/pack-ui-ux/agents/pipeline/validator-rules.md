@@ -1,5 +1,8 @@
 # pack-ui-ux — Validator Rules
 
+> Compatibility adapter: [canonical v3 guidance](../../knowledge.md) owns the
+> rules; `pack.yaml#retrieval` owns routing. Keep this adapter equivalent.
+
 Layer-1 rules. Prefix `pack-ui-ux-`.
 
 | Rule ID | Severity | Check |

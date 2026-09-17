@@ -1,6 +1,6 @@
 name: pack-dba
 manifest_version: 2
-version: 0.2.0
+version: 0.2.1
 description: Database administration pack — schema change safety, query hygiene, backup/restore readiness, and operational guardrails.
 status: beta
 category: operations

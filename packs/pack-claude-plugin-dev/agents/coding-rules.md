@@ -105,3 +105,14 @@ description: |
 - Marketplace: ship marketplace.json với plugin metadata + screenshot.
 - Self-host: README có install command (vd `claude plugin install <repo-url>`).
 - README có "Compatibility" section (min Claude Code version, OS support).
+
+## Domain Decision Lens
+
+Use within this pack's scope; existing constraints remain authoritative.
+
+- **Observe:** Inspect the pinned host version, plugin root, discovery metadata, invocation path, permissions, and event/transport contract. Distinguish packaging, discovery, invocation, and execution failures.
+- **Mechanism:** A valid manifest does not ensure discovery or correct invocation. A discovered instruction does not grant tool authority; event handlers additionally depend on their input/output protocol.
+- **Choose:** Use a skill/command for reusable guidance, a tool for an external capability, and a hook only for a documented lifecycle event. Select the smallest surface that owns the requirement.
+- **Exception:** Do not add MCP or a hook just to ship prose. Host-specific paths and control fields are not portable assumptions for other agents; keep domain guidance separate from its adapter.
+- **Verify:** Exercise supported installation on the pinned host, then valid/invalid arguments, relocated plugin paths, denied capabilities, malformed event input, and timeouts. Record actual host output.
+- **Stop:** Pause publication when protocol compatibility or requested permissions cannot be verified. Treat install success as packaging evidence, not proof of correct or safe runtime behavior.

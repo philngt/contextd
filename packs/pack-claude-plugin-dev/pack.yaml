@@ -1,6 +1,6 @@
 name: pack-claude-plugin-dev
 manifest_version: 2
-version: 1.1.0
+version: 1.1.1
 description: Build Claude Code plugins per Anthropic standards — plugin manifest, slash commands, subagents, skills, hooks, MCP servers
 status: stable
 category: developer-tooling

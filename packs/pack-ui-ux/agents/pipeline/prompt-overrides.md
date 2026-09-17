@@ -1,5 +1,8 @@
 # pack-ui-ux — Prompt Overrides
 
+> Compatibility adapter: [canonical v3 guidance](../../knowledge.md) owns the
+> rules; `pack.yaml#retrieval` owns routing. Keep this adapter equivalent.
+
 Section bổ sung vào self-check khi pack active.
 
 ## System prompt addition
@@ -62,4 +65,6 @@ Mỗi task PHẢI rà soát anti-patterns trong [`../common-pitfalls.md`](../com
 
 ## Inclusion logic
 
-Pack loader (`scripts/pack_loader.py`) merge nội dung file này vào prompt context khi build `current-task.md` cho `/use-contextd`.
+Legacy prompt consumers may use this adapter during migration. The current v3
+runtime loads `knowledge.md` Global Principles plus matched component sections;
+it does not load this file as a second static source.

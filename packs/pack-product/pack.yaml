@@ -1,6 +1,6 @@
 name: pack-product
 manifest_version: 2
-version: 0.2.0
+version: 0.2.1
 description: Product/business knowledge pack — product briefs, OKR, roadmap, personas, customer journey, success metrics. For non-tech contributors (PM, business, stakeholder).
 status: beta
 category: product

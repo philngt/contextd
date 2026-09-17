@@ -1,6 +1,6 @@
 name: pack-frontend-react
 manifest_version: 2
-version: 1.1.0
+version: 1.1.1
 description: React/Next.js frontend patterns — hooks rules, a11y, effect cleanup, list keys, no direct state mutation
 status: stable
 category: engineering

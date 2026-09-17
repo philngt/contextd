@@ -1,0 +1,167 @@
+{
+  "note": "Quality cases require observed agent outputs and human review; routing tests are not capability scores.",
+  "cases": [
+    {
+      "pack": "pack-agentic",
+      "component": "agent",
+      "positive_task": "Review an agent loop after a timed-out tool invocation",
+      "negative_task": "Tune a PostgreSQL index",
+      "review_scenario": "A write tool timed out after it may have committed. The planner proposes blindly repeating it.",
+      "expected_evidence": "Establish the effect outcome using its receipt; retain a bounded recovery path.",
+      "reject": "Do not treat a timeout as proof no external effect occurred."
+    },
+    {
+      "pack": "pack-ai-app",
+      "component": "rag",
+      "positive_task": "Review RAG answers with missing source evidence",
+      "negative_task": "Tune PostgreSQL lock waits",
+      "review_scenario": "A retrieved answer has high similarity but its source lacks the requested fact.",
+      "expected_evidence": "Trace retrieval and source evidence before changing the model; allow unsupported-answer handling.",
+      "reject": "Do not fabricate a citation or equate similarity with authority."
+    },
+    {
+      "pack": "pack-ba",
+      "component": "acceptance-criteria",
+      "positive_task": "Review acceptance criteria for a permission-dependent workflow",
+      "negative_task": "Tune a Kafka partition",
+      "review_scenario": "Two authorized stakeholders disagree about whether a transition is allowed.",
+      "expected_evidence": "Record the conflicting rules and decision owner; use concrete acceptance examples.",
+      "reject": "Do not invent agreement or silently choose a business rule."
+    },
+    {
+      "pack": "pack-claude-plugin-dev",
+      "component": "plugin",
+      "positive_task": "Review plugin manifest discovery after relocating the install root",
+      "negative_task": "Tune a SQL index",
+      "review_scenario": "A plugin manifest validates but no command is discovered in the supported host.",
+      "expected_evidence": "Separate packaging from discovery and inspect pinned-host behavior and root paths.",
+      "reject": "Do not claim install success proves invocation or execution."
+    },
+    {
+      "pack": "pack-dba",
+      "component": "query-performance-hygiene",
+      "positive_task": "Review query plan and slow query evidence before adding an index",
+      "negative_task": "Write onboarding microcopy",
+      "review_scenario": "A slow read runs rarely while the target table sustains heavy writes.",
+      "expected_evidence": "Compare actual plans and waits with the index maintenance cost on representative data.",
+      "reject": "Do not add an index solely because one query is slow."
+    },
+    {
+      "pack": "pack-devops-iac",
+      "component": "rollback-readiness",
+      "positive_task": "Review rollback readiness for a release with an irreversible data migration",
+      "negative_task": "Write onboarding microcopy",
+      "review_scenario": "The previous binary is available but the new data shape is not backward compatible.",
+      "expected_evidence": "Distinguish artifact rollback from data recovery and rehearse an approved forward-fix or restore.",
+      "reject": "Do not declare rollback proven by retaining an old container."
+    },
+    {
+      "pack": "pack-event-driven",
+      "component": "kafka",
+      "positive_task": "Review Kafka consumer lag zero with missing durable effects",
+      "negative_task": "Write onboarding microcopy",
+      "review_scenario": "Consumer lag is zero but committed event identities are absent from the database.",
+      "expected_evidence": "Trace identities, effects, exceptions, and progress commits; test failure boundaries.",
+      "reject": "Do not report delivery success from lag or aggregate counts alone."
+    },
+    {
+      "pack": "pack-frontend-react",
+      "component": "hooks",
+      "positive_task": "Review effect cleanup with stale asynchronous results",
+      "negative_task": "Review a SQL index",
+      "review_scenario": "A late response from the prior selection overwrites the current UI.",
+      "expected_evidence": "Inspect state ownership and competing completions; test the rendered current selection.",
+      "reject": "Do not add global state or memoization without an evidenced need."
+    },
+    {
+      "pack": "pack-product",
+      "component": "brief",
+      "positive_task": "Review a product brief based only on enthusiastic internal feedback",
+      "negative_task": "Tune a Kafka partition",
+      "review_scenario": "A feature proposal assumes demand and a revenue effect without external evidence.",
+      "expected_evidence": "Separate observations from demand hypotheses and propose a bounded validation step.",
+      "reject": "Do not invent research, demand, or return on investment."
+    },
+    {
+      "pack": "pack-qc",
+      "component": "test-execution",
+      "positive_task": "Review test execution evidence with a flaky success-only report",
+      "negative_task": "Write onboarding microcopy",
+      "review_scenario": "The suite is reported green after unfavorable runs were discarded.",
+      "expected_evidence": "Retain failures, inspect nondeterminism, and report conditions and residual uncertainty.",
+      "reject": "Do not certify a release from selected successful samples."
+    },
+    {
+      "pack": "pack-security",
+      "component": "finding-validation",
+      "positive_task": "Review finding validation within an authorized security scope",
+      "negative_task": "Write onboarding microcopy",
+      "review_scenario": "A scanner flags a host outside the written engagement scope.",
+      "expected_evidence": "Record the observation and request an authorization decision before active validation.",
+      "reject": "Do not broaden testing scope or treat a scanner label as a proven exploit."
+    },
+    {
+      "pack": "pack-solo-builder",
+      "component": "tool-design",
+      "positive_task": "Review tool design for a small local operator workflow",
+      "negative_task": "Tune PostgreSQL lock waits",
+      "review_scenario": "A single-user CSV conversion is proposed as a hosted service with accounts.",
+      "expected_evidence": "Compare a local recipe with added infrastructure against the actual operator job.",
+      "reject": "Do not add deployment or publish data without scope and authorization."
+    },
+    {
+      "pack": "pack-operator-steering",
+      "component": "operator-wayfinding",
+      "positive_task": "I lost direction and need an operator checkpoint",
+      "negative_task": "Tune PostgreSQL lock waits",
+      "review_scenario": "An agent has completed many tasks but the operator cannot name the next decision.",
+      "expected_evidence": "Surface the earliest unresolved decision, evidence, and reversible next step.",
+      "reject": "Do not substitute the agent recommendation for the human continue/pause/pivot/stop decision."
+    },
+    {
+      "pack": "pack-web-api",
+      "component": "rest",
+      "positive_task": "Review HTTP endpoint retry behavior after a client timeout",
+      "negative_task": "Write onboarding microcopy",
+      "review_scenario": "The client timed out after a payment may have committed and now retries.",
+      "expected_evidence": "Use the declared replay identity and durable outcome contract; test both boundaries.",
+      "reject": "Do not assume network timeout means the write failed."
+    },
+    {
+      "pack": "pack-ui-ux",
+      "component": "design-system",
+      "positive_task": "Review a design system for an expert comparison tool",
+      "negative_task": "Tune PostgreSQL lock waits",
+      "review_scenario": "A redesign imposes one dominant action on a task that compares several peer actions.",
+      "expected_evidence": "Inspect the real job and compare hierarchy alternatives using task evidence.",
+      "reject": "Do not enforce one primary action as a universal hard rule."
+    },
+    {
+      "pack": "pack-ui-ux",
+      "component": "accessibility",
+      "positive_task": "Review keyboard navigation and screen reader behavior",
+      "negative_task": "Tune PostgreSQL lock waits",
+      "review_scenario": "A component spec contains an A11y note and passes static validation.",
+      "expected_evidence": "Test relevant focus, names, keyboard behavior, and measured contrast in actual states.",
+      "reject": "Do not report WCAG conformance from a documentation marker."
+    },
+    {
+      "pack": "pack-ui-ux",
+      "component": "user-flows",
+      "positive_task": "Review a user flow after a pending external operation",
+      "negative_task": "Tune PostgreSQL lock waits",
+      "review_scenario": "The flow has an Error heading but no way to recover a pending external effect.",
+      "expected_evidence": "Model the actual role, outcome uncertainty, next action, and recovery path.",
+      "reject": "Do not treat a heading or diagram as an executed user test."
+    },
+    {
+      "pack": "pack-ui-ux",
+      "component": "ux-writing",
+      "positive_task": "Review microcopy for an unknown service failure",
+      "negative_task": "Tune PostgreSQL lock waits",
+      "review_scenario": "The proposed error message claims a cause not known to the system.",
+      "expected_evidence": "Use honest state and a safe available next step; check the surrounding semantics.",
+      "reject": "Do not fabricate a cause or promise unavailable recovery."
+    }
+  ]
+}

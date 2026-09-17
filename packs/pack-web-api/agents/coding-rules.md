@@ -35,3 +35,14 @@
 - Correlation ID propagated từ inbound header → log + downstream calls.
 - Structured access telemetry follows data policy: route template, method, status, latency, correlation/trace ID and privacy-safe principal/tenant signal when justified. Raw body or identifiers are not enabled by a generic debug switch.
 - Metrics include traffic, failures and SLO-relevant latency/distribution; choose percentiles/windows with enough samples rather than hardcode p50/p95/p99 everywhere.
+
+## Domain Decision Lens
+
+Use within this pack's scope; existing constraints remain authoritative.
+
+- **Observe:** Inspect caller identity, authorization, resource/action, request/response schema, durable effects, retry/deadline budget, and the workspace API contract.
+- **Mechanism:** A client timeout does not reveal whether the server committed an effect. Repeating a request can duplicate work unless request identity and the effect boundary support the declared retry semantics.
+- **Choose:** Choose validation and authorization at the trusted boundary, an explicit idempotency/status strategy for uncertain outcomes, and bounded retries for suitable failures. Select protocol and sync/async behavior from client needs.
+- **Exception:** An accepted asynchronous request is not a completed outcome. A syntactically read-only operation may still be expensive; method names alone do not justify unlimited retries or access.
+- **Verify:** Exercise duplicate/concurrent requests, invalid input, cross-resource denial, timeout after commit, and recovery. Compare durable effects with response/error contracts and trace receipts.
+- **Stop:** Pause a material contract change when ownership, compatibility, authorization, or retry semantics are unresolved. Do not mask an unknown outcome with a successful-looking response.

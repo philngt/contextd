@@ -106,3 +106,14 @@ Idioms cho QC writing — test case, bug report, regression plan, release gate. 
 - Quick win trước (config tuning, index, query rewrite) → architectural change sau.
 - 1 change per measurement window — multi-variable confound impossible to attribute.
 - Document order of operations + dependencies in rollout plan.
+
+## Domain Decision Lens
+
+Use within this pack's scope; existing constraints remain authoritative.
+
+- **Observe:** Identify the risk, expected-behavior oracle, changed boundary, build/data versions, environment, and workload. Distinguish a deterministic defect from flaky execution or an unreliable measurement.
+- **Mechanism:** A passing assertion can validate the wrong expectation. Timing changes can come from workload, warm-up, caches, or environment rather than the proposed optimization.
+- **Choose:** Choose the cheapest test layer that exposes the risk and a representative benchmark for the claimed performance effect. Isolate the changed variable and keep correctness guardrails visible.
+- **Exception:** More tests, snapshots, or a lower mean latency do not prove acceptance. Do not hide inconclusive/flaky runs with retries or discard unfavorable samples without a documented method.
+- **Verify:** Record expected and actual results, reproducibility, baseline/change comparisons, distributions, environment, and residual risk. Link release/performance claims to inspectable artifacts and negative cases.
+- **Stop:** Pause a pass or release recommendation when the oracle, representative workload, or required evidence is missing. Quarantine and investigate flaky evidence; do not silently relabel it as passed.

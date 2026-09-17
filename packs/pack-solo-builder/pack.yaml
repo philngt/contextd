@@ -1,6 +1,6 @@
 name: pack-solo-builder
 manifest_version: 2
-version: 0.2.0
+version: 0.2.1
 description: Evidence-aware tool discovery, recipe selection, and maintainable single-purpose workflows for non-technical domain experts.
 status: beta
 category: enablement

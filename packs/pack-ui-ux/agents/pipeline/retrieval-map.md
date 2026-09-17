@@ -1,5 +1,8 @@
 # pack-ui-ux — Retrieval Map
 
+> Compatibility adapter: [canonical v3 guidance](../../knowledge.md) owns the
+> rules; `pack.yaml#retrieval` owns routing. Keep this adapter equivalent.
+
 Component → wiki doc mapping for this pack.
 
 | Component | Docs to retrieve (relative `{ws}/`) |

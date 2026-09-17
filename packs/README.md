@@ -138,21 +138,21 @@ technology mentioned by the pack.
 
 | Pack | Category | Status | Best for |
 |---|---|---|---|
-| [pack-agentic](pack-agentic/) | agent runtime | stable 1.1.0 | Bounded agent loops, tool effects, MCP, handoffs, runtime/long-term memory boundaries |
-| [pack-ai-app](pack-ai-app/) | engineering | stable 1.1.0 | Provider-aware LLM calls, prompt lifecycle, RAG/embedding, evals, data/cost controls |
-| [pack-claude-plugin-dev](pack-claude-plugin-dev/) | developer tooling | stable 1.1.0 | Claude Code plugin-root packaging, commands, agents, skills, hooks, and plugin MCP |
-| [pack-event-driven](pack-event-driven/) | engineering | stable 1.1.0 | Kafka/MQTT/event delivery, retry/DLQ, offset and batch semantics |
-| [pack-frontend-react](pack-frontend-react/) | engineering | stable 1.1.0 | Current Rules of React, Hooks/effects, JSX accessibility, pinned Next.js router boundaries |
-| [pack-web-api](pack-web-api/) | engineering | stable 1.1.0 | REST/GraphQL/gRPC boundaries, validation, retry safety, errors and abuse controls |
-| [pack-ba](pack-ba/) | product | beta 0.2.0 | Requirements, acceptance criteria, process maps and stakeholder decisions |
-| [pack-dba](pack-dba/) | operations | beta 0.2.0 | Evidence-based schema changes, query plans, restore proof and DB operations |
-| [pack-devops-iac](pack-devops-iac/) | operations | beta 0.2.0 | Terraform/OpenTofu, Kubernetes, CI/CD promotion, drift and rollback |
-| [pack-operator-steering](pack-operator-steering/) | agent runtime | beta 0.4.0 | Recover direction, retain human decision ownership, audit drift/context, and decide continue/pause/pivot/stop |
-| [pack-product](pack-product/) | product | beta 0.2.0 | Briefs, outcomes, roadmaps, evidence-backed personas and journeys |
-| [pack-qc](pack-qc/) | quality | beta 0.3.0 | Test/defect/release evidence plus measured, guarded performance optimization |
-| [pack-security](pack-security/) | security | beta 0.3.0 | Threat/control review and explicitly authorized evidence-based security validation |
-| [pack-solo-builder](pack-solo-builder/) | enablement | beta 0.2.0 | Recipe-driven single-purpose tools for non-technical domain experts |
-| [pack-ui-ux](pack-ui-ux/) | design | beta 0.2.0 | Design systems, WCAG 2.2, stateful user flows and UX writing |
+| [pack-agentic](pack-agentic/) | agent runtime | stable 1.1.1 | Bounded agent loops, tool effects, MCP, handoffs, runtime/long-term memory boundaries |
+| [pack-ai-app](pack-ai-app/) | engineering | stable 1.1.1 | Provider-aware LLM calls, prompt lifecycle, RAG/embedding, evals, data/cost controls |
+| [pack-claude-plugin-dev](pack-claude-plugin-dev/) | developer tooling | stable 1.1.1 | Claude Code plugin-root packaging, commands, agents, skills, hooks, and plugin MCP |
+| [pack-event-driven](pack-event-driven/) | engineering | stable 1.1.1 | Kafka/MQTT/event delivery, retry/DLQ, offset and batch semantics |
+| [pack-frontend-react](pack-frontend-react/) | engineering | stable 1.1.1 | Current Rules of React, Hooks/effects, JSX accessibility, pinned Next.js router boundaries |
+| [pack-web-api](pack-web-api/) | engineering | stable 1.1.1 | REST/GraphQL/gRPC boundaries, validation, retry safety, errors and abuse controls |
+| [pack-ba](pack-ba/) | product | beta 0.2.1 | Requirements, acceptance criteria, process maps and stakeholder decisions |
+| [pack-dba](pack-dba/) | operations | beta 0.2.1 | Evidence-based schema changes, query plans, restore proof and DB operations |
+| [pack-devops-iac](pack-devops-iac/) | operations | beta 0.2.1 | Terraform/OpenTofu, Kubernetes, CI/CD promotion, drift and rollback |
+| [pack-operator-steering](pack-operator-steering/) | agent runtime | beta 0.4.1 | Recover direction, retain human decision ownership, audit drift/context, and decide continue/pause/pivot/stop |
+| [pack-product](pack-product/) | product | beta 0.2.1 | Briefs, outcomes, roadmaps, evidence-backed personas and journeys |
+| [pack-qc](pack-qc/) | quality | beta 0.3.1 | Test/defect/release evidence plus measured, guarded performance optimization |
+| [pack-security](pack-security/) | security | beta 0.3.1 | Threat/control review and explicitly authorized evidence-based security validation |
+| [pack-solo-builder](pack-solo-builder/) | enablement | beta 0.2.1 | Recipe-driven single-purpose tools for non-technical domain experts |
+| [pack-ui-ux](pack-ui-ux/) | design | beta 0.3.0 | Design systems, WCAG 2.2, stateful user flows and UX writing |
 
 ## Selection guide
 
@@ -175,6 +175,22 @@ Use `contextd explain` to inspect what a candidate combination actually loads:
 contextd context "Review retry-safe payment endpoint" --preview --format json
 contextd explain "Review retry-safe payment endpoint" --format text
 ```
+
+## Domain cognition guidance
+
+All first-party packs now carry a bounded decision lens: observations, causal
+mechanism, strategy selection, exceptions, verification, and stop conditions.
+The lens is advisory reasoning support, not proof of expertise or an eleven-step
+runtime. Existing constraints and workspace priority still control decisions.
+
+`pack-ui-ux` is the v3 migration pilot for this upgrade; `pack-operator-steering`
+already uses v3. The other packs retain v2 and put their new guidance in the
+existing runtime-loaded `agents/coding-rules.md`. Their full static cost remains
+visible; they are not yet component-sliced. No parallel knowledge store is added.
+
+See [Domain cognition authoring and evaluation](../docs/domain-cognition-packs.md)
+for the reusable method, migration checks, and the distinction between automated
+contract tests and a real agent-quality evaluation.
 
 ## Create or upgrade a pack
 
