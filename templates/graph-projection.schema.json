@@ -1,0 +1,492 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Experimental bounded graph projection v1",
+  "type": "object",
+  "properties": {
+    "artifact_type": {
+      "const": "contextd_graph_projection.v1"
+    },
+    "policy_version": {
+      "const": "bounded-graph-projection.v1"
+    },
+    "workspace": {
+      "type": "string"
+    },
+    "synapse_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "as_of": {
+      "type": "string",
+      "format": "date"
+    },
+    "request": {
+      "type": "object",
+      "properties": {
+        "seeds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "max_depth": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 8
+        },
+        "max_nodes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 128
+        },
+        "edge_types": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "contradicts",
+              "depends_on",
+              "derived_from",
+              "implements",
+              "related_to",
+              "supersedes",
+              "supports"
+            ]
+          },
+          "uniqueItems": true
+        },
+        "direction": {
+          "enum": [
+            "outgoing",
+            "incoming",
+            "both"
+          ]
+        },
+        "regions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"
+          },
+          "uniqueItems": true
+        },
+        "max_boundary_edges": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1024
+        }
+      },
+      "required": [
+        "seeds",
+        "max_depth",
+        "max_nodes",
+        "edge_types",
+        "direction",
+        "regions",
+        "max_boundary_edges"
+      ],
+      "additionalProperties": false
+    },
+    "usage": {
+      "const": "advisory-metadata-only"
+    },
+    "execution_authorized": {
+      "const": false
+    },
+    "nodes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+          },
+          "workspace": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "source_hash": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "lifecycle": {
+            "enum": [
+              "active",
+              "draft",
+              "deprecated",
+              "superseded"
+            ]
+          },
+          "freshness": {
+            "enum": [
+              "fresh",
+              "stale",
+              "unknown"
+            ]
+          },
+          "knowledge_role": {
+            "enum": [
+              "artifact",
+              "constraint",
+              "decision",
+              "evidence",
+              "guideline",
+              "knowledge",
+              "mechanism",
+              "pattern",
+              "primitive",
+              "principle",
+              "procedure",
+              "skill",
+              "strategy"
+            ]
+          },
+          "regions": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"
+            },
+            "uniqueItems": true
+          },
+          "depth": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "seed": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+          },
+          "parent": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "via_edge": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "workspace",
+          "kind",
+          "path",
+          "source_hash",
+          "lifecycle",
+          "freshness",
+          "knowledge_role",
+          "regions",
+          "depth",
+          "seed",
+          "parent",
+          "via_edge"
+        ],
+        "additionalProperties": false
+      },
+      "minItems": 1,
+      "maxItems": 128
+    },
+    "edges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "contradicts",
+              "depends_on",
+              "derived_from",
+              "implements",
+              "related_to",
+              "supersedes",
+              "supports"
+            ]
+          },
+          "source": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+          },
+          "target": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "source",
+          "target"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "boundary_edges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "contradicts",
+              "depends_on",
+              "derived_from",
+              "implements",
+              "related_to",
+              "supersedes",
+              "supports"
+            ]
+          },
+          "source": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+          },
+          "target": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+          },
+          "omitted_node": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+          },
+          "reason": {
+            "enum": [
+              "region-boundary",
+              "edge-filter",
+              "direction-filter",
+              "depth-limit",
+              "node-limit"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "source",
+          "target",
+          "omitted_node",
+          "reason"
+        ],
+        "additionalProperties": false
+      },
+      "maxItems": 1024
+    },
+    "gaps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "contradicts",
+              "depends_on",
+              "derived_from",
+              "implements",
+              "related_to",
+              "supersedes",
+              "supports"
+            ]
+          },
+          "source": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+          },
+          "target": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+          },
+          "omitted_node": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+          },
+          "reason": {
+            "enum": [
+              "region-boundary",
+              "edge-filter",
+              "direction-filter",
+              "depth-limit",
+              "node-limit"
+            ]
+          },
+          "code": {
+            "const": "missing-required-neighbor"
+          }
+        },
+        "required": [
+          "id",
+          "type",
+          "source",
+          "target",
+          "omitted_node",
+          "reason",
+          "code"
+        ],
+        "additionalProperties": false
+      },
+      "maxItems": 1024
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "code": {
+                "const": "selected-noncurrent-node"
+              },
+              "node_id": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]*$"
+              }
+            },
+            "required": [
+              "code",
+              "node_id"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "code": {
+                "enum": [
+                  "contradiction-outside-projection",
+                  "replacement-outside-projection"
+                ]
+              },
+              "edge_id": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "code",
+              "edge_id"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "maxItems": 1024
+    },
+    "source_hashes": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^[0-9a-f]{64}$"
+      }
+    },
+    "diagnostic_counts": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 0
+      }
+    },
+    "metadata_issue_counts": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 0
+      }
+    },
+    "summary": {
+      "type": "object",
+      "properties": {
+        "selected_nodes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "boundary_edges": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "required_neighbor_gaps": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "warnings": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "boundary_edges_truncated": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "gaps_truncated": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "warnings_truncated": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "graph_diagnostics": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "metadata_issues": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "selected_nodes",
+        "boundary_edges",
+        "required_neighbor_gaps",
+        "warnings",
+        "boundary_edges_truncated",
+        "gaps_truncated",
+        "warnings_truncated",
+        "graph_diagnostics",
+        "metadata_issues"
+      ],
+      "additionalProperties": false
+    },
+    "projection_hash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  },
+  "required": [
+    "artifact_type",
+    "policy_version",
+    "workspace",
+    "synapse_hash",
+    "as_of",
+    "request",
+    "usage",
+    "execution_authorized",
+    "nodes",
+    "edges",
+    "boundary_edges",
+    "gaps",
+    "warnings",
+    "source_hashes",
+    "diagnostic_counts",
+    "metadata_issue_counts",
+    "summary",
+    "projection_hash"
+  ],
+  "additionalProperties": false
+}

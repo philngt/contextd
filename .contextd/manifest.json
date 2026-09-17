@@ -904,6 +904,10 @@
       "template_file": "templates/contextd-config.schema.json"
     },
     {
+      "name": "graph-projection.schema",
+      "template_file": "templates/graph-projection.schema.json"
+    },
+    {
       "name": "pack.schema",
       "template_file": "templates/pack.schema.json"
     },
