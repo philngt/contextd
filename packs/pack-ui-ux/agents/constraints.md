@@ -1,5 +1,8 @@
 # pack-ui-ux — Constraints
 
+> Compatibility adapter: [canonical v3 guidance](../knowledge.md) owns the
+> rules; `pack.yaml#retrieval` owns routing. Keep this adapter equivalent.
+
 Hard rules cho UI/UX design documentation. Additive trên engine constraints. Strict-only direction.
 
 ## Design Token (`pack-ui-ux-design-token`)

@@ -46,6 +46,17 @@ Use `ready`, `needs-evidence`, `needs-decision`, `needs-research`, or `blocked`.
 Request only the smallest missing artifact or owner decision that can change the
 conclusion.
 
+### Domain Decision Lens
+
+Use within this pack's scope; existing constraints remain authoritative.
+
+- **Observe:** Locate the accepted objective, controlling decisions, current artifacts, source freshness, and the earliest unresolved decision. Separate missing evidence from a choice only the operator can make.
+- **Mechanism:** When an assumption is copied as a fact, later plans can amplify it into apparent authority. Additional execution then increases sunk cost without resolving the original uncertainty.
+- **Choose:** Repair the smallest gap: inspect evidence, recover relevant domain guidance, or request one material owner decision. Compare continuing, pausing, pivoting, and stopping against expected value and risk.
+- **Exception:** A local reversible implementation choice need not become an ADR. Conversely, an agent recommendation is not operator acceptance and repeated local feedback is not a global policy.
+- **Verify:** Trace a recommendation to current evidence, its alternatives, owner authority, expected result, and revisit trigger. Verify the actual next outcome rather than the persuasiveness of the explanation.
+- **Stop:** Pause actions that deepen a proven conflict or require unresolved authority. Propose context patches with provenance and review; do not autonomously overwrite shared knowledge or direction.
+
 ## Component: context-audit
 
 ### Mental Model

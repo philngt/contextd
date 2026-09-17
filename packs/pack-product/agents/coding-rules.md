@@ -56,3 +56,14 @@ Khi dịch service/contract sang business view, áp dụng mapping:
 | Throughput | How many requests we can handle per second/minute |
 
 Output `/business-view` PHẢI: (1) không có jargon trong main body, (2) kèm "Technical reference" footnote link tới source doc.
+
+## Domain Decision Lens
+
+Use within this pack's scope; existing constraints remain authoritative.
+
+- **Observe:** Identify the target role/context, observed problem, evidence source/date, intended outcome, baseline, constraints, and decision owner. Separate a requested feature from the need it might address.
+- **Mechanism:** A feature is a hypothesis about behavior change. A metric movement can have competing explanations; shipping output or describing a plausible persona does not establish user value.
+- **Choose:** Compare a bounded experiment, a manual/process alternative, reuse, or no change before committing a broad feature. Prioritize by evidence, expected value, cost, and reversibility rather than a feature quota.
+- **Exception:** Some obligations are not suitable for an A/B test; use the appropriate acceptance evidence without inventing demand or ROI. A local success need not generalize to another segment.
+- **Verify:** Define the outcome, cohort, measurement window, baseline, guardrails, and revisit condition. Record actual research or test results separately from forecasts, assumptions, and unrun experiments.
+- **Stop:** Pause or revisit scope when the load-bearing assumption fails, the objective changes, or benefits no longer justify cost/risk. Material direction remains the owner decision.

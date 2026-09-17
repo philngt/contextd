@@ -1,6 +1,6 @@
 name: pack-qc
 manifest_version: 2
-version: 0.3.0
+version: 0.3.1
 description: Quality control + performance optimization pack — test design/execution, defect triage, regression coverage, release quality gates, baseline metrics, bottleneck profiling, safe optimization, regression guarding.
 status: beta
 category: quality

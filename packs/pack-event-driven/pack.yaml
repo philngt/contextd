@@ -1,6 +1,6 @@
 name: pack-event-driven
 manifest_version: 2
-version: 1.1.0
+version: 1.1.1
 description: Kafka, MQTT, and event-driven backend patterns (DLQ, offset commit, idempotent consumer, batch processing)
 status: stable
 category: engineering

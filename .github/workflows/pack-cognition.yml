@@ -6,6 +6,7 @@ on:
       - 'packs/**'
       - 'templates/**'
       - 'scripts/**'
+      - 'docs/domain-cognition-packs.md'
       - '.github/workflows/pack-cognition.yml'
   workflow_dispatch:
 
@@ -15,22 +16,20 @@ permissions:
 jobs:
   pack-validation:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10', '3.12']
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: ${{ matrix.python-version }}
       - name: Install test dependencies
         run: python -m pip install -e ".[test]"
       - name: Validate pack contracts
         run: contextd pack-validate --all --format text
-      - name: Export clean source for reproducible validation
-        run: git archive --format=tar --output="${{ runner.temp }}/pack-validation-source.tar" HEAD
-      - name: Upload validation source
-        uses: actions/upload-artifact@v4
-        with:
-          name: pack-validation-source
-          path: ${{ runner.temp }}/pack-validation-source.tar
-          retention-days: 1
+      - name: Validate domain cognition delivery and compatibility
+        run: python scripts/test_pack_cognition.py

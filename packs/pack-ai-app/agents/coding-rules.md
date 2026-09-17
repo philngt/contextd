@@ -48,3 +48,14 @@
 - Unit test prompt template rendering (input → expected string).
 - Integration test với recorded fixtures (vd `vcr.py`, `nock`) — không hit live API trong CI.
 - Golden eval trên dataset thực tế trước release.
+
+## Domain Decision Lens
+
+Use within this pack's scope; existing constraints remain authoritative.
+
+- **Observe:** Record the task contract, pinned provider/model, prompt version, permitted data, retrieved source IDs, and output/evaluation contract before attributing a failure to model quality.
+- **Mechanism:** Wrong answers can come from missing evidence, retrieval selection, instruction conflict, generation, or parsing. A larger model does not establish which boundary failed.
+- **Choose:** Repair the evidenced boundary: deterministic lookup for exact facts, retrieval for external evidence, schema validation for output shape, or a model/prompt change when held-out evaluation justifies it.
+- **Exception:** Not every application needs RAG or embeddings. Similarity is not authority, valid JSON is not factual correctness, and a confident answer cannot replace a missing source.
+- **Verify:** Compare versioned held-out tasks with the same inputs, tools, and scoring criteria. Include unsupported-answer handling, sensitive-data exposure, latency, and cost; distinguish simulated from observed results.
+- **Stop:** Pause release when required evidence, data permission, or quality/cost limits are unresolved. Keep exploratory results labeled rather than manufacturing benchmark scores or trusted citations.

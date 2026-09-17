@@ -111,3 +111,14 @@ Nếu spec mix 2 recipes → list cả 2 + ghi rõ phần nào lấy từ recipe
   2. Có → link entry + source/version/units/assumptions liên quan
   3. Chưa hoặc provenance thiếu → ghi Knowledge Gap, giữ spec `draft`, không tự suy diễn
   4. High-impact use case → ghi qualified reviewer, human checkpoint và verification fixtures trước build
+
+## Domain Decision Lens
+
+Use within this pack's scope; existing constraints remain authoritative.
+
+- **Observe:** Ask what recurring job the owner needs done, inspect representative input/output examples, and identify target devices, data sensitivity, deployment constraints, and maintenance capability.
+- **Mechanism:** Every new option, dependency, and operating step adds a burden the owner must understand. A technically successful demo can fail the actual job when inputs, recovery, or handoff are unclear.
+- **Choose:** Prefer an existing tool or the smallest approved recipe that completes one coherent job. Add storage, automation, or distribution only when a verified requirement needs it.
+- **Exception:** A backend, account, container, or elaborate interface is not a default requirement. A reusable recipe must be adapted to the real environment rather than copied with hidden assumptions.
+- **Verify:** Run a representative end-to-end task with synthetic/approved samples, compare exact output expectations, and exercise malformed input and recovery. Check that the owner can repeat the workflow from its instructions.
+- **Stop:** Pause delivery when acceptance examples, sensitive-data permission, or the operating environment are unresolved. Do not publish, overwrite user data, or create new ongoing obligations without agreement.

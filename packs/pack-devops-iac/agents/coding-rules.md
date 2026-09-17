@@ -21,3 +21,14 @@
 - Make concurrency and cancellation behavior explicit for environment-changing workflows.
 - Record drift findings separately from approved changes; reconcile them through the normal review path.
 - Test rollback commands and verification signals before relying on a runbook during an incident.
+
+## Domain Decision Lens
+
+Use within this pack's scope; existing constraints remain authoritative.
+
+- **Observe:** Inspect desired configuration, actual state, the reviewed saved plan, immutable artifact identity, environment ownership, failure domains, and rollback/roll-forward conditions.
+- **Mechanism:** State drift or rebuilding an artifact changes what was approved. A running process may still be unable to serve traffic; readiness and deployment success are different observations.
+- **Choose:** Prefer a bounded change with observable promotion gates. Investigate drift before proposing reconciliation; promote the verified artifact rather than silently regenerating production inputs.
+- **Exception:** Reverting code does not necessarily reverse schema or external effects. A successful plan or probe is limited evidence, not a blanket guarantee that rollout and recovery are safe.
+- **Verify:** Check that apply consumes the reviewed plan, promoted digests match, rendered workloads meet policy, and service-level signals recover. Rehearse the documented rollback or forward-fix path.
+- **Stop:** Pause when actual state invalidates approval, replacement/destruction exceeds scope, or the recovery path is unproven. Request the missing owner decision instead of force-reconciling state.

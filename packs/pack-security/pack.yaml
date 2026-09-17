@@ -1,6 +1,6 @@
 name: pack-security
 manifest_version: 2
-version: 0.3.0
+version: 0.3.1
 description: Security engineering + authorized pentest pack — threat modeling, secure design review, vulnerability management, control verification, scope discipline, evidence-based findings, risk rating, and remediation reporting.
 status: beta
 category: security

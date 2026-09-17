@@ -38,3 +38,14 @@
 
 - React Testing Library (RTL) — query by role/label, không by class/id (test what user sees).
 - Mock external boundary (fetch, router) — không mock implementation detail (useState).
+
+## Domain Decision Lens
+
+Use within this pack's scope; existing constraints remain authoritative.
+
+- **Observe:** Identify state owners, props, user events, external systems, async results, and reachable UI states. Inspect the workspace-pinned framework/router contract before choosing a data boundary.
+- **Mechanism:** A state transition changes rendered output; duplicated derived state or stale async results can make the displayed state disagree with the source of truth. Effects are not a substitute for state ownership.
+- **Choose:** Derive values during rendering when possible, handle user actions in event paths, and use effects for external synchronization. Add shared state or memoization only for an evidenced ownership or performance need.
+- **Exception:** Not every value belongs in a global store, and not every fetch belongs in a client effect. Native form behavior can be sufficient; a library choice is not the user outcome.
+- **Verify:** Test observable roles, labels, interaction states, competing async completions, and recovery. Inspect rendered behavior at required viewport/text sizes; compilation alone does not establish usability.
+- **Stop:** Pause a material UI or server/client boundary change when the design or pinned runtime contract is unresolved. Keep exploratory alternatives distinct from approved product decisions.

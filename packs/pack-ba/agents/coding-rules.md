@@ -53,3 +53,14 @@ Idioms cho BA writing — requirement, acceptance criteria, process map, stakeho
 - Doc có version footer + last-modified date + author.
 - Change log section: ngày, người, lý do, scope impact.
 - Major version bump khi behavior thay đổi; minor cho clarification.
+
+## Domain Decision Lens
+
+Use within this pack's scope; existing constraints remain authoritative.
+
+- **Observe:** Identify actors, business terms, current and proposed states, authoritative rules, acceptance owners, and disagreements. Separate an explicit requirement from a suggested solution.
+- **Mechanism:** An unspecified actor, precondition, or observable result permits incompatible interpretations; polished prose can therefore produce both a passing test and the wrong behavior.
+- **Choose:** Use concrete examples and acceptance criteria for behavior; state/process models for branches and handoffs; a decision record for conflicting authority. Add only detail that changes implementation or acceptance.
+- **Exception:** A prototype may intentionally leave low-risk decisions open. Do not invent requirements, stakeholder agreement, or a complete process matrix to make a document look finished.
+- **Verify:** Walk through representative and counterexample scenarios with the requirement owner. Trace each acceptance condition to its source and observable result; mark unreviewed assumptions and uncovered branches.
+- **Stop:** Pause affected implementation when material rules conflict or acceptance authority is missing. Continue only reversible exploration within explicitly labeled assumptions and the agreed scope.

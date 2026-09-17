@@ -1,5 +1,8 @@
 # pack-ui-ux — Top 10 Common Pitfalls
 
+> Compatibility adapter: [canonical v3 guidance](../knowledge.md) owns the
+> rules; `pack.yaml#retrieval` owns routing. Keep this adapter equivalent.
+
 Anti-pattern lặp lại trong UI/UX documentation. Additive trên [constraints.md](constraints.md).
 
 ## P01 — Hardcode màu/spacing không qua token

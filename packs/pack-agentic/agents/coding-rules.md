@@ -53,3 +53,14 @@
 - Mock LLM với scripted responses cho deterministic unit test.
 - Replay test: record real loop trace, assert behavior consistent on replay.
 - Eval golden tasks: agent solves predefined task within step+cost budget.
+
+## Domain Decision Lens
+
+Use within this pack's scope; existing constraints remain authoritative.
+
+- **Observe:** Identify the objective, state, tool effects, remaining budget, approvals, and last verified checkpoint. Distinguish task-local memory from reviewed durable knowledge.
+- **Mechanism:** A loop can repeat because its state or hypothesis never changes, not because it needs more tokens. Retrying a timed-out tool can repeat an external effect whose outcome is unknown.
+- **Choose:** Use a fixed workflow for known transitions; a bounded agent loop for genuinely uncertain next steps. Delegate only independently scoped work with a shared remaining budget and a verifiable return contract.
+- **Exception:** More agents or persistent memory do not repair an ambiguous goal. A successful tool response is not proof that the requested outcome occurred; inspect the effect-specific receipt.
+- **Verify:** Replay checkpoint recovery and test duplicate calls, cancellation, malformed results, denied approval, and exhausted budgets. Compare intended effects with durable receipts and record unresolved outcomes.
+- **Stop:** Pause before an unapproved irreversible effect, repeated state, or exhausted budget. Propose durable learning for review; never promote a local success into shared policy automatically.

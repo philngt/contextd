@@ -1,6 +1,6 @@
 name: pack-ai-app
 manifest_version: 2
-version: 1.1.0
+version: 1.1.1
 description: LLM application patterns — prompt caching, structured output, eval harness, cost tracking, no PII leak
 status: stable
 category: engineering

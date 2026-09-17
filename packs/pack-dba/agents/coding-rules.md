@@ -43,3 +43,14 @@ Idioms + preferred patterns cho DBA work. Less strict than constraints — đây
 - Với incident DB, luôn nêu **blast radius** (table/row count affected) và **recovery checkpoints**.
 - Nêu recovery paths thực sự được platform support (full, point-in-time, selective/repair) cùng preconditions, data-consistency risk và verification; không invent partial restore nếu chưa proven.
 - Postmortem: include slow query / lock graph evidence khi root cause là perf-related.
+
+## Domain Decision Lens
+
+Use within this pack's scope; existing constraints remain authoritative.
+
+- **Observe:** Inspect engine/version, actual schema, data distribution, query plan, waits, write rate, transaction boundaries, and the recovery contract. Do not infer the production workload from a small development table.
+- **Mechanism:** Latency may be dominated by access paths, lock waits, I/O, or contention. An index exchanges read work for maintenance/storage work; it does not universally remove the bottleneck.
+- **Choose:** Compare a query/access-path change, a shorter transaction, workload shaping, or a larger structural change against the measured cause. Choose the least disruptive option that meets the contract.
+- **Exception:** A read-optimized index can hurt a write-heavy workload. A fast empty-table migration and a completed backup job do not prove production safety or recoverability.
+- **Verify:** Compare representative before/after plans, waits, latency distributions, write cost, and integrity checks. Rehearse migration and restore on authorized data with recorded recovery evidence.
+- **Stop:** Pause destructive or lock-heavy execution when impact, ownership, recovery, or authorization is missing. Report a tuning hypothesis as unverified until workload evidence supports it.

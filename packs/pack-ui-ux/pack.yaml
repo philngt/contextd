@@ -1,6 +1,6 @@
 name: pack-ui-ux
-manifest_version: 2
-version: 0.2.0
+manifest_version: 3
+version: 0.3.0
 description: UI/UX pack — design system, accessibility (WCAG), user flows, và UX writing conventions.
 status: beta
 category: design
@@ -22,7 +22,14 @@ keywords:
   user-flows: [user flow, screen flow, wireframe, prototype, interaction design, happy path, edge case]
   ux-writing: [ux writing, microcopy, content guidelines, tone of voice, copy, placeholder, error message, cta]
 
+retrieval:
+  design-system: [platform/design/design-system.md, platform/design/tokens.md]
+  accessibility: [platform/design/a11y.md]
+  user-flows: [domains/{domain}/flows/*.md]
+  ux-writing: [platform/design/ux-writing.md]
+
 files:
+  knowledge: knowledge.md
   constraints: agents/constraints.md
   coding_rules: agents/coding-rules.md
   validator_rules: agents/pipeline/validator-rules.md

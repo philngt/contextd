@@ -107,3 +107,14 @@ Idioms cho security review/design/control. Less strict than constraints — đâ
 - Professional, vendor-neutral; không bash framework/team.
 - Constructive: mọi finding kèm path forward.
 - Acknowledge limitation: time-boxed, scope-limited, không "exhaustive".
+
+## Domain Decision Lens
+
+Use within this pack's scope; existing constraints remain authoritative.
+
+- **Observe:** Confirm written authorization, asset scope, test window, actor privileges, trust boundaries, sensitive data, and permitted effects before evaluating a finding.
+- **Mechanism:** A security failure connects an actor and entry point to a forbidden effect across a trust boundary. A scanner label or missing header alone does not prove that causal path or business impact.
+- **Choose:** Prefer inspection and least-impact validation with synthetic/redacted data; select prevention, detection, and response controls for the evidenced threat. Keep severity distinct from remediation priority.
+- **Exception:** An unconfirmed finding is not a proven exploit, and a clean scan is not proof of safety. Negative authorization checks and environment-specific controls matter more than a universal control ranking.
+- **Verify:** Record bounded, reproducible evidence and expected/actual authorization behavior. Retest the control and relevant negative cases; preserve only the minimum permitted evidence with its scope and source.
+- **Stop:** Stop active testing when authorization, scope, or safe impact limits are unclear or exceeded. Do not escalate access, collect real sensitive records, or run destructive tests to strengthen a report.

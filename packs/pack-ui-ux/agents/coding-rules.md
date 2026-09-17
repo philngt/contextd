@@ -1,5 +1,8 @@
 # pack-ui-ux — Coding Rules
 
+> Compatibility adapter: [canonical v3 guidance](../knowledge.md) owns the
+> rules; `pack.yaml#retrieval` owns routing. Keep this adapter equivalent.
+
 Conventions cho UI/UX documentation. Less strict than constraints — đây là idioms, không phải hard gates.
 
 ## Design Token Format (tokens.md)
@@ -13,7 +16,7 @@ Conventions cho UI/UX documentation. Less strict than constraints — đây là 
 ## Component Spec Format (design-system.md)
 
 - Mỗi component: Anatomy (tên các part) → Variants → States → Do/Don't → A11y note → Token usage.
-- **A11y note** dùng blockquote: `> **A11y**: ...` — đặt cuối component spec, trước Token usage.
+- **A11y note** dùng blockquote: `> A11y: ...` — đặt cuối component spec, trước Token usage.
 - Variant table: columns `Variant | When to use | Token override (nếu có)`.
 - State coverage: default, hover, focus, active, disabled, error, loading (chỉ những state component hỗ trợ).
 
