@@ -1,6 +1,8 @@
 # pack-{your-name} — Canonical Knowledge
 
 Global Principles load whenever enabled; only routed component sections load.
+With context_profile: decision-first, Foundation and Procedure blocks are
+on-demand. Strategy/Judgment, standards, evidence and stop conditions stay core.
 Keep reusable guidance here and project-specific evidence in the workspace.
 See `docs/domain-cognition-packs.md` in the knowledge root for authoring guidance.
 
@@ -27,7 +29,13 @@ See `docs/domain-cognition-packs.md` in the knowledge root for authoring guidanc
 ### Standards
 
 - `pack-{your-name}-component-one-standard` — State a testable MUST/SHOULD rule.
+
+### Strategy
+
 - **Choose:** Compare suitable strategies and the conditions for selecting each.
+
+### Judgment
+
 - **Exception:** Give a counterexample to a heuristic, not an exemption from a
   hard constraint. Include reuse or no change when appropriate.
 
@@ -43,6 +51,14 @@ See `docs/domain-cognition-packs.md` in the knowledge root for authoring guidanc
 - **Stop:** Name the missing permission, evidence, budget, or owner decision that
   blocks action. Propose durable lessons for review, never automatic promotion.
 
+### Foundation: domain-basics
+
+{Optional definitions or deeper mechanisms for unfamiliar concepts. Keep required rules in core.}
+
+### Procedure: example-workflow
+
+{Optional recipe. A capable agent may implement directly without loading this.}
+
 ## Component: component-two
 
 ### Mental Model
@@ -53,7 +69,13 @@ See `docs/domain-cognition-packs.md` in the knowledge root for authoring guidanc
 ### Standards
 
 - `pack-{your-name}-component-two-standard` — State a testable MUST/SHOULD rule.
+
+### Strategy
+
 - **Choose:** Contrast at least two relevant approaches using the actual context.
+
+### Judgment
+
 - **Exception:** Explain when the usual approach is inappropriate without
   weakening constraints.
 

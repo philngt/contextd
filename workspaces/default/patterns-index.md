@@ -32,6 +32,7 @@ Quick lookup table for AI agents. Find the pattern name, follow the link, read b
 | `sub-agent-frontmatter-schema` | Required frontmatter (name, description, tools, model) cho `.claude/agents/*.md`. Convention (non-binding): description chứa `DÙNG KHI` + `KHÔNG DÙNG`. | [platform/contracts/sub-agent-frontmatter-schema.md](platform/contracts/sub-agent-frontmatter-schema.md) |
 | `synapse-node-edge-schema` | Deterministic node/edge, lifecycle/freshness, workspace isolation, and task context projection invariants. PAIR with `synapse-context-projection`. | [platform/contracts/synapse-node-edge-schema.md](platform/contracts/synapse-node-edge-schema.md) |
 | `graph-projection` | Experimental read-only seed traversal, semantic roles, region boundaries and dependency-gap reporting. | [platform/contracts/graph-projection.md](platform/contracts/graph-projection.md) |
+| `decision-context` | Optional foundation/procedure projection that preserves decision guidance, constraints, and source identity. | [platform/contracts/decision-context.md](platform/contracts/decision-context.md) |
 
 ## Domain Workflows
 

@@ -1,0 +1,36 @@
+name: Decision context
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/**'
+      - 'packs/**'
+      - 'templates/**'
+      - 'workspaces/**'
+      - '.contextd/**'
+      - 'docs/**'
+      - '.github/workflows/decision-context.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  decision-context:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.10', '3.12']
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install -e ".[test]"
+      - run: contextd pack-validate --all --format text
+      - run: python scripts/test_decision_context.py
+      - run: python scripts/test_pack_cognition.py
+      - run: python scripts/test_artifact_schemas.py

@@ -152,7 +152,7 @@ technology mentioned by the pack.
 | [pack-qc](pack-qc/) | quality | beta 0.3.1 | Test/defect/release evidence plus measured, guarded performance optimization |
 | [pack-security](pack-security/) | security | beta 0.3.1 | Threat/control review and explicitly authorized evidence-based security validation |
 | [pack-solo-builder](pack-solo-builder/) | enablement | beta 0.2.1 | Recipe-driven single-purpose tools for non-technical domain experts |
-| [pack-ui-ux](pack-ui-ux/) | design | beta 0.3.0 | Design systems, WCAG 2.2, stateful user flows and UX writing |
+| [pack-ui-ux](pack-ui-ux/) | design | beta 0.4.0 | Design systems, WCAG 2.2, stateful user flows and UX writing |
 
 ## Selection guide
 
@@ -191,6 +191,15 @@ visible; they are not yet component-sliced. No parallel knowledge store is added
 See [Domain cognition authoring and evaluation](../docs/domain-cognition-packs.md)
 for the reusable method, migration checks, and the distinction between automated
 contract tests and a real agent-quality evaluation.
+
+## Decision-first context
+
+`pack-ui-ux` now opts into the v3 `context_profile: decision-first` extension.
+Its routed Strategy/Judgment, constraints, and verification stay in context;
+Foundation and Procedure blocks are deferred unless explicitly requested.
+Unprofiled packs keep their existing behavior, including v2 static loading.
+See [decision-first context](../docs/decision-context.md) for CLI/MCP requests,
+source provenance, compatibility, and limitations.
 
 ## Create or upgrade a pack
 

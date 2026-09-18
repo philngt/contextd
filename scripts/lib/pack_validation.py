@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional
 
 import pack_loader
-from . import task_context_engine
+from . import task_context_engine, decision_context
 from .context_security import reject_unsafe_entry
 
 
@@ -154,9 +154,17 @@ def _validate_pack_knowledge(wiki_root: Path, pack_dir: Path, manifest: Dict,
     if not text:
         return [_issue("error", "pack.knowledge", "Manifest v3 requires a readable knowledge.md", rel)]
 
-    heading_list = re.findall(r"^##\s+(.+?)\s*$", text, re.MULTILINE)
+    if manifest.get("context_profile") == decision_context.PROFILE:
+        try:
+            decision_context.validate_knowledge(text, components)
+        except ValueError as exc:
+            return [_issue("error", "pack.decision-context", str(exc), rel)]
+        heading_list = [title for title, _ in decision_context.headings(text, 2)]
+        sections = dict(decision_context.sections(text, 2))
+    else:
+        heading_list = re.findall(r"^##\s+(.+?)\s*$", text, re.MULTILINE)
+        sections = _knowledge_sections(text)
     heading_counts = {title: heading_list.count(title) for title in set(heading_list)}
-    sections = _knowledge_sections(text)
     if heading_counts.get("Global Principles", 0) != 1:
         issues.append(_issue(
             "error", "pack.knowledge.global",
@@ -177,7 +185,9 @@ def _validate_pack_knowledge(wiki_root: Path, pack_dir: Path, manifest: Dict,
                 f"knowledge.md must define exactly one `## {title}`", rel,
             ))
             continue
-        headings = set(re.findall(r"^###\s+(.+?)\s*$", body, re.MULTILINE))
+        headings = ({title for title, _ in decision_context.headings(body, 3)}
+                    if manifest.get("context_profile") == decision_context.PROFILE
+                    else set(re.findall(r"^###\s+(.+?)\s*$", body, re.MULTILINE)))
         missing = sorted(required_subsections - headings)
         if missing:
             issues.append(_issue(
@@ -386,6 +396,10 @@ def _validate_pack_dir(wiki_root: Path, pack_dir: Path,
     if not manifest:
         return [_issue("error", "pack.manifest", "Could not parse pack.yaml", _rel(manifest_path, wiki_root))]
 
+    try:
+        decision_context.enabled(manifest)
+    except ValueError as exc:
+        issues.append(_issue("error", "pack.context-profile", str(exc), _rel(manifest_path, wiki_root)))
     declared_name = str(manifest.get("name") or "")
     if declared_name != pack_name:
         issues.append(_issue(

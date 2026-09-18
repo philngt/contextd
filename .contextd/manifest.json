@@ -714,8 +714,9 @@
     {
       "name": "pack-ui-ux",
       "manifest_version": 3,
+      "context_profile": "decision-first",
       "description": "UI/UX pack — design system, accessibility (WCAG), user flows, và UX writing conventions.",
-      "version": "0.3.0",
+      "version": "0.4.0",
       "status": "beta",
       "category": "design",
       "reviewed_on": "2026-08-20",

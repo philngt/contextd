@@ -12,7 +12,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 
 import cmd_resolve  # noqa: E402
-from lib import task_context_engine  # noqa: E402
+from lib import task_context_engine, decision_context  # noqa: E402
 from lib.stdio import configure_stdio  # noqa: E402
 
 
@@ -85,6 +85,7 @@ def _render_text(payload: dict) -> str:
         lines.append(f"- ... {len(dropped) - 30} more")
 
     artifact = payload["artifact"]
+    lines.extend(decision_context.render_report(artifact.get("decision_context")))
     lines.extend(["", "## Gaps"])
     if not artifact.get("gaps"):
         lines.append("- (none)")
@@ -108,6 +109,7 @@ def run(
     workspace: str | None = None,
     cwd: str | None = None,
     fmt: str = "json",
+    support_request: dict | None = None,
 ) -> int:
     if not task.strip():
         print("Error: Empty task", file=sys.stderr)
@@ -155,6 +157,7 @@ def run(
             packs=packs,
             project_dir=project_dir,
             warnings=resolved.get("warnings") or [],
+            support_request=support_request,
         )
     except ValueError as exc:
         print(f"Error: {exc}", file=sys.stderr)
@@ -175,8 +178,10 @@ def main() -> None:
     parser.add_argument("--workspace", default=None, help="Override workspace name")
     parser.add_argument("--cwd", default=None, help="Start directory (default: current)")
     parser.add_argument("--format", choices=["text", "json"], default="json")
+    decision_context.add_arguments(parser)
     args = parser.parse_args()
-    sys.exit(run(args.task, workspace=args.workspace, cwd=args.cwd, fmt=args.format))
+    sys.exit(run(args.task, workspace=args.workspace, cwd=args.cwd, fmt=args.format,
+                 support_request=decision_context.request_from_args(args)))
 
 
 if __name__ == "__main__":
