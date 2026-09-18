@@ -1,0 +1,35 @@
+name: Decision context
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/**'
+      - 'packs/**'
+      - 'templates/**'
+      - '.contextd/**'
+      - 'docs/**'
+      - '.github/workflows/decision-context.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  decision-context:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -e ".[test]"
+      - run: contextd pack-validate --all --format text
+      - name: Export tracked source for offline regression testing
+        run: git archive --format=tar --output="${{ runner.temp }}/contextd-source.tar" HEAD
+      - uses: actions/upload-artifact@v4
+        with:
+          name: decision-context-baseline
+          path: ${{ runner.temp }}/contextd-source.tar
+          retention-days: 1
