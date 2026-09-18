@@ -277,6 +277,9 @@ def tool_definitions() -> List[Dict[str, Any]]:
                     "workspace": {"type": "string"},
                     "cwd": {"type": "string"},
                     "materialize": {"type": "boolean", "default": False},
+                    "context_detail": {"type": "string", "enum": ["decision-first", "full"], "default": "decision-first"},
+                    "foundations": {"type": "array", "items": {"type": "string"}, "description": "Exact task-scoped pack/component/section IDs"},
+                    "procedures": {"type": "array", "items": {"type": "string"}, "description": "Optional procedural support IDs; no mandatory skill dependency"},
                 },
                 "required": ["task"],
                 "additionalProperties": False,
@@ -583,7 +586,7 @@ def call_tool(name: str, arguments: Dict[str, Any], options: ServerOptions) -> D
         })
 
     if name == "contextd.context":
-        _validate_no_extra(arguments, {"task", "workspace", "cwd", "materialize"})
+        _validate_no_extra(arguments, {"task", "workspace", "cwd", "materialize", "context_detail", "foundations", "procedures"})
         task = str(arguments.get("task") or "").strip()
         if not task:
             raise ToolExecutionError("task is required")
@@ -601,6 +604,9 @@ def call_tool(name: str, arguments: Dict[str, Any], options: ServerOptions) -> D
             packs=state.packs,
             project_dir=state.project_dir,
             warnings=state.warnings,
+            support_request={"detail": arguments.get("context_detail", "decision-first"),
+                             "foundations": arguments.get("foundations", []),
+                             "procedures": arguments.get("procedures", [])},
         )
         if _bool(arguments.get("materialize"), default=False):
             artifact = task_context_engine.materialize_context(

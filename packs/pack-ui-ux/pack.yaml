@@ -1,6 +1,7 @@
 name: pack-ui-ux
 manifest_version: 3
-version: 0.3.0
+context_profile: decision-first
+version: 0.4.0
 description: UI/UX pack — design system, accessibility (WCAG), user flows, và UX writing conventions.
 status: beta
 category: design

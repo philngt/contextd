@@ -25,6 +25,10 @@
     "manifest_version": {
       "enum": [2, 3]
     },
+    "context_profile": {
+      "const": "decision-first",
+      "description": "Opt-in v3 decision core with on-demand foundations and procedures."
+    },
     "name": {
       "type": "string",
       "pattern": "^pack-[a-z0-9][a-z0-9-]*$"
@@ -147,6 +151,10 @@
     }
   },
   "allOf": [
+    {
+      "if": { "required": ["context_profile"] },
+      "then": { "properties": { "manifest_version": { "const": 3 } } }
+    },
     {
       "if": {
         "properties": {

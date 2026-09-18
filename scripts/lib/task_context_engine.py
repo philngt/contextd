@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Mapping, Optional, Tuple
 
 import pack_loader
-from . import context_policy, synapse_engine
+from . import context_policy, synapse_engine, decision_context
 from .atomic_write import atomic_write_text
 from .context_security import block_reason, is_relative_to, redact_text, reject_unsafe_entry
 
@@ -1515,6 +1515,7 @@ def _collect_static_context(
     packs: List[str],
     components: Optional[List[str]] = None,
     source_records: Optional[Mapping[str, synapse_engine.SourceRecord]] = None,
+    support_request: Optional[Mapping] = None,
 ) -> List[Dict]:
     """Collect deterministic non-volatile sources for materialized packs."""
     components = components or []
@@ -1553,6 +1554,7 @@ def _collect_static_context(
         pack_dir = wiki_root / "packs" / pack_name
         manifest_path = pack_dir / "pack.yaml"
         manifest = _load_pack_manifest(manifest_path)
+        profiled = decision_context.enabled(manifest)
         manifest_item = _doc(
             manifest_path,
             "pack-rule",
@@ -1570,6 +1572,10 @@ def _collect_static_context(
                 and not Path(knowledge_rel).is_absolute()
                 and ".." not in Path(knowledge_rel).parts
             ):
+                if profiled and (pack_dir.is_symlink() or not is_relative_to(
+                    (pack_dir / knowledge_rel).resolve(), pack_dir.resolve(),
+                )):
+                    raise ValueError(f"Profiled pack {pack_name} knowledge escapes its pack boundary")
                 knowledge_item = _doc(
                     pack_dir / knowledge_rel,
                     "pack-knowledge",
@@ -1577,11 +1583,21 @@ def _collect_static_context(
                     source_records=source_records,
                 )
                 if knowledge_item is not None:
-                    docs.append(_slice_pack_knowledge(
-                        knowledge_item,
-                        manifest.get("components") or [],
-                        components,
-                    ))
+                    if profiled:
+                        docs.append(decision_context.project(
+                            knowledge_item, manifest, components,
+                            decision_context.normalize_request(support_request),
+                        ))
+                    else:
+                        docs.append(_slice_pack_knowledge(
+                            knowledge_item,
+                            manifest.get("components") or [],
+                            components,
+                        ))
+                elif profiled:
+                    raise ValueError(f"Profiled pack {pack_name} has no safe readable knowledge source")
+            elif profiled:
+                raise ValueError(f"Profiled pack {pack_name} has an invalid knowledge path")
             continue
 
         legacy_sources = [
@@ -1602,6 +1618,7 @@ def _build_context_pack(
     packs: List[str],
     docs: List[Dict],
     static_docs: Optional[List[Dict]] = None,
+    decision_report: Optional[Mapping] = None,
 ) -> Dict:
     static_docs = static_docs or []
     pack_sources: List[Dict] = []
@@ -1634,6 +1651,10 @@ def _build_context_pack(
         "packs": packs,
         "sources": sorted(static, key=lambda x: x["path"]),
     }
+    if decision_report is not None:
+        # Raw source hashes alone cannot distinguish different projections of
+        # the same file. Bind the selected content and normalized request too.
+        payload["decision_projection"] = decision_context.identity(decision_report, pack_sources)
     source_hash = _sha256_text(json.dumps(payload, sort_keys=True, ensure_ascii=False))
     return {
         "artifact_type": "context_pack_ref",
@@ -1657,6 +1678,8 @@ def build_context_snapshot(
     warnings: Optional[List[str]] = None,
     include_selection_trace: bool = False,
     synapse_as_of: Optional[date] = None,
+    *,
+    support_request: Optional[Mapping] = None,
 ) -> Tuple[Dict, Dict]:
     """Build one immutable context artifact + synapse snapshot pair.
 
@@ -1669,6 +1692,7 @@ def build_context_snapshot(
         raise ValueError(
             f"Invalid or missing workspace {workspace!r}; context build refused."
         )
+    request = decision_context.normalize_request(support_request)
     warnings_out = list(warnings or [])
     intent_scores = _intent_scores(task)
     intent_type = _pick_by_precedence(intent_scores, INTENT_PRECEDENCE, "implement_feature")
@@ -1713,7 +1737,13 @@ def build_context_snapshot(
         packs,
         components=components,
         source_records=synapse_build.sources_by_path,
+        support_request=request,
     )
+    decision_report = decision_context.report_for(static_docs, packs, request)
+    # A canonical knowledge file explicitly routed as a referenced document
+    # must not leak a second, unsliced copy of its optional teaching/procedures.
+    profiled_docs = {d["path"]: d for d in static_docs if "decision_support" in d}
+    docs = [profiled_docs.get(d["path"], d) for d in docs]
     _attach_synapse_metadata(static_docs, synapse_build.lookups)
     budget_report = _finalize_budget_report(budget_report, docs, static_docs)
     warnings_out.extend(_selected_state_warnings(docs))
@@ -1722,7 +1752,7 @@ def build_context_snapshot(
             warnings_out.append(
                 f"Synapse {diagnostic['code']}: {diagnostic['message']}"
             )
-    context_pack = _build_context_pack(workspace, packs, docs, static_docs)
+    context_pack = _build_context_pack(workspace, packs, docs, static_docs, decision_report)
     source_hashes = {
         doc["path"]: doc["source_hash"]
         for doc in docs + static_docs
@@ -1784,6 +1814,8 @@ def build_context_snapshot(
         "budget_report": budget_report,
         "source_hashes": source_hashes,
     }
+    if decision_report is not None:
+        artifact["decision_context"] = decision_report
     artifact["governance_report"] = context_policy.evaluate_artifact(
         artifact,
         wiki_root,
@@ -1804,6 +1836,8 @@ def build_context_artifact(
     warnings: Optional[List[str]] = None,
     include_selection_trace: bool = False,
     synapse_as_of: Optional[date] = None,
+    *,
+    support_request: Optional[Mapping] = None,
 ) -> Dict:
     """Build the canonical JSON context artifact without exposing build state."""
     artifact, _ = build_context_snapshot(
@@ -1815,6 +1849,7 @@ def build_context_artifact(
         warnings=warnings,
         include_selection_trace=include_selection_trace,
         synapse_as_of=synapse_as_of,
+        support_request=support_request,
     )
     return artifact
 
@@ -1826,6 +1861,8 @@ def build_context_explanation(
     packs: List[str],
     project_dir: Optional[Path] = None,
     warnings: Optional[List[str]] = None,
+    *,
+    support_request: Optional[Mapping] = None,
 ) -> Dict:
     """Build a human/debug-oriented explanation around the canonical artifact."""
     artifact = build_context_artifact(
@@ -1836,6 +1873,7 @@ def build_context_explanation(
         project_dir=project_dir,
         warnings=warnings,
         include_selection_trace=True,
+        support_request=support_request,
     )
     trace = artifact.pop("_selection_trace", {})
     summary = {
@@ -1891,6 +1929,10 @@ def render_markdown(artifact: Dict) -> str:
             f"~{budget.get('estimated_tokens_static', 0)} static = "
             f"~{budget.get('estimated_tokens_total', 0)} total tokens"
         )
+    lines.extend(decision_context.render_report(artifact.get("decision_context")))
+    for doc in artifact.get("static_context", []):
+        if "decision_support" in doc:
+            lines.extend(["", f"## Pack Guidance: {doc['path']}", "", doc["content"], ""])
     lines.extend(["", "## Relevant Knowledge", ""])
     for doc in artifact.get("referenced_docs", []):
         sections = ", ".join(doc.get("sections") or ["all"])
@@ -1937,6 +1979,7 @@ def _pack_markdown(artifact: Dict) -> str:
         f"Source hash: {artifact['contextPack']['sourceHash']}",
         "",
     ]
+    lines.extend(decision_context.render_report(artifact.get("decision_context")))
     docs: List[Dict] = []
     seen: set[str] = set()
     for doc in artifact.get("static_context", []) + artifact.get("referenced_docs", []):
@@ -2020,6 +2063,19 @@ def materialize_context(
     returned by ``build_context_snapshot``. Without it, the task artifacts are
     still materialized and the synapse reference remains not_materialized.
     """
+    report = artifact.get("decision_context")
+    profiled = any("decision_support" in d for d in artifact.get("static_context", []))
+    if profiled and not isinstance(report, Mapping):
+        raise ValueError("Missing decision projection report; materialization refused")
+    if report is not None:
+        if not isinstance(report, Mapping) or not isinstance(report.get("enabled_packs"), list):
+            raise ValueError("Invalid decision projection report; materialization refused")
+        expected = _build_context_pack(
+            artifact["workspace"], report["enabled_packs"],
+            artifact.get("referenced_docs", []), artifact.get("static_context", []), report,
+        )
+        if any(artifact["contextPack"].get(key) != expected[key] for key in ("sourceHash", "packKey")):
+            raise ValueError("Decision context projection changed after build; materialization refused")
     context_dir = project_dir / ".contextd" / "context"
     packs_dir = context_dir / "packs"
     packs_dir.mkdir(parents=True, exist_ok=True)

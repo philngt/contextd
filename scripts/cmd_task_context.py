@@ -11,7 +11,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 
 import cmd_resolve  # noqa: E402
-from lib import task_context_engine  # noqa: E402
+from lib import task_context_engine, decision_context  # noqa: E402
 from lib.stdio import configure_stdio  # noqa: E402
 
 
@@ -22,6 +22,7 @@ def run(
     fmt: str = "markdown",
     materialize: bool = False,
     output_dir: str | None = None,
+    support_request: dict | None = None,
 ) -> int:
     if not task.strip():
         print("Error: Empty task", file=sys.stderr)
@@ -70,6 +71,7 @@ def run(
             packs=packs,
             project_dir=project_dir,
             warnings=resolved.get("warnings") or [],
+            support_request=support_request,
         )
     except ValueError as exc:
         print(f"Error: {exc}", file=sys.stderr)
@@ -113,6 +115,7 @@ def main():
                         help="Write .contextd/context/current-task.{json,md} and context pack")
     parser.add_argument("--output-dir", default=None,
                         help="Project directory for materialized .contextd/context (default: resolved project)")
+    decision_context.add_arguments(parser)
     args = parser.parse_args()
     sys.exit(run(
         args.task,
@@ -121,6 +124,7 @@ def main():
         fmt=args.format,
         materialize=args.materialize,
         output_dir=args.output_dir,
+        support_request=decision_context.request_from_args(args),
     ))
 
 

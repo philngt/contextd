@@ -1,9 +1,15 @@
 # pack-ui-ux — Canonical Knowledge
 
-Manifest v3: Global Principles apply whenever enabled; only routed component
-sections are loaded. Legacy `agents/` files remain compatibility adapters.
+Manifest v3, decision-first profile: Global Principles and each routed
+component's decision core are loaded. Optional foundations and procedures are
+requested by exact ID; they are not mandatory prerequisites for execution. Legacy `agents/` files remain compatibility adapters.
 
 ## Global Principles
+
+A capable agent may execute directly from strategy and judgment using its
+available tools. A packaged skill is not required unless a controlling contract
+requires its procedure. Tool permissions and actual outcome verification still
+apply; this profile does not infer model competence from self-confidence.
 
 Start with the user task, observed state, and controlling workspace design
 contract. Separate inspected evidence, a mechanism hypothesis, a recommendation,
@@ -77,8 +83,18 @@ Baseline reference: [W3C WCAG 2.2](https://www.w3.org/TR/WCAG22/).
 
 ### Standards
 
+Apply `pack-ui-ux-design-token` and all applicable Global Principles; optional support never relaxes them.
+
+### Strategy
+
 - **Choose:** For competing actions, compare changing emphasis, regrouping information, or revealing secondary controls later. Prefer an existing component/token when it fits; document a new variant or token-scale decision rather than inventing catalog entries.
+### Judgment
+
 - **Exception:** Comparison and expert tools may need several peer actions and higher density. Do not impose one primary action, generous whitespace, or a new component library independently of the task and constraints.
+
+Hypothetical contrast: a first-time single-task flow may benefit from stronger emphasis on one action; an expert comparison canvas may need peer actions kept visible. The deciding evidence is the actual task, not a universal density or button-count rule.
+
+### Procedure: document-design-system
 
 #### Design Token Format (tokens.md)
 
@@ -100,6 +116,10 @@ Baseline reference: [W3C WCAG 2.2](https://www.w3.org/TR/WCAG22/).
 - File naming: `{YYYY-MM-DD}-{slug}.md` — vd `2026-05-22-choose-component-library.md`.
 - Structure: Status → Context → Decision → Options considered → Rationale → Consequences.
 - Status: `Proposed | Accepted | Deprecated | Superseded by {file}`.
+
+### Foundation: hierarchy-basics
+
+A design token names a reusable value; a variant adapts a component to a supported context; a state describes its current interaction or data condition. Visual hierarchy is an intended ordering of emphasis, not evidence that a user found the correct action. Compare the actual task and content before using the familiar “one primary action” heuristic.
 
 ### Failure Signals
 
@@ -123,14 +143,28 @@ Baseline reference: [W3C WCAG 2.2](https://www.w3.org/TR/WCAG22/).
 
 ### Standards
 
+Apply `pack-ui-ux-accessibility` and all applicable Global Principles; optional support never relaxes them.
+
+### Strategy
+
 - **Choose:** Prefer native semantics; use the applicable, pinned APG pattern for custom behavior. Pair automated checks with manual keyboard and assistive-technology inspection, selecting checks from the actual component states.
+### Judgment
+
 - **Exception:** Only keys and states relevant to the chosen pattern need specification. A non-interactive decorative asset is not an actionable control; exclude it from the accessibility tree with the platform-appropriate mechanism. These distinctions do not relax the inherited baseline.
+
+Hypothetical contrast: a native control with tested semantics and a custom composite control may need different verification work. A static A11y marker in either case does not establish keyboard behavior or conformance.
+
+### Procedure: document-accessibility
 
 #### Accessibility Doc Format (a11y.md)
 
 - Structure: WCAG principles (Perceivable, Operable, Understandable, Robust) → Checklist per principle → Component-specific notes.
 - Checklist item: `- [ ] {criterion}` với link WCAG Success Criterion số (vd `1.4.3`).
 - Testing method ghi ngay sau criterion: `(test: axe-core / manual keyboard / screen reader VoiceOver)`.
+
+### Foundation: semantics-basics
+
+A semantic role describes what a control is; an accessible name identifies it; focus identifies the current keyboard target. A documentation note about these properties differs from inspecting behavior in the rendered interface. Consult the applicable platform pattern and current workspace baseline when a control or assistive workflow is unfamiliar.
 
 ### Failure Signals
 
@@ -153,8 +187,18 @@ Baseline reference: [W3C WCAG 2.2](https://www.w3.org/TR/WCAG22/).
 
 ### Standards
 
+Apply `pack-ui-ux-user-flows` and all applicable Global Principles; optional support never relaxes them.
+
+### Strategy
+
 - **Choose:** Use a numbered path for simple behavior and a state/flow diagram for meaningful branches, interruption, or resumption. Compare inline recovery, a separate step, or deferred work against the user task and permission model.
+### Judgment
+
 - **Exception:** Do not add arbitrary error-state quotas or an extra confirmation for every action. Reversible local actions and consequential external effects need different recovery/confirmation treatment, subject to the existing contract.
+
+Hypothetical contrast: undo may be enough for a reversible local edit; an uncertain external operation may require checking its durable outcome before retry. Escalate when the recovery contract is not known.
+
+### Procedure: document-user-flows
 
 #### User Flow Format
 
@@ -163,6 +207,10 @@ Baseline reference: [W3C WCAG 2.2](https://www.w3.org/TR/WCAG22/).
 - **Diagram**: Mermaid `stateDiagram-v2` hoặc `flowchart TD` — ưu tiên stateDiagram cho screen-to-screen. Fallback sang numbered list nếu tool không render Mermaid.
 - Decision point dạng câu hỏi: `Is user authenticated?` — branch `Yes →` / `No →`.
 - Edge path heading: `## Edge & Error Paths` — liệt kê từng case với state + user feedback.
+
+### Foundation: state-basics
+
+A flow relates an actor, preconditions, actions, branches and exit states. Pending work is not a confirmed result. Distinguish the user-visible state from the durable external effect when an operation can time out or resume. A diagram is a model to validate rather than evidence that every transition works.
 
 ### Failure Signals
 
@@ -185,8 +233,18 @@ Baseline reference: [W3C WCAG 2.2](https://www.w3.org/TR/WCAG22/).
 
 ### Standards
 
+Apply `pack-ui-ux-writing` and all applicable Global Principles; optional support never relaxes them.
+
+### Strategy
+
 - **Choose:** Describe the action/outcome in context; use a concise instruction for recoverable errors and an honest status when the user cannot fix the condition. Compare wording with the approved terminology and real layout.
+### Judgment
+
 - **Exception:** Generic labels can work when surrounding semantics make the accessible name clear. Do not fabricate a cause, promise recovery, or force a CTA into a state where no useful action exists.
+
+Hypothetical contrast: a known input error can name the corrective action; an unknown service failure should not assert a cause. Choose wording from verified state, not an invented explanation.
+
+### Procedure: document-ux-writing
 
 #### UX Writing Format (ux-writing.md)
 
@@ -194,6 +252,10 @@ Baseline reference: [W3C WCAG 2.2](https://www.w3.org/TR/WCAG22/).
 - Sections: Tone of Voice → Error Messages → Empty States → Loading States → CTAs → Tooltips → Notifications.
 - Error message template: `[What happened]. [Why — nếu useful]. [What to do next].`
 - Empty state template: `[No {item} yet]. [Action to create first one].`
+
+### Foundation: copy-basics
+
+An accessible name, visible label, status and error explanation serve different purposes. Ground them in the known system state and the actions actually available. Vocabulary is product-specific: a familiar term can have a different approved meaning in this workspace. Unknown causes remain unknown even when a plausible explanation would sound reassuring.
 
 ### Failure Signals
 

@@ -231,6 +231,17 @@ contextd explain "Review retry-safe payment endpoint" --format text
 See [packs/README.md](packs/README.md) for the maturity model, current versions,
 scope boundaries, selection guide, and authoring checklist.
 
+## Decision-first domain guidance
+
+Profiled v3 packs prioritize task-specific Strategy/Judgment while keeping
+constraints and outcome verification. A capable agent may execute directly;
+optional Foundation/Procedure sections are loaded only when requested with
+`--foundation`, `--procedure`, or `--context-detail full`. `pack-ui-ux` is the
+first profiled pack. Other packs retain their current loading behavior.
+See [decision-first context](docs/decision-context.md) for CLI, Python and MCP
+examples, provenance, and the difference between optional teaching and required
+local knowledge.
+
 ## Engine & Workspace Reference
 
 - Engine folders: [agents/](agents/), [templates/](templates/), [.claude/commands/](.claude/commands/)

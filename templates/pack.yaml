@@ -3,6 +3,7 @@
 
 name: pack-{your-name}
 manifest_version: 3
+context_profile: decision-first
 version: 0.1.0
 description: "Describe the concrete workflow or artifact this pack owns in at least forty characters."
 status: experimental

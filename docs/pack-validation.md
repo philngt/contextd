@@ -68,6 +68,16 @@ These checks deliberately do not claim that a technology recommendation is
 current. Provider/framework packs must also carry an official baseline link,
 review date, and workspace-pinned compatibility contract.
 
+## Opt-in decision-first profile
+
+`context_profile: decision-first` is accepted only for v3. Each component also
+needs explicit nonempty Strategy and Judgment sections. Optional Foundation and
+Procedure blocks use unique slug IDs and cannot own a stable rule definition or
+uppercase mandatory instruction. The parser ignores fenced examples and rejects
+ambiguous headings/unclosed fences. Existing rule parity checks still apply.
+See [decision-first contract](decision-context.md); validation is not proof of
+correct semantic classification or agent expertise.
+
 ## CLI and exit codes
 
 ```bash

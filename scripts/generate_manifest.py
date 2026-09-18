@@ -133,6 +133,7 @@ def _parse_pack(pack_dir: Path) -> Optional[Dict]:
     return {
         "name": name,
         "manifest_version": manifest.get("manifest_version", 1),
+        **({"context_profile": manifest["context_profile"]} if "context_profile" in manifest else {}),
         "description": description,
         "version": version,
         "status": manifest.get("status", "legacy"),

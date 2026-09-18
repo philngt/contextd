@@ -25,6 +25,15 @@ a second graph, or host-specific prompts. Domain facts stay workspace-scoped.
 Agent hosts and C2O may consume built artifacts, but orchestration, permission
 enforcement, and automatic knowledge promotion are not introduced here.
 
+## Decision-first delivery
+
+The opt-in v3 decision-first profile now separates the compact Strategy/Judgment
+core from supplementary foundations and optional procedures. `pack-ui-ux` 0.4.0
+uses this profile; unprofiled packs retain the behavior described above. Generic
+teaching is not loaded by default, and a strategy need not depend on a skill.
+See [decision-first context](decision-context.md) for authoring, requests,
+compatibility and evaluation limits.
+
 ## Six questions for a useful lens
 
 | Label | Authoring question |

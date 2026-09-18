@@ -77,6 +77,15 @@ checks and a polished screenshot do not establish usability or WCAG conformance.
 
 ## Retrieval behavior
 
+The `decision-first` profile keeps the selected Strategy/Judgment and all core
+constraints/evidence, but defers Foundation and Procedure subsections. For
+example, `--foundation pack-ui-ux/accessibility/semantics-basics` reloads a
+concept and `--procedure pack-ui-ux/accessibility/document-accessibility`
+loads the optional documentation recipe. `--context-detail full` includes all
+support for the already-selected components. No mandatory skill is introduced.
+See [decision-first context](../../docs/decision-context.md).
+
+
 Manifest v3 loads Global Principles and only matched component sections from
 `knowledge.md`; unselected component bodies and legacy static pack files are not
 loaded. The four workspace routes are unchanged.

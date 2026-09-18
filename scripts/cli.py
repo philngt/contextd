@@ -21,6 +21,7 @@ __version__ = get_version(start_path=SCRIPT_DIR.parent)
 import cmd_resolve  # noqa: E402
 import cmd_find  # noqa: E402
 import cmd_bundle  # noqa: E402
+from lib import decision_context
 import cmd_task_context  # noqa: E402
 import cmd_synapse  # noqa: E402
 import cmd_contract_path  # noqa: E402
@@ -388,6 +389,7 @@ def _task_context_cmd(args) -> int:
         fmt=args.format,
         materialize=args.materialize,
         output_dir=args.output_dir,
+        support_request=decision_context.request_from_args(args),
     )
 
 
@@ -399,6 +401,7 @@ def _context_cmd(args) -> int:
         fmt=args.format,
         materialize=not args.no_materialize,
         output_dir=args.output_dir,
+        support_request=decision_context.request_from_args(args),
     )
 
 
@@ -563,6 +566,7 @@ def _explain_cmd(args) -> int:
         workspace=args.workspace,
         cwd=args.cwd,
         fmt=args.format,
+        support_request=decision_context.request_from_args(args),
     )
 
 
@@ -725,6 +729,7 @@ def main() -> int:
                            help="Do not write .contextd/context artifacts")
     p_context.add_argument("--preview", dest="no_materialize", action="store_true",
                            help="Preview stdout only; alias for --no-materialize")
+    decision_context.add_arguments(p_context)
     p_context.set_defaults(func=_context_cmd)
 
     # task-context (legacy-compatible alias)
@@ -737,6 +742,7 @@ def main() -> int:
                       help="Write .contextd/context/current-task.{json,md} and context pack")
     p_tc.add_argument("--output-dir", default=None,
                       help="Project directory for materialized .contextd/context")
+    decision_context.add_arguments(p_tc)
     p_tc.set_defaults(func=_task_context_cmd)
 
     # contract-path
@@ -765,6 +771,7 @@ def main() -> int:
     p_explain.add_argument("--workspace", default=None, help="Override workspace name")
     p_explain.add_argument("--cwd", default=None, help="Start directory (default: current)")
     _add_format_arg(p_explain, ["text", "json"], "json")
+    decision_context.add_arguments(p_explain)
     p_explain.set_defaults(func=_explain_cmd)
 
     # policy-check

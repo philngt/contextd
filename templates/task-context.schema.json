@@ -258,6 +258,162 @@
       },
       "additionalProperties": true
     },
+    "decision_context": {
+      "type": "object",
+      "required": [
+        "version",
+        "request",
+        "packs",
+        "enabled_packs",
+        "unprofiled_packs",
+        "execution",
+        "selection_basis"
+      ],
+      "properties": {
+        "version": {
+          "const": "1"
+        },
+        "execution": {
+          "const": "direct-unless-required-by-contract"
+        },
+        "selection_basis": {
+          "const": "author-profile-and-explicit-request; not model self-confidence"
+        },
+        "enabled_packs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "unprofiled_packs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "request": {
+          "type": "object",
+          "required": [
+            "detail",
+            "foundations",
+            "procedures"
+          ],
+          "properties": {
+            "detail": {
+              "enum": [
+                "decision-first",
+                "full"
+              ]
+            },
+            "foundations": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "pattern": "^pack-[a-z0-9][a-z0-9-]*/[a-z0-9][a-z0-9-]*/[a-z0-9][a-z0-9-]*$"
+              }
+            },
+            "procedures": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "pattern": "^pack-[a-z0-9][a-z0-9-]*/[a-z0-9][a-z0-9-]*/[a-z0-9][a-z0-9-]*$"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "packs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "pack",
+              "loaded",
+              "deferred",
+              "estimated_tokens_full",
+              "estimated_tokens_selected"
+            ],
+            "properties": {
+              "pack": {
+                "type": "string"
+              },
+              "estimated_tokens_full": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "estimated_tokens_selected": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "loaded": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "ref",
+                    "kind",
+                    "reason"
+                  ],
+                  "properties": {
+                    "ref": {
+                      "type": "string"
+                    },
+                    "kind": {
+                      "enum": [
+                        "foundations",
+                        "procedures"
+                      ]
+                    },
+                    "reason": {
+                      "enum": [
+                        "explicit-request",
+                        "full-detail",
+                        "on-demand"
+                      ]
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "deferred": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "ref",
+                    "kind",
+                    "reason"
+                  ],
+                  "properties": {
+                    "ref": {
+                      "type": "string"
+                    },
+                    "kind": {
+                      "enum": [
+                        "foundations",
+                        "procedures"
+                      ]
+                    },
+                    "reason": {
+                      "enum": [
+                        "explicit-request",
+                        "full-detail",
+                        "on-demand"
+                      ]
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    },
     "retrieval_policy": {
       "type": "object",
       "required": ["mode", "advisory_retrieval", "priority", "max_docs"],

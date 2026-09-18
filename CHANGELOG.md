@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased — Decision-first context
+
+- Add an opt-in manifest-v3 decision-first profile with explicit Strategy/Judgment
+  and on-demand Foundation/Procedure sections; required constraints stay core.
+- Add exact support requests to context/explain, Python builders and MCP context.
+- Bind selected content/requests into profiled materialization identities; keep
+  unprofiled behavior compatible and expose loaded/deferred selection reasons.
+- Upgrade pack-ui-ux to 0.4.0 and add regression/authoring coverage. No live model
+  benchmark or autonomous executor is included.
+
 ## [Unreleased]
 
 ### Fixed — Windows console encoding and keyword matching
@@ -79,7 +89,7 @@ Definition files renamed under `.claude/commands/`; references updated across pi
 - `agents/pipeline/multi-agent-pipeline.md` — replaced the Stage 1 intent JSON example with a schema pointer.
 - `.claude/agents/contextd-planner.md` — replaced the full output JSON example with a "quick recap" pointing to schema `oneOf[0]`.
 - `.claude/agents/contextd-context-selector.md` — same treatment for the `02-context` trace block.
-- `.claude/agents/contextd-reviewer.md` — same for `05-review`.
+- `.claude/agents/contextd-reviewer.md` — same for the `05-review`.
 
 Effect: adding/renaming a field now requires editing one schema file. Examples that used to drift independently across 5 files are gone.
 
