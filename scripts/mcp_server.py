@@ -56,14 +56,7 @@ class ServerOptions:
     cwd: Optional[Path] = None
 
 
-@dataclass
-class ResolvedState:
-    resolved: Dict[str, Any]
-    knowledge_root: Optional[Path]
-    workspace: Optional[str]
-    project_dir: Path
-    packs: List[str]
-    warnings: List[str]
+ResolvedState = contextd_resolver.ResolvedRequest  # Compatibility import.
 
 
 def _version() -> str:
@@ -140,100 +133,22 @@ def _available_workspaces(root: Optional[Path]) -> List[str]:
     return contextd_resolver.available_workspaces(root)
 
 
-def _workspace_packs(root: Path, workspace: str, resolved: Dict[str, Any],
-                     workspace_overridden: bool) -> Tuple[List[str], str]:
-    if not workspace_overridden:
-        return list(resolved.get("packs") or []), str(resolved.get("pack_source") or "resolved")
-    workspace_md = root / "workspaces" / workspace / "workspace.md"
-    packs, source = cmd_resolve.get_effective_packs({}, workspace_md)
-    return packs, source
+
 
 
 def resolve_state(options: ServerOptions, cwd: Optional[str] = None,
                   workspace: Optional[str] = None,
                   require_workspace: bool = False) -> ResolvedState:
-    start_dir = _resolve_path(cwd) or options.cwd or Path(".").resolve()
-    resolved = cmd_resolve.resolve(cwd=start_dir, require_workspace=False)
-    warnings = list(resolved.get("warnings") or [])
-
-    root = options.knowledge_root
-    if root is None:
-        root_raw = resolved.get("knowledge_root") or resolved.get("wiki_root")
-        root = _resolve_path(str(root_raw)) if root_raw else None
-    else:
-        root = root.resolve()
-        resolved["knowledge_root"] = str(root)
-        resolved["wiki_root"] = str(root)
-
-    selected_workspace = workspace or options.workspace or resolved.get("workspace")
-    workspace_overridden = bool(workspace or options.workspace)
-    if selected_workspace:
-        resolved["workspace"] = selected_workspace
-
-    project_dir_raw = resolved.get("project_dir")
-    project_dir = Path(str(project_dir_raw)).expanduser().resolve() if project_dir_raw else start_dir
-
-    safe_workspace_dir: Optional[Path] = None
-    if root is not None and selected_workspace:
-        safe_workspace_dir = contextd_resolver.resolve_workspace_dir(root, selected_workspace)
-        resolved["workspace_dir"] = (
-            str(safe_workspace_dir)
-            if safe_workspace_dir and safe_workspace_dir.is_dir()
-            else None
+    """MCP translates transport defaults/errors; the resolver owns semantics."""
+    try:
+        return contextd_resolver.resolve_request(
+            cwd=_resolve_path(cwd) or options.cwd,
+            workspace=workspace if workspace is not None else options.workspace,
+            knowledge_root=options.knowledge_root,
+            require_workspace=require_workspace,
         )
-        if safe_workspace_dir is None:
-            warnings.append(f"Invalid workspace: {selected_workspace!r}")
-
-    if require_workspace:
-        if root is None:
-            raise ToolExecutionError("Could not resolve knowledge_root.", {
-                "warnings": warnings,
-            })
-        if not root.is_dir():
-            raise ToolExecutionError(f"knowledge_root does not exist: {root}", {
-                "knowledge_root": str(root),
-            })
-        if not (root / "workspaces").is_dir():
-            raise ToolExecutionError(f"knowledge_root must contain workspaces/: {root}", {
-                "knowledge_root": str(root),
-            })
-        if not selected_workspace:
-            raise ToolExecutionError("No workspace resolved.", {
-                "available_workspaces": _available_workspaces(root),
-                "warnings": warnings,
-            })
-        if safe_workspace_dir is None:
-            raise ToolExecutionError(f"Invalid workspace: {selected_workspace!r}", {
-                "workspace": selected_workspace,
-                "available_workspaces": _available_workspaces(root),
-            })
-        if not safe_workspace_dir.is_dir():
-            raise ToolExecutionError(f"Workspace directory not found: {safe_workspace_dir}", {
-                "workspace": selected_workspace,
-                "available_workspaces": _available_workspaces(root),
-            })
-
-    packs: List[str] = []
-    if root is not None and selected_workspace and safe_workspace_dir is not None:
-        packs, pack_source = _workspace_packs(root, selected_workspace, resolved, workspace_overridden)
-        resolved["packs"] = packs
-        resolved["pack_source"] = pack_source
-        if root:
-            missing = [p for p in packs if not (root / "packs" / p / "pack.yaml").is_file()]
-            for pack_name in missing:
-                msg = f"Active pack not found: {pack_name}"
-                if msg not in warnings:
-                    warnings.append(msg)
-    resolved["warnings"] = warnings
-
-    return ResolvedState(
-        resolved=resolved,
-        knowledge_root=root,
-        workspace=selected_workspace,
-        project_dir=project_dir,
-        packs=packs,
-        warnings=warnings,
-    )
+    except contextd_resolver.ResolutionError as exc:
+        raise ToolExecutionError(str(exc), exc.payload) from exc
 
 
 def tool_definitions() -> List[Dict[str, Any]]:
@@ -597,7 +512,7 @@ def call_tool(name: str, arguments: Dict[str, Any], options: ServerOptions) -> D
             require_workspace=True,
         )
         assert state.knowledge_root is not None and state.workspace is not None
-        artifact, synapse_snapshot = task_context_engine.build_context_snapshot(
+        build_result = task_context_engine.build_context_result(
             task=task,
             wiki_root=state.knowledge_root,
             workspace=state.workspace,
@@ -608,6 +523,7 @@ def call_tool(name: str, arguments: Dict[str, Any], options: ServerOptions) -> D
                              "foundations": arguments.get("foundations", []),
                              "procedures": arguments.get("procedures", [])},
         )
+        artifact, synapse_snapshot = build_result.artifact, build_result.synapse
         if _bool(arguments.get("materialize"), default=False):
             artifact = task_context_engine.materialize_context(
                 artifact,

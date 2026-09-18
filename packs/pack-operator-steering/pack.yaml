@@ -42,3 +42,6 @@ files:
   validator_script: scripts/rules.py
 
 conflicts_with: []
+
+# Canonical task-classification metadata (not a compiler special case).
+workstream: quality

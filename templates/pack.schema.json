@@ -44,6 +44,10 @@
     "status": {
       "enum": ["stable", "beta", "experimental", "deprecated"]
     },
+    "workstream": {
+      "enum": ["engineering", "product", "business_analysis", "quality", "security", "design", "ops", "domain_research"],
+      "description": "Optional authored workstream bias; overrides the old-manifest name adapter."
+    },
     "category": {
       "enum": [
         "agent-runtime",

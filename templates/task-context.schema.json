@@ -230,6 +230,8 @@
       "properties": {
         "artifact_type": { "const": "context_pack_ref" },
         "version": { "type": "string" },
+        "identity_version": { "const": 2 },
+        "packs": { "type": "array", "items": { "type": "string" } },
         "kind": { "type": "string" },
         "packKey": { "type": "string" },
         "ref": { "type": ["string", "null"] },

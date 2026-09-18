@@ -41,6 +41,9 @@ jobs:
       - name: Run test_contextd_runtime
         run: python scripts/test_contextd_runtime.py
 
+      - name: Run runtime boundary regressions
+        run: python scripts/test_runtime_boundaries.py
+
       - name: Validate generated artifacts against schemas
         run: python scripts/test_artifact_schemas.py
 

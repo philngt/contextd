@@ -9,6 +9,8 @@ import json
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional
 
+from .context_payload import compiled_sources
+
 
 VALID_SEVERITIES = {"error", "warning", "info"}
 
@@ -97,7 +99,10 @@ def _rule_applies(rule: Dict, artifact: Dict) -> bool:
 
 
 def _selected_docs(artifact: Dict) -> List[Dict]:
-    return [doc for doc in artifact.get("referenced_docs") or [] if isinstance(doc, dict)]
+    return compiled_sources(
+        (doc for doc in artifact.get("static_context") or [] if isinstance(doc, dict)),
+        (doc for doc in artifact.get("referenced_docs") or [] if isinstance(doc, dict)),
+    )
 
 
 def _doc_paths(artifact: Dict) -> List[str]:
@@ -185,7 +190,7 @@ def _evaluate_deny(rule: Dict, source_path: str, artifact: Dict) -> List[Dict]:
 
     max_tokens = deny.get("max_estimated_tokens")
     budget = artifact.get("budget_report") or {}
-    estimated_tokens = budget.get("estimated_tokens_selected")
+    estimated_tokens = budget.get("estimated_tokens_total", budget.get("estimated_tokens_selected"))
     if isinstance(max_tokens, int) and isinstance(estimated_tokens, int):
         if estimated_tokens > max_tokens:
             out.append(_violation(rule, source_path, "deny.max_estimated_tokens",

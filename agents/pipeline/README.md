@@ -12,14 +12,14 @@ Mô tả cách feed knowledge từ wiki cho LLM agent mà không bị hallucinat
 
 | File | Vai trò |
 |------|---------|
-| **[.claude/commands/use-contextd.md](../../.claude/commands/use-contextd.md)** | **Execution flow chính thức** — slash adapter gọi canonical `contextd context`. Khi conflict với file khác, file này thắng. |
+| **[.claude/commands/use-contextd.md](../../.claude/commands/use-contextd.md)** | Claude-specific adapter gọi canonical `contextd context`; không định nghĩa policy riêng hoặc ghi đè compiler/schema. |
 | [multi-agent-pipeline.md](multi-agent-pipeline.md) | Historical/reference: vai trò subagent cũ + mapping sang artifact engine |
 | [task-to-docs-map.md](task-to-docs-map.md) | Intent taxonomy + task/component → docs mapping |
 | [context-filter.md](context-filter.md) | Rank + slice + budget rules used by context artifact builder |
 | [prompt-template.md](prompt-template.md) | Output template main agent dùng sau khi đọc artifact |
 | [validator-rules.md](validator-rules.md) | Self-check/reviewer rules — engine defaults + workspace override |
 
-`use-contextd.md` định nghĩa **how**; các file pipeline này định nghĩa **what** từng stage cần.
+Compiler + artifact schema + normalized input policy định nghĩa hành vi. CLI/MCP/Claude/Codex adapters chỉ mô tả cách sử dụng; tài liệu adapter không phải nguồn policy cạnh tranh. Các tài liệu pipeline giải thích contract, không ghi đè implementation.
 
 ---
 
@@ -43,7 +43,7 @@ User Task
                                   → identity-check and materialize the same graph
                                   → materialize .contextd/context/packs/{packKey}.md
    ↓
-[Stage 4] Main agent (Builder)    → đọc JSON artifact, code theo prompt-template.md
+[Stage 4] Main agent              → đọc JSON artifact; chọn workflow phù hợp task
    ↓
 [Stage 5] reviewer (optional)     → check code vs referenced_docs/contextPack
    ↓

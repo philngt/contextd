@@ -40,3 +40,6 @@ files:
   common_pitfalls: agents/common-pitfalls.md
 
 conflicts_with: []
+
+# Canonical task-classification metadata (not a compiler special case).
+workstream: design

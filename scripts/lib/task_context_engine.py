@@ -11,176 +11,33 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+from dataclasses import dataclass
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Dict, Iterable, List, Mapping, Optional, Tuple
 
 import pack_loader
+from .context_defaults import (
+    INTENT_KEYWORDS,
+    WORKSTREAM_KEYWORDS,
+    AUDIENCE_BY_WORKSTREAM,
+    SECTION_POLICY,
+    CATEGORY_BUDGETS,
+    PRIORITY,
+    WORKSTREAM_BUDGETS,
+    WORKSTREAM_PRIORITY,
+    INTENT_PRECEDENCE,
+    WORKSTREAM_PRECEDENCE,
+)
 from . import context_policy, synapse_engine, decision_context
-from .atomic_write import atomic_write_text
+from . import context_output
+from .context_output import render_markdown, _pack_markdown
+from .context_payload import (
+    compiled_sources, build_pack_ref as _build_context_pack,
+    synapse_state as _synapse_state, project_synapse as _context_projection,
+)
 from .context_security import block_reason, is_relative_to, redact_text, reject_unsafe_entry
 
-
-INTENT_KEYWORDS = {
-    "implement_feature": [
-        "add", "implement", "create", "build", "write", "support", "enable",
-        "introduce", "new feature", "feature", "endpoint", "api", "consumer",
-        "producer", "service", "handler", "controller",
-    ],
-    "fix_bug": [
-        "fix", "bug", "debug", "broken", "breaks", "error", "crash", "fails", "failing",
-        "not working", "doesn't work", "exception", "regression", "issue",
-    ],
-    "design": [
-        "design", "architecture", "approach", "how should", "structure",
-        "pattern", "refactor", "restructure", "organize", "strategy", "proposal",
-    ],
-    "incident": [
-        "incident", "outage", "down", "spike", "latency", "error rate",
-        "production", "live", "oncall", "alert", "paged",
-    ],
-    "review": [
-        "review", "pr", "pull request", "audit", "check", "verify", "assess",
-        "code review", "walkthrough", "sign-off", "drift", "remediation",
-        "đánh giá", "danh gia", "kiểm tra", "kiem tra", "nghiệm thu", "nghiem thu",
-    ],
-}
-
-WORKSTREAM_KEYWORDS = {
-    "product": [
-        "product", "brief", "prd", "okr", "roadmap", "persona", "journey",
-        "metric", "customer", "feature request",
-    ],
-    "business_analysis": [
-        "requirement", "business requirement", "acceptance criteria", "user story",
-        "gherkin", "stakeholder", "process map", "workflow map", "brd",
-    ],
-    "quality": [
-        "test case", "test plan", "qa", "qc", "quality", "defect", "bug triage",
-        "regression", "release gate", "performance", "benchmark", "profiling",
-        "audit", "drift", "remediation", "acceptance criteria", "verification method",
-        "đánh giá", "danh gia", "nghiệm thu", "nghiem thu",
-    ],
-    "security": [
-        "security", "threat", "vulnerability", "pentest", "attack surface",
-        "risk rating", "control", "authz", "secret",
-    ],
-    "design": [
-        "design system", "accessibility", "a11y", "user flow", "wireframe",
-        "ux", "ui", "prototype", "copy", "microcopy",
-    ],
-    "ops": [
-        "incident", "runbook", "oncall", "outage", "alert", "rollback",
-        "restore", "release", "deploy", "team sync",
-    ],
-    "domain_research": [
-        "research", "interview", "regulation", "policy", "evidence", "source",
-        "customer signal", "analytics", "support ticket",
-    ],
-}
-
-PACK_WORKSTREAMS = {
-    "pack-product": "product",
-    "pack-ba": "business_analysis",
-    "pack-qc": "quality",
-    "pack-security": "security",
-    "pack-ui-ux": "design",
-    "pack-dba": "ops",
-    "pack-solo-builder": "domain_research",
-    "pack-operator-steering": "quality",
-}
-
-AUDIENCE_BY_WORKSTREAM = {
-    "engineering": "engineering",
-    "product": "product",
-    "business_analysis": "ba",
-    "quality": "qc",
-    "security": "security",
-    "design": "design",
-    "ops": "ops",
-    "domain_research": "domain",
-}
-
-SECTION_POLICY = {
-    "contract": ["all"],
-    "pattern": ["Flow", "Default Config", "Failure Strategy", "Implementation Rules", "Rules"],
-    "project": ["Purpose", "Flow", "Config Overrides", "Failure"],
-    "service": ["Purpose", "Flow", "Config Overrides", "Failure"],
-    "domain": ["States", "Transitions", "Business Rules"],
-    "workflow": ["States", "Transitions", "Business Rules"],
-    "architecture": ["all"],
-    "decision": ["Status", "Context", "Decision", "Consequences"],
-    "runbook": ["Symptoms", "Diagnosis", "Mitigation", "Rollback"],
-    "product": ["Problem", "Target User", "Success Metric", "Acceptance Criteria"],
-    "requirement": ["Actor", "Trigger", "Business Outcome", "Acceptance Criteria"],
-    "design": ["Flow", "Accessibility", "UX Writing", "Edge Cases"],
-    "quality": ["Evidence", "Scope", "Risk", "Decision"],
-    "evidence": ["Verified Facts", "Open Questions", "Source Summary"],
-    "pitfalls": ["all"],
-    "common-pitfalls": ["all"],
-    "workspace-profile": ["all"],
-    "engine-guidance": ["all"],
-    "engine-rule": ["all"],
-    "workspace-rule": ["all"],
-    "pack-rule": ["all"],
-    "pack-metadata": ["all"],
-    "pack-knowledge": ["all"],
-    "operator": ["all"],
-}
-
-CATEGORY_BUDGETS = {
-    "contract": 2,
-    "pattern": 2,
-    "project": 2,
-    "service": 2,
-    "domain": 1,
-    "workflow": 1,
-    "architecture": 1,
-    "decision": 2,
-    "runbook": 2,
-    "product": 2,
-    "requirement": 2,
-    "design": 2,
-    "quality": 2,
-    "evidence": 2,
-    "pitfalls": 3,
-    "common-pitfalls": 3,
-    "workspace-profile": 1,
-    "engine-guidance": 1,
-    "engine-rule": 2,
-    "workspace-rule": 3,
-    "pack-rule": 3,
-    "pack-metadata": 1,
-    "pack-knowledge": 3,
-    "operator": 3,
-}
-
-PRIORITY = {
-    "contract": 0,
-    "pattern": 1,
-    "project": 2,
-    "service": 2,
-    "domain": 3,
-    "workflow": 3,
-    "architecture": 4,
-    "decision": 4,
-    "runbook": 2,
-    "product": 2,
-    "requirement": 2,
-    "design": 2,
-    "quality": 2,
-    "evidence": 3,
-    "pitfalls": 1,
-    "common-pitfalls": 1,
-    "workspace-profile": 2,
-    "engine-guidance": 2,
-    "engine-rule": 1,
-    "workspace-rule": 1,
-    "pack-rule": 1,
-    "pack-metadata": 1,
-    "pack-knowledge": 1,
-    "operator": 1,
-}
 
 SYNAPSE_SCORE_ADJUSTMENTS = {
     "draft": -6,
@@ -197,131 +54,6 @@ SYNAPSE_SCORE_ADJUSTMENTS = {
 PACK_ROUTE_BASE_SCORE = 2
 PACK_ROUTE_DIRECT_SCORE = 12
 PACK_ROUTE_ORDER_SCORE = 4
-
-WORKSTREAM_BUDGETS = {
-    "engineering": CATEGORY_BUDGETS,
-    "product": {
-        **CATEGORY_BUDGETS,
-        "product": 3,
-        "requirement": 2,
-        "domain": 1,
-        "decision": 1,
-        "contract": 1,
-        "pattern": 1,
-    },
-    "business_analysis": {
-        **CATEGORY_BUDGETS,
-        "requirement": 3,
-        "domain": 2,
-        "product": 1,
-        "contract": 1,
-        "runbook": 1,
-    },
-    "quality": {
-        **CATEGORY_BUDGETS,
-        "quality": 2,
-        "evidence": 2,
-        "runbook": 2,
-        "project": 1,
-        "contract": 1,
-    },
-    "security": {
-        **CATEGORY_BUDGETS,
-        "contract": 2,
-        "runbook": 2,
-        "project": 1,
-        "architecture": 1,
-        "decision": 1,
-    },
-    "design": {
-        **CATEGORY_BUDGETS,
-        "design": 3,
-        "product": 1,
-        "requirement": 1,
-        "domain": 1,
-        "decision": 1,
-    },
-    "ops": {
-        **CATEGORY_BUDGETS,
-        "runbook": 3,
-        "evidence": 2,
-        "project": 1,
-        "architecture": 1,
-    },
-    "domain_research": {
-        **CATEGORY_BUDGETS,
-        "evidence": 3,
-        "domain": 2,
-        "product": 1,
-        "requirement": 1,
-        "design": 1,
-    },
-}
-
-WORKSTREAM_PRIORITY = {
-    "engineering": {
-        "priority": ["contracts", "patterns", "project_docs", "domain_knowledge"],
-        "context_goal": "prepare_code_change",
-    },
-    "product": {
-        "priority": [
-            "product_context", "requirements", "domain_knowledge",
-            "source_evidence", "contracts", "patterns",
-        ],
-        "context_goal": "shape_product_decision",
-    },
-    "business_analysis": {
-        "priority": [
-            "requirements", "domain_knowledge", "product_context",
-            "contracts", "operational_runbooks",
-        ],
-        "context_goal": "clarify_testable_requirements",
-    },
-    "quality": {
-        "priority": [
-            "quality_evidence", "operational_runbooks", "requirements",
-            "project_docs", "contracts",
-        ],
-        "context_goal": "support_quality_decision",
-    },
-    "security": {
-        "priority": [
-            "contracts", "operational_runbooks", "source_evidence",
-            "project_docs", "architecture",
-        ],
-        "context_goal": "support_security_review",
-    },
-    "design": {
-        "priority": [
-            "design_context", "product_context", "requirements",
-            "domain_knowledge", "source_evidence",
-        ],
-        "context_goal": "shape_user_experience",
-    },
-    "ops": {
-        "priority": [
-            "operational_runbooks", "source_evidence", "project_docs",
-            "architecture", "contracts",
-        ],
-        "context_goal": "support_operational_response",
-    },
-    "domain_research": {
-        "priority": [
-            "source_evidence", "domain_knowledge", "requirements",
-            "product_context", "design_context",
-        ],
-        "context_goal": "ground_domain_understanding",
-    },
-}
-
-# Deterministic tie-break order for detect_intent()/detect_workstream() when
-# keyword scores are equal. Most specific/urgent first; generic fallback
-# values (implement_feature, engineering) last so they only win by default.
-INTENT_PRECEDENCE = ["incident", "fix_bug", "review", "design", "implement_feature"]
-WORKSTREAM_PRECEDENCE = [
-    "security", "ops", "quality", "business_analysis",
-    "product", "design", "domain_research", "engineering",
-]
 
 
 def _now() -> str:
@@ -434,36 +166,16 @@ def detect_intent(task: str) -> str:
 
 
 def _parse_pack_keywords(pack_yaml: Path) -> Dict[str, List[str]]:
-    text = _read(pack_yaml)
-    if text is None:
+    raw = _load_pack_manifest(pack_yaml).get("keywords") or {}
+    if not isinstance(raw, dict):
         return {}
-    out: Dict[str, List[str]] = {}
-    in_keywords = False
-    for raw in text.splitlines():
-        if re.match(r"^keywords\s*:\s*$", raw):
-            in_keywords = True
-            continue
-        if in_keywords and raw and not raw.startswith((" ", "\t")):
-            break
-        if not in_keywords:
-            continue
-        m = re.match(r"^\s+([a-z][\w\-]*)\s*:\s*\[(.*?)\]", raw)
-        if not m:
-            continue
-        items = [x.strip().strip("'\"") for x in m.group(2).split(",")]
-        out[m.group(1)] = [x for x in items if x]
-    return out
+    return {str(component): [word for word in words if isinstance(word, str) and word]
+            for component, words in raw.items() if isinstance(words, list)}
 
 
 def _load_pack_manifest(pack_yaml: Path) -> Dict:
-    text = _read(pack_yaml)
-    if text is None:
-        return {}
-    try:
-        manifest = pack_loader._parse_simple_yaml(text)  # noqa: SLF001
-    except (TypeError, ValueError):
-        return {}
-    return manifest if isinstance(manifest, dict) else {}
+    """Compatibility name; manifest I/O and parsing belong to the pack loader."""
+    return pack_loader.load_manifest(pack_yaml)
 
 
 def _pack_manifest_version(manifest: Mapping) -> int:
@@ -538,27 +250,24 @@ def detect_scope(task: str, wiki_root: Path, workspace: str) -> Tuple[Optional[s
     return match_dir(ws_dir / "domains"), match_dir(ws_dir / "projects")
 
 
-def _workstream_scores(task: str, packs: List[str], components: List[str]) -> Dict[str, int]:
+def _workstream_scores(task: str, packs: List[str], components: List[str],
+                       wiki_root: Optional[Path] = None) -> Dict[str, int]:
     scores: Dict[str, int] = {}
     for workstream, keywords in WORKSTREAM_KEYWORDS.items():
         score = sum(1 for kw in keywords if _matches(kw, task))
         if score:
             scores[workstream] = scores.get(workstream, 0) + score
-
     for pack_name in packs:
-        workstream = PACK_WORKSTREAMS.get(pack_name)
-        if not workstream:
-            continue
-        if components:
-            scores[workstream] = scores.get(workstream, 0) + 2
-        else:
-            scores[workstream] = scores.get(workstream, 0) + 1
-
+        manifest = _load_pack_manifest(wiki_root / "packs" / pack_name / "pack.yaml") if wiki_root else None
+        workstream = pack_loader.pack_workstream(pack_name, manifest)
+        if workstream:
+            scores[workstream] = scores.get(workstream, 0) + (2 if components else 1)
     return scores
 
 
-def detect_workstream(task: str, packs: List[str], components: List[str]) -> str:
-    scores = _workstream_scores(task, packs, components)
+def detect_workstream(task: str, packs: List[str], components: List[str],
+                      wiki_root: Optional[Path] = None) -> str:
+    scores = _workstream_scores(task, packs, components, wiki_root=wiki_root)
     return _pick_by_precedence(scores, WORKSTREAM_PRECEDENCE, "engineering")
 
 
@@ -842,16 +551,6 @@ def _doc(path: Path, category: str, wiki_root: Path,
         doc["redacted"] = True
         doc["redaction_findings"] = findings
     return doc
-
-
-def _synapse_state(node: Dict) -> Dict:
-    return {
-        "node_id": node["id"],
-        "memory_class": node["memory_class"],
-        "lifecycle": node["lifecycle"],
-        "freshness": node["freshness"],
-        "review_by": node.get("review_by"),
-    }
 
 
 def _attach_synapse_metadata(
@@ -1344,17 +1043,8 @@ def _finalize_budget_report(budget_report: Dict, referenced_docs: List[Dict],
 
     referenced_tokens, referenced_by_category = summarize(referenced_docs)
     static_tokens, static_by_category = summarize(static_docs)
-    compiled_docs: List[Dict] = []
-    seen: set[str] = set()
-    overlap = 0
-    for doc in static_docs + referenced_docs:
-        path = str(doc.get("path") or "")
-        if path and path in seen:
-            overlap += 1
-            continue
-        if path:
-            seen.add(path)
-        compiled_docs.append(doc)
+    compiled_docs = compiled_sources(static_docs, referenced_docs)
+    overlap = len(static_docs) + len(referenced_docs) - len(compiled_docs)
     total_tokens, total_by_category = summarize(compiled_docs)
 
     out = dict(budget_report)
@@ -1394,28 +1084,6 @@ def _selected_state_warnings(docs: List[Dict]) -> List[str]:
                 f"Selected stale knowledge node {node_id} ({doc['path']}{review})."
             )
     return warnings
-
-
-def _context_projection(synapse: Dict, docs: List[Dict]) -> Dict:
-    selected_states = [
-        doc["synapse"] for doc in docs if doc.get("synapse")
-    ]
-    selected_ids = sorted({state["node_id"] for state in selected_states})
-    selected_set = set(selected_ids)
-    relevant_edges = [
-        edge for edge in synapse.get("edges", [])
-        if edge.get("source") in selected_set and edge.get("target") in selected_set
-    ]
-    return {
-        "artifact_type": "contextd_context_projection.v1",
-        "version": "1",
-        "memory_class": "context",
-        "source_synapse_hash": synapse["synapse_hash"],
-        "policy_version": synapse["policy_version"],
-        "selected_node_ids": selected_ids,
-        "selected_states": sorted(selected_states, key=lambda item: item["node_id"]),
-        "edges": relevant_edges,
-    }
 
 
 def _load_index(
@@ -1613,75 +1281,27 @@ def _collect_static_context(
     return docs
 
 
-def _build_context_pack(
-    workspace: str,
-    packs: List[str],
-    docs: List[Dict],
-    static_docs: Optional[List[Dict]] = None,
-    decision_report: Optional[Mapping] = None,
-) -> Dict:
-    static_docs = static_docs or []
-    pack_sources: List[Dict] = []
-    seen_paths: set[str] = set()
-    # Materialization uses the same order. Static guidance owns a duplicate
-    # path so the source manifest, budget report, and compiled markdown agree.
-    for doc in static_docs + docs:
-        path = str(doc.get("path") or "")
-        if not path or path in seen_paths:
-            continue
-        seen_paths.add(path)
-        pack_sources.append(doc)
-    static = [
-        {
-            "path": doc["path"],
-            "category": doc["category"],
-            "source_hash": doc["source_hash"],
-        }
-        for doc in pack_sources
-        if doc["category"] in {
-            "contract", "pattern", "project", "service", "domain", "workflow",
-            "architecture", "decision", "runbook", "product", "requirement",
-            "design", "quality", "evidence", "pitfalls", "common-pitfalls",
-            "workspace-profile", "engine-guidance", "engine-rule", "pack-rule",
-            "workspace-rule", "pack-metadata", "pack-knowledge",
-        }
-    ]
-    payload = {
-        "workspace": workspace,
-        "packs": packs,
-        "sources": sorted(static, key=lambda x: x["path"]),
-    }
-    if decision_report is not None:
-        # Raw source hashes alone cannot distinguish different projections of
-        # the same file. Bind the selected content and normalized request too.
-        payload["decision_projection"] = decision_context.identity(decision_report, pack_sources)
-    source_hash = _sha256_text(json.dumps(payload, sort_keys=True, ensure_ascii=False))
-    return {
-        "artifact_type": "context_pack_ref",
-        "version": "1",
-        "kind": "deterministic-static-context",
-        "packKey": source_hash[:16],
-        "ref": None,
-        "compiledRef": None,
-        "sourceHash": source_hash,
-        "sources": payload["sources"],
-        "status": "not_materialized",
-    }
+@dataclass(frozen=True)
+class BuildResult:
+    """A retained build result, not a promise of deeply immutable dictionaries."""
+
+    artifact: Dict
+    synapse: Dict
+    selection_trace: Dict
 
 
-def build_context_snapshot(
+def build_context_result(
     task: str,
     wiki_root: Path,
     workspace: str,
     packs: List[str],
     project_dir: Optional[Path] = None,
     warnings: Optional[List[str]] = None,
-    include_selection_trace: bool = False,
     synapse_as_of: Optional[date] = None,
     *,
     support_request: Optional[Mapping] = None,
-) -> Tuple[Dict, Dict]:
-    """Build one immutable context artifact + synapse snapshot pair.
+) -> BuildResult:
+    """Build a retained result with trace separate from the public artifact.
 
     Both outputs share the same full-workspace synapse build. Callers that
     materialize should pass the returned synapse to ``materialize_context`` so
@@ -1698,7 +1318,7 @@ def build_context_snapshot(
     intent_type = _pick_by_precedence(intent_scores, INTENT_PRECEDENCE, "implement_feature")
     components = detect_components(task, wiki_root, packs)
     domain, scope = detect_scope(task, wiki_root, workspace)
-    workstream_scores = _workstream_scores(task, packs, components)
+    workstream_scores = _workstream_scores(task, packs, components, wiki_root=wiki_root)
     workstream = _pick_by_precedence(workstream_scores, WORKSTREAM_PRECEDENCE, "engineering")
     meta = WORKSTREAM_PRIORITY.get(workstream, WORKSTREAM_PRIORITY["engineering"])
     synapse_build = synapse_engine.build_synapse_snapshot(
@@ -1822,9 +1442,25 @@ def build_context_snapshot(
         workspace,
         packs,
     )
+    return BuildResult(artifact, synapse, selection_trace)
+
+
+def build_context_snapshot(
+    task: str, wiki_root: Path, workspace: str, packs: List[str],
+    project_dir: Optional[Path] = None, warnings: Optional[List[str]] = None,
+    include_selection_trace: bool = False, synapse_as_of: Optional[date] = None,
+    *, support_request: Optional[Mapping] = None,
+) -> Tuple[Dict, Dict]:
+    """Compatibility tuple API; new callers use build_context_result()."""
+    result = build_context_result(
+        task, wiki_root, workspace, packs, project_dir=project_dir,
+        warnings=warnings, synapse_as_of=synapse_as_of,
+        support_request=support_request,
+    )
+    artifact = result.artifact
     if include_selection_trace:
-        artifact["_selection_trace"] = selection_trace
-    return artifact, synapse
+        artifact = {**artifact, "_selection_trace": result.selection_trace}
+    return artifact, result.synapse
 
 
 def build_context_artifact(
@@ -1865,17 +1501,17 @@ def build_context_explanation(
     support_request: Optional[Mapping] = None,
 ) -> Dict:
     """Build a human/debug-oriented explanation around the canonical artifact."""
-    artifact = build_context_artifact(
+    result = build_context_result(
         task=task,
         wiki_root=wiki_root,
         workspace=workspace,
         packs=packs,
         project_dir=project_dir,
         warnings=warnings,
-        include_selection_trace=True,
         support_request=support_request,
     )
-    trace = artifact.pop("_selection_trace", {})
+    artifact = result.artifact
+    trace = result.selection_trace
     summary = {
         "artifact_type": artifact["artifact_type"],
         "workspace": artifact["workspace"],
@@ -1897,245 +1533,17 @@ def build_context_explanation(
     }
 
 
-def render_markdown(artifact: Dict) -> str:
-    lines: List[str] = [
-        "# Task Context",
-        "",
-        "## Task",
-        f"> {artifact['task']}",
-        "",
-        "## Detected Intent",
-        f"- **Type**: `{artifact['intent']['type']}`",
-        f"- **Workstream**: `{artifact['intent'].get('workstream', 'engineering')}`",
-        f"- **Audience**: `{artifact['intent'].get('audience', 'engineering')}`",
-        f"- **Context Goal**: `{artifact['intent'].get('context_goal', 'prepare_code_change')}`",
-        "- **Components**: "
-        + (", ".join(artifact["intent"].get("components") or []) or "(none detected)"),
-        f"- **Workspace**: `{artifact['workspace']}`",
-        f"- **Context Pack**: `{artifact['contextPack']['packKey']}` "
-        f"({artifact['contextPack']['status']})",
-    ]
-    synapse_ref = artifact.get("synapse") or {}
-    if synapse_ref.get("synapse_hash"):
-        lines.append(
-            f"- **Synapse**: `{synapse_ref['synapse_hash'][:16]}` "
-            f"({synapse_ref.get('status', 'unknown')})"
-        )
-    budget = artifact.get("budget_report") or {}
-    if budget:
-        lines.append(
-            "- **Estimated Context**: "
-            f"~{budget.get('estimated_tokens_referenced', 0)} referenced + "
-            f"~{budget.get('estimated_tokens_static', 0)} static = "
-            f"~{budget.get('estimated_tokens_total', 0)} total tokens"
-        )
-    lines.extend(decision_context.render_report(artifact.get("decision_context")))
-    for doc in artifact.get("static_context", []):
-        if "decision_support" in doc:
-            lines.extend(["", f"## Pack Guidance: {doc['path']}", "", doc["content"], ""])
-    lines.extend(["", "## Relevant Knowledge", ""])
-    for doc in artifact.get("referenced_docs", []):
-        sections = ", ".join(doc.get("sections") or ["all"])
-        lines.append(f"### [{doc['category']}] {doc['path']}")
-        state = doc.get("synapse") or {}
-        state_text = ""
-        if state:
-            state_text = (
-                f"; node: {state['node_id']}; lifecycle: {state['lifecycle']}"
-                f"; freshness: {state['freshness']}"
-            )
-        lines.append(
-            f"_Sections: {sections}; sha256: {doc['source_hash'][:12]}{state_text}_"
-        )
-        lines.append("")
-        lines.append(doc.get("content", "").strip())
-        lines.append("")
-
-    if artifact.get("gaps"):
-        lines.append("## Knowledge Gaps")
-        lines.append("")
-        for gap in artifact["gaps"]:
-            marker = "blocking" if gap.get("blocking_hint") else "non-blocking"
-            lines.append(f"- [{marker}] {gap['category']}: {gap['missing']}")
-        lines.append("")
-
-    if artifact.get("warnings"):
-        lines.append("## Warnings")
-        lines.append("")
-        for warning in artifact["warnings"]:
-            lines.append(f"- {warning}")
-        lines.append("")
-
-    lines.append("---")
-    lines.append("_Generated by contextd context (deterministic, file-backed)._")
-    return "\n".join(lines)
-
-
-def _pack_markdown(artifact: Dict) -> str:
-    lines = [
-        f"# Context Pack {artifact['contextPack']['packKey']}",
-        "",
-        f"Workspace: {artifact['workspace']}",
-        f"Source hash: {artifact['contextPack']['sourceHash']}",
-        "",
-    ]
-    lines.extend(decision_context.render_report(artifact.get("decision_context")))
-    docs: List[Dict] = []
-    seen: set[str] = set()
-    for doc in artifact.get("static_context", []) + artifact.get("referenced_docs", []):
-        path = doc.get("path")
-        if not path or path in seen:
-            continue
-        seen.add(path)
-        docs.append(doc)
-    for doc in docs:
-        lines.append("---")
-        lines.append(f"## Source: {doc['path']}")
-        lines.append("")
-        lines.append(doc.get("content", "").strip())
-        lines.append("")
-    return "\n".join(lines)
-
-
-def _same_knowledge_root(artifact: Dict, synapse_snapshot: Dict) -> bool:
-    artifact_root = artifact.get("knowledge_root")
-    snapshot_root = synapse_snapshot.get("knowledge_root")
-    if not isinstance(artifact_root, str) or not isinstance(snapshot_root, str):
-        return False
-    try:
-        return Path(artifact_root).resolve() == Path(snapshot_root).resolve()
-    except (OSError, RuntimeError):
-        return False
-
-
-def _artifact_sources_match_snapshot(artifact: Dict, synapse_snapshot: Dict) -> bool:
-    """Verify workspace docs in the artifact came from the supplied graph."""
-    workspace = artifact.get("workspace")
-    if not isinstance(workspace, str) or not workspace:
-        return False
-    prefix = f"workspaces/{workspace}/"
-    nodes = synapse_engine.nodes_by_path(synapse_snapshot)
-    referenced_docs = artifact.get("referenced_docs") or []
-    static_context = artifact.get("static_context") or []
-    if not isinstance(referenced_docs, list) or not isinstance(static_context, list):
-        return False
-    docs = referenced_docs + static_context
-    expected_source_hashes: Dict[str, str] = {}
-    for doc in docs:
-        if not isinstance(doc, dict):
-            return False
-        path = doc.get("path")
-        source_hash = doc.get("source_hash")
-        if not isinstance(path, str) or not isinstance(source_hash, str):
-            return False
-        expected_source_hashes[path] = source_hash
-        if not path.startswith(prefix):
-            continue
-        node = nodes.get(path)
-        if node is None or node.get("source_hash") != source_hash:
-            return False
-        if doc.get("synapse") != _synapse_state(node):
-            return False
-    return artifact.get("source_hashes") == expected_source_hashes
-
-
-def _artifact_projection_matches_snapshot(artifact: Dict, synapse_snapshot: Dict) -> bool:
-    referenced_docs = artifact.get("referenced_docs")
-    if not isinstance(referenced_docs, list):
-        return False
-    try:
-        expected = _context_projection(synapse_snapshot, referenced_docs)
-    except (KeyError, TypeError):
-        return False
-    return artifact.get("context_projection") == expected
-
-
-def materialize_context(
-    artifact: Dict,
-    project_dir: Path,
-    *,
-    synapse_snapshot: Optional[Dict] = None,
-) -> Dict:
-    """Write context outputs from an already-built immutable snapshot.
-
-    Materialization is intentionally write-only: it never rescans canonical
-    workspace sources. Callers that need ``synapse.json`` pass the graph
-    returned by ``build_context_snapshot``. Without it, the task artifacts are
-    still materialized and the synapse reference remains not_materialized.
-    """
-    report = artifact.get("decision_context")
-    profiled = any("decision_support" in d for d in artifact.get("static_context", []))
-    if profiled and not isinstance(report, Mapping):
-        raise ValueError("Missing decision projection report; materialization refused")
-    if report is not None:
-        if not isinstance(report, Mapping) or not isinstance(report.get("enabled_packs"), list):
-            raise ValueError("Invalid decision projection report; materialization refused")
-        expected = _build_context_pack(
-            artifact["workspace"], report["enabled_packs"],
-            artifact.get("referenced_docs", []), artifact.get("static_context", []), report,
-        )
-        if any(artifact["contextPack"].get(key) != expected[key] for key in ("sourceHash", "packKey")):
-            raise ValueError("Decision context projection changed after build; materialization refused")
-    context_dir = project_dir / ".contextd" / "context"
-    packs_dir = context_dir / "packs"
-    packs_dir.mkdir(parents=True, exist_ok=True)
-    pack_path = packs_dir / f"{artifact['contextPack']['packKey']}.md"
-    atomic_write_text(pack_path, _pack_markdown(artifact))
-
-    artifact = json.loads(json.dumps(artifact, ensure_ascii=False))
-    rel_pack = pack_path.relative_to(project_dir).as_posix()
-    artifact["contextPack"]["ref"] = rel_pack
-    artifact["contextPack"]["compiledRef"] = rel_pack
-    artifact["contextPack"]["status"] = "materialized"
-
-    synapse_ref = artifact.get("synapse") or {}
-    synapse_path: Optional[Path] = None
-    if synapse_snapshot is not None:
-        snapshot_matches = (
-            synapse_snapshot.get("artifact_type") == "contextd_synapse.v1"
-            and synapse_snapshot.get("workspace") == artifact.get("workspace")
-            and _same_knowledge_root(artifact, synapse_snapshot)
-            and synapse_snapshot.get("synapse_hash") == synapse_ref.get("synapse_hash")
-            and synapse_snapshot.get("as_of") == synapse_ref.get("as_of")
-            and synapse_snapshot.get("policy_version") == synapse_ref.get("policy_version")
-            and (artifact.get("context_projection") or {}).get("source_synapse_hash")
-            == synapse_ref.get("synapse_hash")
-            and synapse_engine.compute_synapse_hash(synapse_snapshot)
-            == synapse_snapshot.get("synapse_hash")
-            and _artifact_sources_match_snapshot(artifact, synapse_snapshot)
-            and _artifact_projection_matches_snapshot(artifact, synapse_snapshot)
-        )
-        if snapshot_matches:
-            synapse_path = synapse_engine.materialize_synapse(synapse_snapshot, project_dir)
-            synapse_ref["ref"] = synapse_path.relative_to(project_dir).as_posix()
-            synapse_ref["status"] = "materialized"
-        else:
-            synapse_ref["ref"] = None
-            synapse_ref["status"] = "drifted"
-            artifact.setdefault("warnings", []).append(
-                "Synapse snapshot does not match the context artifact; "
-                "materialization refused. Rerun contextd context."
-            )
-    else:
-        synapse_ref["ref"] = None
-        synapse_ref["status"] = "not_materialized"
-
-    json_path = context_dir / "current-task.json"
-    md_path = context_dir / "current-task.md"
-    artifact["materialized"] = {
-        "json": json_path.relative_to(project_dir).as_posix(),
-        "markdown": md_path.relative_to(project_dir).as_posix(),
-        "pack": rel_pack,
-    }
-    if synapse_path is not None:
-        artifact["materialized"]["synapse"] = synapse_path.relative_to(project_dir).as_posix()
-    atomic_write_text(json_path, json.dumps(artifact, indent=2, ensure_ascii=False) + "\n")
-    atomic_write_text(md_path, render_markdown(artifact))
-    return artifact
-
-
 def build_task_context(task: str, wiki_root: Path, workspace: str,
                        packs: List[str]) -> str:
     """Legacy API: return rendered Markdown."""
     artifact = build_context_artifact(task, wiki_root, workspace, packs)
     return render_markdown(artifact)
+
+
+def materialize_context(artifact: Dict, project_dir: Path, *,
+                        synapse_snapshot: Optional[Dict] = None) -> Dict:
+    """Compatibility facade; all write semantics live in context_output."""
+    return context_output.materialize_context(
+        artifact, project_dir, synapse_snapshot=synapse_snapshot,
+        render_task=render_markdown, render_pack=_pack_markdown,
+    )

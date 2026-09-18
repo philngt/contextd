@@ -127,3 +127,23 @@ def reject_unsafe_entry(raw_entry: str) -> str | None:
     if value.startswith("workspaces/"):
         return "cross-workspace paths must use {ws}/ and stay in the active workspace"
     return None
+
+
+
+def read_safe_text(path: Path, boundary: Path, *, redact: bool = True) -> str | None:
+    """Read redacted UTF-8 text only within an explicitly selected source root.
+
+    Check the lexical path and the resolved target before reading. This is a
+    local-file guard, not a sandbox against concurrent hostile filesystem edits.
+    """
+    try:
+        root = boundary.resolve()
+        target = path.resolve()
+        if not is_relative_to(target, root) or not target.is_file():
+            return None
+        if block_reason(path) or block_reason(target):
+            return None
+        text = path.read_text(encoding="utf-8")
+    except (OSError, RuntimeError, UnicodeDecodeError):
+        return None
+    return redact_text(text)[0] if redact else text

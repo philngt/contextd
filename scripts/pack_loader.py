@@ -36,6 +36,9 @@ import sys
 from pathlib import Path
 from typing import Callable, Dict, List, Optional
 
+from lib import contextd_resolver
+from lib.context_security import read_safe_text
+
 
 # ---------------------------------------------------------------------------
 # Minimal YAML parser (sufficient for pack.yaml — flat mappings, lists, nested
@@ -190,15 +193,8 @@ PACK_LIST_ITEM_RE = re.compile(r"^\s*[-*]\s+([a-z0-9][\w\-]*)\s*$", re.MULTILINE
 
 
 def parse_workspace_packs(workspace_md_path: Path) -> List[str]:
-    """Read `## Packs` section from workspace.md and return pack names."""
-    if not workspace_md_path.is_file():
-        return []
-    text = workspace_md_path.read_text(encoding="utf-8")
-    m = PACKS_SECTION_RE.search(text)
-    if not m:
-        return []
-    body = m.group(1)
-    return PACK_LIST_ITEM_RE.findall(body)
+    """Compatibility adapter to the canonical workspace pack parser."""
+    return contextd_resolver.parse_workspace_packs(workspace_md_path)
 
 
 # ---------------------------------------------------------------------------
@@ -236,7 +232,7 @@ def discover_pack(wiki_root: Path, pack_name: str) -> Optional[Pack]:
     if not manifest_path.is_file():
         return None
     try:
-        manifest = _parse_simple_yaml(manifest_path.read_text(encoding="utf-8"))
+        manifest = load_manifest(manifest_path)
     except Exception as e:
         sys.stderr.write(f"[pack_loader] failed to parse {manifest_path}: {e}\n")
         return None
@@ -330,3 +326,42 @@ __all__ = [
     "load_packs_for_workspace",
     "load_pack_validator_rules",
 ]
+
+
+
+def parse_manifest_text(text: str) -> Dict:
+    """Public parser for the documented manifest YAML subset (not full YAML)."""
+    return _parse_simple_yaml(text)
+
+
+def load_manifest(path: Path) -> Dict:
+    """Read manifest metadata inside its pack boundary without redacting syntax."""
+    if path.parent.is_symlink() or path.parent.parent.is_symlink():
+        return {}
+    text = read_safe_text(path, path.parent, redact=False)
+    if text is None:
+        return {}
+    manifest = parse_manifest_text(text)
+    pack_workstream(path.parent.name, manifest)
+    return manifest
+
+
+__all__ += ["parse_manifest_text", "load_manifest"]
+
+
+
+def pack_workstream(pack_name: str, manifest: Optional[Dict] = None) -> Optional[str]:
+    """Normalize an authored workstream, with an isolated old-manifest adapter.
+
+    A new pack supplies `workstream` in its manifest; no compiler edit is needed.
+    Known legacy names without the field retain their historical behavior.
+    Explicit invalid values fail rather than silently changing classification.
+    """
+    from lib.context_defaults import LEGACY_PACK_WORKSTREAMS, WORKSTREAM_PRIORITY
+    manifest = manifest or {}
+    if "workstream" not in manifest:
+        return LEGACY_PACK_WORKSTREAMS.get(pack_name)
+    value = manifest["workstream"]
+    if not isinstance(value, str) or value not in WORKSTREAM_PRIORITY:
+        raise ValueError(f"Invalid workstream for pack {pack_name!r}: {value!r}")
+    return value
