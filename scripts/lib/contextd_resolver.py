@@ -16,6 +16,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
+from .context_security import read_safe_text
+
 
 PROJECT_CONFIGS = [
     (".contextd/config.json", "contextd"),
@@ -142,7 +144,9 @@ def parse_workspace_packs(workspace_md_path: Path) -> List[str]:
     """Read `## Packs` section from workspace.md and return pack names."""
     if not workspace_md_path.is_file():
         return []
-    text = workspace_md_path.read_text(encoding="utf-8")
+    text = read_safe_text(workspace_md_path, workspace_md_path.parent, redact=False)
+    if text is None:
+        return []
     m = PACKS_SECTION_RE.search(text)
     if not m:
         return []
@@ -156,7 +160,8 @@ def get_effective_packs(config: Dict, workspace_md_path: Path) -> Tuple[List[str
     return parse_workspace_packs(workspace_md_path), "workspace.md"
 
 
-def resolve(cwd: Optional[Path] = None, require_workspace: bool = False) -> Dict:
+def resolve(cwd: Optional[Path] = None, require_workspace: bool = False,
+            *, workspace_override: Optional[str] = None) -> Dict:
     """Resolve contextd workspace state.
 
     Returned keys include both canonical `knowledge_root` and legacy `wiki_root`
@@ -205,7 +210,7 @@ def resolve(cwd: Optional[Path] = None, require_workspace: bool = False) -> Dict
             warnings.append(f"Ignoring lower-priority config: {hit.path}")
 
     cfg = selected.data
-    workspace = _raw_workspace(cfg)
+    workspace = workspace_override if workspace_override is not None else _raw_workspace(cfg)
     if not workspace:
         warnings.append("Config has no workspace/default_workspace field.")
         if require_workspace:
@@ -263,3 +268,75 @@ def available_workspaces(knowledge_root: Path) -> List[str]:
     if not root.is_dir():
         return []
     return sorted(p.name for p in root.iterdir() if p.is_dir() and not p.is_symlink())
+
+
+@dataclass(frozen=True)
+class ResolvedRequest:
+    resolved: Dict
+    knowledge_root: Optional[Path]
+    workspace: Optional[str]
+    project_dir: Path
+    packs: List[str]
+    warnings: List[str]
+
+
+class ResolutionError(ValueError):
+    """Resolution failed before a compiler or adapter can read source content."""
+
+    def __init__(self, message: str, payload: Optional[Dict] = None):
+        super().__init__(message)
+        self.payload = payload or {}
+
+
+def resolve_request(cwd: Optional[Path] = None, workspace: Optional[str] = None,
+                    knowledge_root: Optional[Path] = None,
+                    require_workspace: bool = True) -> ResolvedRequest:
+    """Normalize CLI/MCP/export overrides once, preserving legacy config input.
+
+    An explicit workspace (including the current workspace name) selects that
+    workspace's pack defaults. Without an override the project's pack list has
+    replace semantics. Explicit root/workspace also support config-free MCP.
+    """
+    start = Path(cwd).expanduser().resolve() if cwd is not None else Path.cwd().resolve()
+    resolved = resolve(cwd=start, require_workspace=False, workspace_override=workspace)
+    warnings = list(resolved.get("warnings") or [])
+    raw_root = knowledge_root if knowledge_root is not None else resolved.get("knowledge_root")
+    root = Path(raw_root).expanduser().resolve() if raw_root else None
+    selected = workspace if workspace is not None else resolved.get("workspace")
+    project = Path(resolved.get("project_dir") or start).resolve()
+    ws_dir = resolve_workspace_dir(root, selected) if root is not None and selected else None
+    error = None
+    if root is None:
+        error = "Could not resolve knowledge_root."
+    elif not root.is_dir() or not (root / "workspaces").is_dir():
+        error = f"knowledge_root must contain workspaces/: {root}"
+    elif ws_dir is None or not ws_dir.is_dir():
+        error = f"Invalid or missing workspace: {selected!r}; context build refused."
+    if error and require_workspace:
+        raise ResolutionError(error, {"warnings": warnings,
+                              "available_workspaces": available_workspaces(root) if root else []})
+    packs: List[str] = []
+    source = resolved.get("pack_source")
+    if ws_dir is not None and ws_dir.is_dir():
+        if workspace is not None:
+            packs, source = get_effective_packs({}, ws_dir / "workspace.md")
+        else:
+            packs = list(resolved.get("packs") or [])
+        for pack in packs:
+            if not is_valid_workspace_name(pack):
+                raise ResolutionError(f"Invalid pack name: {pack!r}")
+            pack_dir = root / "packs" / pack
+            if (root / "packs").is_symlink() or pack_dir.is_symlink():
+                raise ResolutionError(f"Unsafe pack directory: {pack!r}")
+            if not (pack_dir / "pack.yaml").is_file():
+                warning = f"Active pack not found: {pack}"
+                if warning not in warnings:
+                    warnings.append(warning)
+    resolved.update(knowledge_root=str(root) if root else None,
+                    wiki_root=str(root) if root else None,
+                    workspace=selected,
+                    workspace_dir=str(ws_dir) if ws_dir is not None and ws_dir.is_dir() else None,
+                    project_dir=str(project), packs=packs, pack_source=source, warnings=warnings)
+    if error is None:
+        resolved.pop("error", None)
+    return ResolvedRequest(resolved, root, selected, project, packs, warnings)

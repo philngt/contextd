@@ -90,10 +90,9 @@ def _collect_pack_files(wiki_root: Path, pack_name: str) -> Dict[str, str]:
     pack_dir = wiki_root / "packs" / pack_name
     if (wiki_root / "packs").is_symlink() or pack_dir.is_symlink() or not pack_dir.is_dir():
         return {}
-    manifest_text = read_safe_text(pack_dir / "pack.yaml", pack_dir)
-    if manifest_text is None:
+    manifest = pack_loader.load_manifest(pack_dir / "pack.yaml")
+    if not manifest:
         return {}
-    manifest = pack_loader._parse_simple_yaml(manifest_text)
     try:
         version = int(manifest.get("manifest_version", 1))
     except (TypeError, ValueError):
@@ -413,32 +412,10 @@ def render(runtime: str, workspace: Optional[str] = None,
     if manifest is None:
         raise RuntimeError("Manifest not found. Run `python scripts/generate_manifest.py` first.")
 
-    resolved = cmd_resolve.resolve()
-    wiki_root_str = resolved.get("knowledge_root") or resolved.get("wiki_root")
-    if not wiki_root_str:
-        raise RuntimeError("Could not resolve knowledge_root.")
+    state = contextd_resolver.resolve_request(workspace=workspace)
+    return renderer(manifest, state.workspace, state.knowledge_root,
+                    state.packs, include_engine)
 
-    wiki_root = Path(wiki_root_str).resolve()
-    resolved_ws = resolved.get("workspace")
-    ws = workspace or resolved_ws
-
-    if not ws:
-        raise RuntimeError("No workspace resolved. Specify --workspace.")
-    ws_dir = contextd_resolver.resolve_workspace_dir(wiki_root, ws)
-    if ws_dir is None or not ws_dir.is_dir():
-        raise ValueError(f"Invalid or missing workspace: {ws!r}")
-
-    # If workspace is overridden, read packs from that workspace's workspace.md
-    if workspace and workspace != resolved_ws:
-        ws_md = wiki_root / "workspaces" / workspace / "workspace.md"
-        if ws_md.is_file():
-            packs, _ = cmd_resolve.get_effective_packs({}, ws_md)
-        else:
-            packs = []
-    else:
-        packs = resolved.get("packs") or []
-
-    return renderer(manifest, ws, wiki_root, packs, include_engine)
 
 
 def main():

@@ -435,36 +435,16 @@ def detect_intent(task: str) -> str:
 
 
 def _parse_pack_keywords(pack_yaml: Path) -> Dict[str, List[str]]:
-    text = _read(pack_yaml)
-    if text is None:
+    raw = _load_pack_manifest(pack_yaml).get("keywords") or {}
+    if not isinstance(raw, dict):
         return {}
-    out: Dict[str, List[str]] = {}
-    in_keywords = False
-    for raw in text.splitlines():
-        if re.match(r"^keywords\s*:\s*$", raw):
-            in_keywords = True
-            continue
-        if in_keywords and raw and not raw.startswith((" ", "\t")):
-            break
-        if not in_keywords:
-            continue
-        m = re.match(r"^\s+([a-z][\w\-]*)\s*:\s*\[(.*?)\]", raw)
-        if not m:
-            continue
-        items = [x.strip().strip("'\"") for x in m.group(2).split(",")]
-        out[m.group(1)] = [x for x in items if x]
-    return out
+    return {str(component): [word for word in words if isinstance(word, str) and word]
+            for component, words in raw.items() if isinstance(words, list)}
 
 
 def _load_pack_manifest(pack_yaml: Path) -> Dict:
-    text = _read(pack_yaml)
-    if text is None:
-        return {}
-    try:
-        manifest = pack_loader._parse_simple_yaml(text)  # noqa: SLF001
-    except (TypeError, ValueError):
-        return {}
-    return manifest if isinstance(manifest, dict) else {}
+    """Compatibility name; manifest I/O and parsing belong to the pack loader."""
+    return pack_loader.load_manifest(pack_yaml)
 
 
 def _pack_manifest_version(manifest: Mapping) -> int:

@@ -258,5 +258,12 @@ class RuntimeBoundaryTests(unittest.TestCase):
                          runtime._collect_workspace_files(self.root, "default"))
 
 
+def load_tests(loader, tests, pattern):
+    # Keep all staged regressions on the existing Python 3.10/3.12 CI path.
+    import test_engine_simplification
+    tests.addTests(loader.loadTestsFromModule(test_engine_simplification))
+    return tests
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

@@ -130,7 +130,7 @@ def reject_unsafe_entry(raw_entry: str) -> str | None:
 
 
 
-def read_safe_text(path: Path, boundary: Path) -> str | None:
+def read_safe_text(path: Path, boundary: Path, *, redact: bool = True) -> str | None:
     """Read redacted UTF-8 text only within an explicitly selected source root.
 
     Check the lexical path and the resolved target before reading. This is a
@@ -146,4 +146,4 @@ def read_safe_text(path: Path, boundary: Path) -> str | None:
         text = path.read_text(encoding="utf-8")
     except (OSError, RuntimeError, UnicodeDecodeError):
         return None
-    return redact_text(text)[0]
+    return redact_text(text)[0] if redact else text

@@ -11,7 +11,7 @@ from pathlib import Path
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 
-import cmd_resolve  # noqa: E402
+from lib import contextd_resolver  # noqa: E402
 from lib import task_context_engine, decision_context  # noqa: E402
 from lib.stdio import configure_stdio  # noqa: E402
 
@@ -115,40 +115,16 @@ def run(
         print("Error: Empty task", file=sys.stderr)
         return 1
 
-    start = Path(cwd).resolve() if cwd else None
-    resolved = cmd_resolve.resolve(cwd=start, require_workspace=True)
-    if resolved.get("error"):
-        print(f"Error: {resolved['error']}", file=sys.stderr)
-        for warning in resolved.get("warnings") or []:
+    try:
+        state = contextd_resolver.resolve_request(cwd=Path(cwd) if cwd else None, workspace=workspace)
+    except contextd_resolver.ResolutionError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        for warning in exc.payload.get("warnings", []):
             print(f"  - {warning}", file=sys.stderr)
         return 1
-
-    wiki_root_str = resolved.get("knowledge_root") or resolved.get("wiki_root")
-    if not wiki_root_str:
-        print("Error: Could not resolve knowledge_root.", file=sys.stderr)
-        return 1
-
-    wiki_root = Path(wiki_root_str).resolve()
-    ws = workspace or resolved.get("workspace")
-    if not ws:
-        print("Error: No workspace resolved. Specify --workspace.", file=sys.stderr)
-        return 1
-
-    if workspace:
-        ws_dir = cmd_resolve.resolve_workspace_dir(wiki_root, workspace)
-        if ws_dir is None or not ws_dir.is_dir():
-            print(
-                f"Error: Invalid or missing workspace {workspace!r}; "
-                "context build refused.",
-                file=sys.stderr,
-            )
-            return 1
-        ws_md = ws_dir / "workspace.md"
-        packs, _ = cmd_resolve.get_effective_packs({}, ws_md)
-    else:
-        packs = resolved.get("packs") or []
-
-    project_dir = Path(resolved.get("project_dir") or ".").resolve()
+    wiki_root, ws, packs, project_dir = (state.knowledge_root, state.workspace,
+                                        state.packs, state.project_dir)
+    resolved = state.resolved
     try:
         payload = task_context_engine.build_context_explanation(
             task=task,
