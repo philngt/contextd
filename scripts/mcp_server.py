@@ -512,7 +512,7 @@ def call_tool(name: str, arguments: Dict[str, Any], options: ServerOptions) -> D
             require_workspace=True,
         )
         assert state.knowledge_root is not None and state.workspace is not None
-        artifact, synapse_snapshot = task_context_engine.build_context_snapshot(
+        build_result = task_context_engine.build_context_result(
             task=task,
             wiki_root=state.knowledge_root,
             workspace=state.workspace,
@@ -523,6 +523,7 @@ def call_tool(name: str, arguments: Dict[str, Any], options: ServerOptions) -> D
                              "foundations": arguments.get("foundations", []),
                              "procedures": arguments.get("procedures", [])},
         )
+        artifact, synapse_snapshot = build_result.artifact, build_result.synapse
         if _bool(arguments.get("materialize"), default=False):
             artifact = task_context_engine.materialize_context(
                 artifact,

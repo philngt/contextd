@@ -120,5 +120,62 @@ class ManifestTests(Fixture):
         parser.assert_called_once()
 
 
+class BuildBoundaryTests(Fixture):
+    def build(self):
+        return engine.build_context_result("implement demo", self.root, "default", [], project_dir=self.root)
+
+    def test_trace_is_separate_from_canonical_artifact(self):
+        result = self.build()
+        self.assertNotIn("_selection_trace", result.artifact)
+        self.assertTrue(result.selection_trace["considered_docs"])
+
+    def test_legacy_tuple_api_is_compatible(self):
+        artifact, graph = engine.build_context_snapshot("implement demo", self.root, "default", [], include_selection_trace=True)
+        self.assertIn("_selection_trace", artifact)
+        self.assertEqual(graph["synapse_hash"], artifact["synapse"]["synapse_hash"])
+
+    def test_explain_does_not_modify_build_artifact(self):
+        result = self.build()
+        original = copy.deepcopy(result.artifact)
+        with patch.object(engine, "build_context_result", return_value=result):
+            explained = engine.build_context_explanation("implement demo", self.root, "default", [])
+        self.assertEqual(result.artifact, original)
+        self.assertEqual(explained["selection_trace"], result.selection_trace)
+
+    def test_output_can_render_without_reading_sources(self):
+        from lib import context_output
+        result = self.build()
+        with patch.object(Path, "read_text", side_effect=AssertionError("source reread")), patch.object(Path, "read_bytes", side_effect=AssertionError("source reread")):
+            rendered = context_output.render_markdown(result.artifact)
+        self.assertIn("Task Context", rendered)
+
+    def test_compiler_has_no_filesystem_writer(self):
+        import ast
+        tree = ast.parse(Path(engine.__file__).read_text(encoding="utf-8"))
+        writes = [n for n in ast.walk(tree) if isinstance(n, ast.Call) and isinstance(n.func, ast.Attribute) and n.func.attr in {"write_text", "write_bytes", "mkdir"}]
+        self.assertEqual(writes, [])
+
+    def test_policy_checks_static_sources_and_total_budget(self):
+        from lib import context_policy
+        artifact = {"referenced_docs": [], "static_context": [{"path": "agents/constraints.md", "category": "engine-rule", "content": "x" * 400}], "budget_report": {"estimated_tokens_selected": 0, "estimated_tokens_total": 100}}
+        rule = {"id": "cap", "deny": {"max_estimated_tokens": 50, "categories": ["engine-rule"]}}
+        checks = {v["check"] for v in context_policy._evaluate_deny(rule, "test", artifact)}
+        self.assertEqual(checks, {"deny.max_estimated_tokens", "deny.categories"})
+        self.assertEqual(len(artifact["static_context"][0]["content"]), 400)
+
+    def test_policy_deduplicates_same_static_and_referenced_path(self):
+        from lib import context_policy
+        doc = {"path": "same.md", "category": "pattern", "content": "example"}
+        artifact = {"static_context": [doc], "referenced_docs": [doc]}
+        violations = context_policy._evaluate_deny({"id": "cap", "deny": {"max_selected_docs": 1}}, "test", artifact)
+        self.assertEqual(violations, [])
+
+    def test_legacy_budget_report_fallback_remains_supported(self):
+        from lib import context_policy
+        artifact = {"referenced_docs": [], "budget_report": {"estimated_tokens_selected": 100}}
+        violations = context_policy._evaluate_deny({"id": "cap", "deny": {"max_estimated_tokens": 50}}, "test", artifact)
+        self.assertEqual(violations[0]["check"], "deny.max_estimated_tokens")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

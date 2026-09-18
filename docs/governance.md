@@ -51,3 +51,14 @@ contextd policy-check "debug context quality" --format json
 `contextd context ... --format json` includes optional `governance_report`. Existing consumers can ignore the field.
 
 Governance evaluates the selected context; it does not select new documents and never overrides deterministic contracts, patterns, or pack retrieval.
+
+
+## Compiled payload scope
+
+Checks apply to the static-first, path-deduplicated union of `static_context`
+and `referenced_docs`. `max_selected_docs` counts this union and
+`max_estimated_tokens` checks `estimated_tokens_total` (with the historical
+selected-token field as a fallback for older artifacts). Existing limits may
+now report violations from previously uncounted static guidance; review limits
+rather than deleting mandatory sources. Policy evaluation never silently
+truncates content.

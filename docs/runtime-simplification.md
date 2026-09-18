@@ -21,3 +21,22 @@ prose redaction; exported prose remains redacted.
 
 Legacy configs and v2 packs are accepted at the boundary. No new dependencies,
 daemon, cache, plugin registry or runtime manager are introduced.
+
+
+## Commit 3: compiler/output boundary
+
+`BuildResult` carries the artifact, retained Synapse snapshot and selection
+trace separately. CLI and MCP use this result. Existing tuple/Markdown APIs
+are thin compatibility facades. Explanation no longer injects and pops a
+private trace field on the canonical artifact.
+
+`context_payload` owns the ordered source view, projection identity and
+Synapse projection helpers. `context_output` owns rendering and write
+preflight. File-backed input collection remains in the build orchestration;
+this is not a new generic execution framework or a complete all-input cache.
+
+Governance now checks the same static-first deduplicated payload as the writer.
+Token limits include static guidance; legacy artifacts fall back to the old
+referenced-token field. Limits report violations; they do not silently truncate
+required instructions or automatically override the explicit policy-check
+command's exit-code contract.

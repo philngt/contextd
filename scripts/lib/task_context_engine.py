@@ -17,8 +17,13 @@ from typing import Dict, Iterable, List, Mapping, Optional, Tuple
 
 import pack_loader
 from . import context_policy, synapse_engine, decision_context
-from .atomic_write import atomic_write_text
-from .context_payload import compiled_sources
+from dataclasses import dataclass
+from . import context_output
+from .context_output import render_markdown, _pack_markdown
+from .context_payload import (
+    compiled_sources, build_pack_ref as _build_context_pack,
+    synapse_state as _synapse_state, project_synapse as _context_projection,
+)
 from .context_security import block_reason, is_relative_to, redact_text, reject_unsafe_entry
 
 
@@ -825,16 +830,6 @@ def _doc(path: Path, category: str, wiki_root: Path,
     return doc
 
 
-def _synapse_state(node: Dict) -> Dict:
-    return {
-        "node_id": node["id"],
-        "memory_class": node["memory_class"],
-        "lifecycle": node["lifecycle"],
-        "freshness": node["freshness"],
-        "review_by": node.get("review_by"),
-    }
-
-
 def _attach_synapse_metadata(
     docs: Iterable[Dict],
     lookups: synapse_engine.SynapseLookups,
@@ -1368,28 +1363,6 @@ def _selected_state_warnings(docs: List[Dict]) -> List[str]:
     return warnings
 
 
-def _context_projection(synapse: Dict, docs: List[Dict]) -> Dict:
-    selected_states = [
-        doc["synapse"] for doc in docs if doc.get("synapse")
-    ]
-    selected_ids = sorted({state["node_id"] for state in selected_states})
-    selected_set = set(selected_ids)
-    relevant_edges = [
-        edge for edge in synapse.get("edges", [])
-        if edge.get("source") in selected_set and edge.get("target") in selected_set
-    ]
-    return {
-        "artifact_type": "contextd_context_projection.v1",
-        "version": "1",
-        "memory_class": "context",
-        "source_synapse_hash": synapse["synapse_hash"],
-        "policy_version": synapse["policy_version"],
-        "selected_node_ids": selected_ids,
-        "selected_states": sorted(selected_states, key=lambda item: item["node_id"]),
-        "edges": relevant_edges,
-    }
-
-
 def _load_index(
     index_path: Path,
     wiki_root: Optional[Path] = None,
@@ -1585,61 +1558,27 @@ def _collect_static_context(
     return docs
 
 
-def _build_context_pack(
-    workspace: str,
-    packs: List[str],
-    docs: List[Dict],
-    static_docs: Optional[List[Dict]] = None,
-    decision_report: Optional[Mapping] = None,
-) -> Dict:
-    pack_sources = compiled_sources(static_docs or [], docs)
-    sources = sorted(
-        ({"path": doc["path"], "category": doc["category"],
-          "source_hash": doc["source_hash"]} for doc in pack_sources),
-        key=lambda item: item["path"],
-    )
-    payload = {
-        "identity_version": 2,
-        "workspace": workspace,
-        "packs": list(packs),
-        "sources": sources,
-        # Do not sort this list: output order is part of the projection.
-        "rendered_sources": [
-            {"path": doc["path"], "sections": doc["sections"],
-             "content_hash": _sha256_text(doc["content"])}
-            for doc in pack_sources
-        ],
-        "decision_report": decision_report,
-    }
-    source_hash = _sha256_text(json.dumps(payload, sort_keys=True, ensure_ascii=False))
-    return {
-        "artifact_type": "context_pack_ref",
-        "version": "1",
-        "identity_version": 2,
-        "packs": list(packs),
-        "kind": "deterministic-static-context",
-        "packKey": source_hash[:16],
-        "ref": None,
-        "compiledRef": None,
-        "sourceHash": source_hash,
-        "sources": sources,
-        "status": "not_materialized",
-    }
+@dataclass(frozen=True)
+class BuildResult:
+    """A retained build result, not a promise of deeply immutable dictionaries."""
+
+    artifact: Dict
+    synapse: Dict
+    selection_trace: Dict
 
 
-def build_context_snapshot(
+def build_context_result(
     task: str,
     wiki_root: Path,
     workspace: str,
     packs: List[str],
     project_dir: Optional[Path] = None,
     warnings: Optional[List[str]] = None,
-    include_selection_trace: bool = False,
     synapse_as_of: Optional[date] = None,
     *,
     support_request: Optional[Mapping] = None,
-) -> Tuple[Dict, Dict]:
-    """Build one immutable context artifact + synapse snapshot pair.
+) -> BuildResult:
+    """Build a retained result with trace separate from the public artifact.
 
     Both outputs share the same full-workspace synapse build. Callers that
     materialize should pass the returned synapse to ``materialize_context`` so
@@ -1780,9 +1719,25 @@ def build_context_snapshot(
         workspace,
         packs,
     )
+    return BuildResult(artifact, synapse, selection_trace)
+
+
+def build_context_snapshot(
+    task: str, wiki_root: Path, workspace: str, packs: List[str],
+    project_dir: Optional[Path] = None, warnings: Optional[List[str]] = None,
+    include_selection_trace: bool = False, synapse_as_of: Optional[date] = None,
+    *, support_request: Optional[Mapping] = None,
+) -> Tuple[Dict, Dict]:
+    """Compatibility tuple API; new callers use build_context_result()."""
+    result = build_context_result(
+        task, wiki_root, workspace, packs, project_dir=project_dir,
+        warnings=warnings, synapse_as_of=synapse_as_of,
+        support_request=support_request,
+    )
+    artifact = result.artifact
     if include_selection_trace:
-        artifact["_selection_trace"] = selection_trace
-    return artifact, synapse
+        artifact = {**artifact, "_selection_trace": result.selection_trace}
+    return artifact, result.synapse
 
 
 def build_context_artifact(
@@ -1823,17 +1778,17 @@ def build_context_explanation(
     support_request: Optional[Mapping] = None,
 ) -> Dict:
     """Build a human/debug-oriented explanation around the canonical artifact."""
-    artifact = build_context_artifact(
+    result = build_context_result(
         task=task,
         wiki_root=wiki_root,
         workspace=workspace,
         packs=packs,
         project_dir=project_dir,
         warnings=warnings,
-        include_selection_trace=True,
         support_request=support_request,
     )
-    trace = artifact.pop("_selection_trace", {})
+    artifact = result.artifact
+    trace = result.selection_trace
     summary = {
         "artifact_type": artifact["artifact_type"],
         "workspace": artifact["workspace"],
@@ -1855,259 +1810,17 @@ def build_context_explanation(
     }
 
 
-def render_markdown(artifact: Dict) -> str:
-    lines: List[str] = [
-        "# Task Context",
-        "",
-        "## Task",
-        f"> {artifact['task']}",
-        "",
-        "## Detected Intent",
-        f"- **Type**: `{artifact['intent']['type']}`",
-        f"- **Workstream**: `{artifact['intent'].get('workstream', 'engineering')}`",
-        f"- **Audience**: `{artifact['intent'].get('audience', 'engineering')}`",
-        f"- **Context Goal**: `{artifact['intent'].get('context_goal', 'prepare_code_change')}`",
-        "- **Components**: "
-        + (", ".join(artifact["intent"].get("components") or []) or "(none detected)"),
-        f"- **Workspace**: `{artifact['workspace']}`",
-        f"- **Context Pack**: `{artifact['contextPack']['packKey']}` "
-        f"({artifact['contextPack']['status']})",
-    ]
-    synapse_ref = artifact.get("synapse") or {}
-    if synapse_ref.get("synapse_hash"):
-        lines.append(
-            f"- **Synapse**: `{synapse_ref['synapse_hash'][:16]}` "
-            f"({synapse_ref.get('status', 'unknown')})"
-        )
-    budget = artifact.get("budget_report") or {}
-    if budget:
-        lines.append(
-            "- **Estimated Context**: "
-            f"~{budget.get('estimated_tokens_referenced', 0)} referenced + "
-            f"~{budget.get('estimated_tokens_static', 0)} static = "
-            f"~{budget.get('estimated_tokens_total', 0)} total tokens"
-        )
-    lines.extend(decision_context.render_report(artifact.get("decision_context")))
-    for doc in artifact.get("static_context", []):
-        if "decision_support" in doc:
-            lines.extend(["", f"## Pack Guidance: {doc['path']}", "", doc["content"], ""])
-    lines.extend(["", "## Relevant Knowledge", ""])
-    for doc in artifact.get("referenced_docs", []):
-        sections = ", ".join(doc.get("sections") or ["all"])
-        lines.append(f"### [{doc['category']}] {doc['path']}")
-        state = doc.get("synapse") or {}
-        state_text = ""
-        if state:
-            state_text = (
-                f"; node: {state['node_id']}; lifecycle: {state['lifecycle']}"
-                f"; freshness: {state['freshness']}"
-            )
-        lines.append(
-            f"_Sections: {sections}; sha256: {doc['source_hash'][:12]}{state_text}_"
-        )
-        lines.append("")
-        lines.append(doc.get("content", "").strip())
-        lines.append("")
-
-    if artifact.get("gaps"):
-        lines.append("## Knowledge Gaps")
-        lines.append("")
-        for gap in artifact["gaps"]:
-            marker = "blocking" if gap.get("blocking_hint") else "non-blocking"
-            lines.append(f"- [{marker}] {gap['category']}: {gap['missing']}")
-        lines.append("")
-
-    if artifact.get("warnings"):
-        lines.append("## Warnings")
-        lines.append("")
-        for warning in artifact["warnings"]:
-            lines.append(f"- {warning}")
-        lines.append("")
-
-    lines.append("---")
-    lines.append("_Generated by contextd context (deterministic, file-backed)._")
-    return "\n".join(lines)
-
-
-def _pack_markdown(artifact: Dict) -> str:
-    lines = [
-        f"# Context Pack {artifact['contextPack']['packKey']}",
-        "",
-        f"Workspace: {artifact['workspace']}",
-        f"Source hash: {artifact['contextPack']['sourceHash']}",
-        "",
-    ]
-    lines.extend(decision_context.render_report(artifact.get("decision_context")))
-    docs = compiled_sources(
-        artifact.get("static_context", []), artifact.get("referenced_docs", []),
-    )
-    for doc in docs:
-        lines.append("---")
-        lines.append(f"## Source: {doc['path']}")
-        lines.append("")
-        lines.append(doc.get("content", "").strip())
-        lines.append("")
-    return "\n".join(lines)
-
-
-def _same_knowledge_root(artifact: Dict, synapse_snapshot: Dict) -> bool:
-    artifact_root = artifact.get("knowledge_root")
-    snapshot_root = synapse_snapshot.get("knowledge_root")
-    if not isinstance(artifact_root, str) or not isinstance(snapshot_root, str):
-        return False
-    try:
-        return Path(artifact_root).resolve() == Path(snapshot_root).resolve()
-    except (OSError, RuntimeError):
-        return False
-
-
-def _artifact_sources_match_snapshot(artifact: Dict, synapse_snapshot: Dict) -> bool:
-    """Verify workspace docs in the artifact came from the supplied graph."""
-    workspace = artifact.get("workspace")
-    if not isinstance(workspace, str) or not workspace:
-        return False
-    prefix = f"workspaces/{workspace}/"
-    nodes = synapse_engine.nodes_by_path(synapse_snapshot)
-    referenced_docs = artifact.get("referenced_docs") or []
-    static_context = artifact.get("static_context") or []
-    if not isinstance(referenced_docs, list) or not isinstance(static_context, list):
-        return False
-    docs = referenced_docs + static_context
-    expected_source_hashes: Dict[str, str] = {}
-    for doc in docs:
-        if not isinstance(doc, dict):
-            return False
-        path = doc.get("path")
-        source_hash = doc.get("source_hash")
-        if not isinstance(path, str) or not isinstance(source_hash, str):
-            return False
-        expected_source_hashes[path] = source_hash
-        if not path.startswith(prefix):
-            continue
-        node = nodes.get(path)
-        if node is None or node.get("source_hash") != source_hash:
-            return False
-        if doc.get("synapse") != _synapse_state(node):
-            return False
-    return artifact.get("source_hashes") == expected_source_hashes
-
-
-def _artifact_projection_matches_snapshot(artifact: Dict, synapse_snapshot: Dict) -> bool:
-    referenced_docs = artifact.get("referenced_docs")
-    if not isinstance(referenced_docs, list):
-        return False
-    try:
-        expected = _context_projection(synapse_snapshot, referenced_docs)
-    except (KeyError, TypeError):
-        return False
-    return artifact.get("context_projection") == expected
-
-
-def materialize_context(
-    artifact: Dict,
-    project_dir: Path,
-    *,
-    synapse_snapshot: Optional[Dict] = None,
-) -> Dict:
-    """Write context outputs from an already-built immutable snapshot.
-
-    Materialization is intentionally write-only: it never rescans canonical
-    workspace sources. Callers that need ``synapse.json`` pass the graph
-    returned by ``build_context_snapshot``. Without it, the task artifacts are
-    still materialized and the synapse reference remains not_materialized.
-    """
-    report = artifact.get("decision_context")
-    profiled = any("decision_support" in d for d in artifact.get("static_context", []))
-    if profiled and not isinstance(report, Mapping):
-        raise ValueError("Missing decision projection report; materialization refused")
-    if report is not None:
-        if not isinstance(report, Mapping) or not isinstance(report.get("enabled_packs"), list):
-            raise ValueError("Invalid decision projection report; materialization refused")
-    pack_ref = artifact.get("contextPack") or {}
-    packs = pack_ref.get("packs")
-    if pack_ref.get("identity_version") != 2 or not isinstance(packs, list):
-        raise ValueError("Unsupported context pack identity; rebuild with contextd context")
-    if report is not None and report["enabled_packs"] != packs:
-        raise ValueError("Decision context packs changed after build; materialization refused")
-    expected = _build_context_pack(
-        artifact["workspace"], packs, artifact.get("referenced_docs", []),
-        artifact.get("static_context", []), report,
-    )
-    if any(pack_ref.get(key) != expected[key] for key in ("sourceHash", "packKey", "sources")):
-        raise ValueError("Context projection changed after build; materialization refused")
-    context_dir = project_dir / ".contextd" / "context"
-    packs_dir = context_dir / "packs"
-    pack_path = packs_dir / f"{artifact['contextPack']['packKey']}.md"
-
-    artifact = json.loads(json.dumps(artifact, ensure_ascii=False))
-    rel_pack = pack_path.relative_to(project_dir).as_posix()
-    artifact["contextPack"]["ref"] = rel_pack
-    artifact["contextPack"]["compiledRef"] = rel_pack
-    artifact["contextPack"]["status"] = "materialized"
-
-    synapse_ref = artifact.get("synapse") or {}
-    synapse_path: Optional[Path] = None
-    snapshot_matches = False
-    if synapse_snapshot is not None:
-        snapshot_matches = (
-            synapse_snapshot.get("artifact_type") == "contextd_synapse.v1"
-            and synapse_snapshot.get("workspace") == artifact.get("workspace")
-            and _same_knowledge_root(artifact, synapse_snapshot)
-            and synapse_snapshot.get("synapse_hash") == synapse_ref.get("synapse_hash")
-            and synapse_snapshot.get("as_of") == synapse_ref.get("as_of")
-            and synapse_snapshot.get("policy_version") == synapse_ref.get("policy_version")
-            and (artifact.get("context_projection") or {}).get("source_synapse_hash")
-            == synapse_ref.get("synapse_hash")
-            and synapse_engine.compute_synapse_hash(synapse_snapshot)
-            == synapse_snapshot.get("synapse_hash")
-            and _artifact_sources_match_snapshot(artifact, synapse_snapshot)
-            and _artifact_projection_matches_snapshot(artifact, synapse_snapshot)
-        )
-        if snapshot_matches:
-            synapse_path = context_dir / "synapse.json"
-            synapse_ref["ref"] = synapse_path.relative_to(project_dir).as_posix()
-            synapse_ref["status"] = "materialized"
-        else:
-            synapse_ref["ref"] = None
-            synapse_ref["status"] = "drifted"
-            artifact.setdefault("warnings", []).append(
-                "Synapse snapshot does not match the context artifact; "
-                "synapse.json will not be written; task artifacts remain available. "
-                "Rerun contextd context."
-            )
-    else:
-        synapse_ref["ref"] = None
-        synapse_ref["status"] = "not_materialized"
-
-    json_path = context_dir / "current-task.json"
-    md_path = context_dir / "current-task.md"
-    artifact["materialized"] = {
-        "json": json_path.relative_to(project_dir).as_posix(),
-        "markdown": md_path.relative_to(project_dir).as_posix(),
-        "pack": rel_pack,
-    }
-    if synapse_path is not None:
-        artifact["materialized"]["synapse"] = synapse_path.relative_to(project_dir).as_posix()
-    # Prepare every render before the first write. Files remain individually
-    # atomic; this is not a multi-file transaction or a concurrent-writer lock.
-    pack_text = _pack_markdown(artifact)
-    json_text = json.dumps(artifact, indent=2, ensure_ascii=False) + "\n"
-    markdown_text = render_markdown(artifact)
-    synapse_text = (
-        json.dumps(synapse_snapshot, indent=2, ensure_ascii=False) + "\n"
-        if snapshot_matches else None
-    )
-    packs_dir.mkdir(parents=True, exist_ok=True)
-    atomic_write_text(pack_path, pack_text)
-    if synapse_text is not None:
-        atomic_write_text(synapse_path, synapse_text)
-    atomic_write_text(json_path, json_text)
-    atomic_write_text(md_path, markdown_text)
-    return artifact
-
-
 def build_task_context(task: str, wiki_root: Path, workspace: str,
                        packs: List[str]) -> str:
     """Legacy API: return rendered Markdown."""
     artifact = build_context_artifact(task, wiki_root, workspace, packs)
     return render_markdown(artifact)
+
+
+def materialize_context(artifact: Dict, project_dir: Path, *,
+                        synapse_snapshot: Optional[Dict] = None) -> Dict:
+    """Compatibility facade; all write semantics live in context_output."""
+    return context_output.materialize_context(
+        artifact, project_dir, synapse_snapshot=synapse_snapshot,
+        render_task=render_markdown, render_pack=_pack_markdown,
+    )

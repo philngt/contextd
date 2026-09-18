@@ -39,7 +39,7 @@ def run(
                                         state.packs, state.project_dir)
     resolved = state.resolved
     try:
-        artifact, synapse_snapshot = task_context_engine.build_context_snapshot(
+        build_result = task_context_engine.build_context_result(
             task=task,
             wiki_root=wiki_root,
             workspace=ws,
@@ -48,6 +48,7 @@ def run(
             warnings=resolved.get("warnings") or [],
             support_request=support_request,
         )
+        artifact, synapse_snapshot = build_result.artifact, build_result.synapse
     except ValueError as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
