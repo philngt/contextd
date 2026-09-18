@@ -40,3 +40,35 @@ Token limits include static guidance; legacy artifacts fall back to the old
 referenced-token field. Limits report violations; they do not silently truncate
 required instructions or automatically override the explicit policy-check
 command's exit-code contract.
+
+
+## Commit 4: policy data and neutral core guidance
+
+Classification keywords, category budgets, section policies and precedence
+are data-only presets in `context_defaults.py`. Existing numeric behavior is
+preserved. A pack declares its own `workstream` in its manifest. The eight
+shipped legacy-name mappings are migrated; old manifests are normalized by a
+small compatibility map at the pack-loader boundary, never inside the kernel.
+New pack names do not require compiler changes.
+
+Universal guidance no longer makes every agent a backend engineer or requires
+an implementation-shaped answer. The backend workflow remains an explicit
+opt-in reference. Adapter documentation no longer claims authority over the
+compiler/schema. Mandatory safety, workspace isolation and required contract
+verification remain in effect.
+
+## Remaining design boundaries
+
+This is a staged simplification, not a rewrite. Full all-input snapshots,
+independent OKF/manifest parser unification, transactional multi-file publication,
+and incremental caching are not introduced. Classification/retrieval still
+use deterministic file-backed inputs and the prior ranking algorithm. Policy
+limits detect/report overflow, not silent truncation. Per-file write guarantees
+and older-artifact rebuild requirements are unchanged.
+
+## Verification
+
+Each commit is compiled and checked with the full `scripts/test_*.py` suite,
+strict wiki lint, pattern indexes and `git diff --check` before publication.
+The new regression module is included in the existing runtime-boundaries CI
+entry point. Normal PR CI runs on Python 3.10 and 3.12.

@@ -341,7 +341,27 @@ def load_manifest(path: Path) -> Dict:
     text = read_safe_text(path, path.parent, redact=False)
     if text is None:
         return {}
-    return parse_manifest_text(text)
+    manifest = parse_manifest_text(text)
+    pack_workstream(path.parent.name, manifest)
+    return manifest
 
 
 __all__ += ["parse_manifest_text", "load_manifest"]
+
+
+
+def pack_workstream(pack_name: str, manifest: Optional[Dict] = None) -> Optional[str]:
+    """Normalize an authored workstream, with an isolated old-manifest adapter.
+
+    A new pack supplies `workstream` in its manifest; no compiler edit is needed.
+    Known legacy names without the field retain their historical behavior.
+    Explicit invalid values fail rather than silently changing classification.
+    """
+    from lib.context_defaults import LEGACY_PACK_WORKSTREAMS, WORKSTREAM_PRIORITY
+    manifest = manifest or {}
+    if "workstream" not in manifest:
+        return LEGACY_PACK_WORKSTREAMS.get(pack_name)
+    value = manifest["workstream"]
+    if not isinstance(value, str) or value not in WORKSTREAM_PRIORITY:
+        raise ValueError(f"Invalid workstream for pack {pack_name!r}: {value!r}")
+    return value

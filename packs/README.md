@@ -230,3 +230,15 @@ python scripts/validate.py --file <fixture> --workspace <workspace-with-pack>
 
 Full validation semantics and exit codes are documented in
 [`docs/pack-validation.md`](../docs/pack-validation.md).
+
+
+## Workstream metadata
+
+A pack can declare `workstream: engineering`, `product`, `business_analysis`,
+`quality`, `security`, `design`, `ops`, or `domain_research` in `pack.yaml`.
+The compiler reads this field instead of maintaining pack-name special cases.
+Unknown explicit values are rejected. Existing known packs missing the field
+retain their historical mapping through the pack-loader compatibility adapter;
+new packs should always author the field when they need a workstream bias.
+Retrieval presets remain data in `scripts/lib/context_defaults.py`, not a new
+DSL or plugin execution mechanism.

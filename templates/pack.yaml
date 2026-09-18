@@ -8,6 +8,8 @@ version: 0.1.0
 description: "Describe the concrete workflow or artifact this pack owns in at least forty characters."
 status: experimental
 category: engineering
+# Choose the task workstream this pack should bias; see pack.schema.json.
+workstream: engineering
 reviewed_on: YYYY-MM-DD
 
 # Runtime intent contract. Values must match templates/pack.schema.json.

@@ -60,12 +60,13 @@ Non-regular sources are rejected before reading, and workspace bundle reads
 accept both absolute and relative knowledge roots. The helper is not an OS
 sandbox against concurrently hostile filesystem edits.
 
-## Deferred work
+## Subsequent commits in this PR
 
-Shared CLI/MCP resolved requests, complete all-input snapshots, parser
-consolidation, pack-owned workstream policy, total-context budget enforcement
-and a separate compiler/output module split remain follow-up changes. No
-daemon, persistent cache, runtime manager or workflow orchestrator is added.
+The remaining three commits normalize runtime requests and manifest parsing,
+separate output/build identity from orchestration, and move policy data and
+backend persona out of the kernel. See
+[runtime-simplification.md](runtime-simplification.md) for implemented scope,
+compatibility and intentionally unchanged guarantees.
 
 ## Regression checks
 

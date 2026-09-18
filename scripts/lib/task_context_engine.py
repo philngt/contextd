@@ -11,13 +11,25 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+from dataclasses import dataclass
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Dict, Iterable, List, Mapping, Optional, Tuple
 
 import pack_loader
+from .context_defaults import (
+    INTENT_KEYWORDS,
+    WORKSTREAM_KEYWORDS,
+    AUDIENCE_BY_WORKSTREAM,
+    SECTION_POLICY,
+    CATEGORY_BUDGETS,
+    PRIORITY,
+    WORKSTREAM_BUDGETS,
+    WORKSTREAM_PRIORITY,
+    INTENT_PRECEDENCE,
+    WORKSTREAM_PRECEDENCE,
+)
 from . import context_policy, synapse_engine, decision_context
-from dataclasses import dataclass
 from . import context_output
 from .context_output import render_markdown, _pack_markdown
 from .context_payload import (
@@ -26,167 +38,6 @@ from .context_payload import (
 )
 from .context_security import block_reason, is_relative_to, redact_text, reject_unsafe_entry
 
-
-INTENT_KEYWORDS = {
-    "implement_feature": [
-        "add", "implement", "create", "build", "write", "support", "enable",
-        "introduce", "new feature", "feature", "endpoint", "api", "consumer",
-        "producer", "service", "handler", "controller",
-    ],
-    "fix_bug": [
-        "fix", "bug", "debug", "broken", "breaks", "error", "crash", "fails", "failing",
-        "not working", "doesn't work", "exception", "regression", "issue",
-    ],
-    "design": [
-        "design", "architecture", "approach", "how should", "structure",
-        "pattern", "refactor", "restructure", "organize", "strategy", "proposal",
-    ],
-    "incident": [
-        "incident", "outage", "down", "spike", "latency", "error rate",
-        "production", "live", "oncall", "alert", "paged",
-    ],
-    "review": [
-        "review", "pr", "pull request", "audit", "check", "verify", "assess",
-        "code review", "walkthrough", "sign-off", "drift", "remediation",
-        "đánh giá", "danh gia", "kiểm tra", "kiem tra", "nghiệm thu", "nghiem thu",
-    ],
-}
-
-WORKSTREAM_KEYWORDS = {
-    "product": [
-        "product", "brief", "prd", "okr", "roadmap", "persona", "journey",
-        "metric", "customer", "feature request",
-    ],
-    "business_analysis": [
-        "requirement", "business requirement", "acceptance criteria", "user story",
-        "gherkin", "stakeholder", "process map", "workflow map", "brd",
-    ],
-    "quality": [
-        "test case", "test plan", "qa", "qc", "quality", "defect", "bug triage",
-        "regression", "release gate", "performance", "benchmark", "profiling",
-        "audit", "drift", "remediation", "acceptance criteria", "verification method",
-        "đánh giá", "danh gia", "nghiệm thu", "nghiem thu",
-    ],
-    "security": [
-        "security", "threat", "vulnerability", "pentest", "attack surface",
-        "risk rating", "control", "authz", "secret",
-    ],
-    "design": [
-        "design system", "accessibility", "a11y", "user flow", "wireframe",
-        "ux", "ui", "prototype", "copy", "microcopy",
-    ],
-    "ops": [
-        "incident", "runbook", "oncall", "outage", "alert", "rollback",
-        "restore", "release", "deploy", "team sync",
-    ],
-    "domain_research": [
-        "research", "interview", "regulation", "policy", "evidence", "source",
-        "customer signal", "analytics", "support ticket",
-    ],
-}
-
-PACK_WORKSTREAMS = {
-    "pack-product": "product",
-    "pack-ba": "business_analysis",
-    "pack-qc": "quality",
-    "pack-security": "security",
-    "pack-ui-ux": "design",
-    "pack-dba": "ops",
-    "pack-solo-builder": "domain_research",
-    "pack-operator-steering": "quality",
-}
-
-AUDIENCE_BY_WORKSTREAM = {
-    "engineering": "engineering",
-    "product": "product",
-    "business_analysis": "ba",
-    "quality": "qc",
-    "security": "security",
-    "design": "design",
-    "ops": "ops",
-    "domain_research": "domain",
-}
-
-SECTION_POLICY = {
-    "contract": ["all"],
-    "pattern": ["Flow", "Default Config", "Failure Strategy", "Implementation Rules", "Rules"],
-    "project": ["Purpose", "Flow", "Config Overrides", "Failure"],
-    "service": ["Purpose", "Flow", "Config Overrides", "Failure"],
-    "domain": ["States", "Transitions", "Business Rules"],
-    "workflow": ["States", "Transitions", "Business Rules"],
-    "architecture": ["all"],
-    "decision": ["Status", "Context", "Decision", "Consequences"],
-    "runbook": ["Symptoms", "Diagnosis", "Mitigation", "Rollback"],
-    "product": ["Problem", "Target User", "Success Metric", "Acceptance Criteria"],
-    "requirement": ["Actor", "Trigger", "Business Outcome", "Acceptance Criteria"],
-    "design": ["Flow", "Accessibility", "UX Writing", "Edge Cases"],
-    "quality": ["Evidence", "Scope", "Risk", "Decision"],
-    "evidence": ["Verified Facts", "Open Questions", "Source Summary"],
-    "pitfalls": ["all"],
-    "common-pitfalls": ["all"],
-    "workspace-profile": ["all"],
-    "engine-guidance": ["all"],
-    "engine-rule": ["all"],
-    "workspace-rule": ["all"],
-    "pack-rule": ["all"],
-    "pack-metadata": ["all"],
-    "pack-knowledge": ["all"],
-    "operator": ["all"],
-}
-
-CATEGORY_BUDGETS = {
-    "contract": 2,
-    "pattern": 2,
-    "project": 2,
-    "service": 2,
-    "domain": 1,
-    "workflow": 1,
-    "architecture": 1,
-    "decision": 2,
-    "runbook": 2,
-    "product": 2,
-    "requirement": 2,
-    "design": 2,
-    "quality": 2,
-    "evidence": 2,
-    "pitfalls": 3,
-    "common-pitfalls": 3,
-    "workspace-profile": 1,
-    "engine-guidance": 1,
-    "engine-rule": 2,
-    "workspace-rule": 3,
-    "pack-rule": 3,
-    "pack-metadata": 1,
-    "pack-knowledge": 3,
-    "operator": 3,
-}
-
-PRIORITY = {
-    "contract": 0,
-    "pattern": 1,
-    "project": 2,
-    "service": 2,
-    "domain": 3,
-    "workflow": 3,
-    "architecture": 4,
-    "decision": 4,
-    "runbook": 2,
-    "product": 2,
-    "requirement": 2,
-    "design": 2,
-    "quality": 2,
-    "evidence": 3,
-    "pitfalls": 1,
-    "common-pitfalls": 1,
-    "workspace-profile": 2,
-    "engine-guidance": 2,
-    "engine-rule": 1,
-    "workspace-rule": 1,
-    "pack-rule": 1,
-    "pack-metadata": 1,
-    "pack-knowledge": 1,
-    "operator": 1,
-}
 
 SYNAPSE_SCORE_ADJUSTMENTS = {
     "draft": -6,
@@ -203,131 +54,6 @@ SYNAPSE_SCORE_ADJUSTMENTS = {
 PACK_ROUTE_BASE_SCORE = 2
 PACK_ROUTE_DIRECT_SCORE = 12
 PACK_ROUTE_ORDER_SCORE = 4
-
-WORKSTREAM_BUDGETS = {
-    "engineering": CATEGORY_BUDGETS,
-    "product": {
-        **CATEGORY_BUDGETS,
-        "product": 3,
-        "requirement": 2,
-        "domain": 1,
-        "decision": 1,
-        "contract": 1,
-        "pattern": 1,
-    },
-    "business_analysis": {
-        **CATEGORY_BUDGETS,
-        "requirement": 3,
-        "domain": 2,
-        "product": 1,
-        "contract": 1,
-        "runbook": 1,
-    },
-    "quality": {
-        **CATEGORY_BUDGETS,
-        "quality": 2,
-        "evidence": 2,
-        "runbook": 2,
-        "project": 1,
-        "contract": 1,
-    },
-    "security": {
-        **CATEGORY_BUDGETS,
-        "contract": 2,
-        "runbook": 2,
-        "project": 1,
-        "architecture": 1,
-        "decision": 1,
-    },
-    "design": {
-        **CATEGORY_BUDGETS,
-        "design": 3,
-        "product": 1,
-        "requirement": 1,
-        "domain": 1,
-        "decision": 1,
-    },
-    "ops": {
-        **CATEGORY_BUDGETS,
-        "runbook": 3,
-        "evidence": 2,
-        "project": 1,
-        "architecture": 1,
-    },
-    "domain_research": {
-        **CATEGORY_BUDGETS,
-        "evidence": 3,
-        "domain": 2,
-        "product": 1,
-        "requirement": 1,
-        "design": 1,
-    },
-}
-
-WORKSTREAM_PRIORITY = {
-    "engineering": {
-        "priority": ["contracts", "patterns", "project_docs", "domain_knowledge"],
-        "context_goal": "prepare_code_change",
-    },
-    "product": {
-        "priority": [
-            "product_context", "requirements", "domain_knowledge",
-            "source_evidence", "contracts", "patterns",
-        ],
-        "context_goal": "shape_product_decision",
-    },
-    "business_analysis": {
-        "priority": [
-            "requirements", "domain_knowledge", "product_context",
-            "contracts", "operational_runbooks",
-        ],
-        "context_goal": "clarify_testable_requirements",
-    },
-    "quality": {
-        "priority": [
-            "quality_evidence", "operational_runbooks", "requirements",
-            "project_docs", "contracts",
-        ],
-        "context_goal": "support_quality_decision",
-    },
-    "security": {
-        "priority": [
-            "contracts", "operational_runbooks", "source_evidence",
-            "project_docs", "architecture",
-        ],
-        "context_goal": "support_security_review",
-    },
-    "design": {
-        "priority": [
-            "design_context", "product_context", "requirements",
-            "domain_knowledge", "source_evidence",
-        ],
-        "context_goal": "shape_user_experience",
-    },
-    "ops": {
-        "priority": [
-            "operational_runbooks", "source_evidence", "project_docs",
-            "architecture", "contracts",
-        ],
-        "context_goal": "support_operational_response",
-    },
-    "domain_research": {
-        "priority": [
-            "source_evidence", "domain_knowledge", "requirements",
-            "product_context", "design_context",
-        ],
-        "context_goal": "ground_domain_understanding",
-    },
-}
-
-# Deterministic tie-break order for detect_intent()/detect_workstream() when
-# keyword scores are equal. Most specific/urgent first; generic fallback
-# values (implement_feature, engineering) last so they only win by default.
-INTENT_PRECEDENCE = ["incident", "fix_bug", "review", "design", "implement_feature"]
-WORKSTREAM_PRECEDENCE = [
-    "security", "ops", "quality", "business_analysis",
-    "product", "design", "domain_research", "engineering",
-]
 
 
 def _now() -> str:
@@ -524,27 +250,24 @@ def detect_scope(task: str, wiki_root: Path, workspace: str) -> Tuple[Optional[s
     return match_dir(ws_dir / "domains"), match_dir(ws_dir / "projects")
 
 
-def _workstream_scores(task: str, packs: List[str], components: List[str]) -> Dict[str, int]:
+def _workstream_scores(task: str, packs: List[str], components: List[str],
+                       wiki_root: Optional[Path] = None) -> Dict[str, int]:
     scores: Dict[str, int] = {}
     for workstream, keywords in WORKSTREAM_KEYWORDS.items():
         score = sum(1 for kw in keywords if _matches(kw, task))
         if score:
             scores[workstream] = scores.get(workstream, 0) + score
-
     for pack_name in packs:
-        workstream = PACK_WORKSTREAMS.get(pack_name)
-        if not workstream:
-            continue
-        if components:
-            scores[workstream] = scores.get(workstream, 0) + 2
-        else:
-            scores[workstream] = scores.get(workstream, 0) + 1
-
+        manifest = _load_pack_manifest(wiki_root / "packs" / pack_name / "pack.yaml") if wiki_root else None
+        workstream = pack_loader.pack_workstream(pack_name, manifest)
+        if workstream:
+            scores[workstream] = scores.get(workstream, 0) + (2 if components else 1)
     return scores
 
 
-def detect_workstream(task: str, packs: List[str], components: List[str]) -> str:
-    scores = _workstream_scores(task, packs, components)
+def detect_workstream(task: str, packs: List[str], components: List[str],
+                      wiki_root: Optional[Path] = None) -> str:
+    scores = _workstream_scores(task, packs, components, wiki_root=wiki_root)
     return _pick_by_precedence(scores, WORKSTREAM_PRECEDENCE, "engineering")
 
 
@@ -1595,7 +1318,7 @@ def build_context_result(
     intent_type = _pick_by_precedence(intent_scores, INTENT_PRECEDENCE, "implement_feature")
     components = detect_components(task, wiki_root, packs)
     domain, scope = detect_scope(task, wiki_root, workspace)
-    workstream_scores = _workstream_scores(task, packs, components)
+    workstream_scores = _workstream_scores(task, packs, components, wiki_root=wiki_root)
     workstream = _pick_by_precedence(workstream_scores, WORKSTREAM_PRECEDENCE, "engineering")
     meta = WORKSTREAM_PRIORITY.get(workstream, WORKSTREAM_PRIORITY["engineering"])
     synapse_build = synapse_engine.build_synapse_snapshot(

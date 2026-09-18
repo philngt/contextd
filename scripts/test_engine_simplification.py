@@ -177,5 +177,67 @@ class BuildBoundaryTests(Fixture):
         self.assertEqual(violations[0]["check"], "deny.max_estimated_tokens")
 
 
+class PackPolicyTests(Fixture):
+    def test_new_pack_controls_workstream_without_kernel_change(self):
+        self.write("packs/pack-custom/pack.yaml", "name: pack-custom\nmanifest_version: 2\nworkstream: security\n")
+        result = engine.build_context_result("inspect generic behavior", self.root, "default", ["pack-custom"])
+        self.assertEqual(result.artifact["intent"]["workstream"], "security")
+
+    def test_authored_metadata_wins_over_legacy_name(self):
+        self.assertEqual(pack_loader.pack_workstream("pack-ui-ux", {"workstream": "product"}), "product")
+
+    def test_old_manifest_keeps_compatibility_at_loader_boundary(self):
+        self.assertEqual(pack_loader.pack_workstream("pack-ui-ux", {}), "design")
+        self.assertIsNone(pack_loader.pack_workstream("pack-custom", {}))
+
+    def test_invalid_workstream_fails_before_compilation(self):
+        self.write("packs/pack-custom/pack.yaml", "name: pack-custom\nworkstream: not-a-workstream\n")
+        with self.assertRaisesRegex(ValueError, "workstream"):
+            engine.build_context_result("inspect", self.root, "default", ["pack-custom"])
+
+    def test_kernel_has_no_named_pack_policy(self):
+        text = Path(engine.__file__).read_text(encoding="utf-8")
+        self.assertNotIn("PACK_WORKSTREAMS", text)
+        self.assertNotIn('"pack-ui-ux"', text)
+        self.assertNotIn('"pack-product"', text)
+
+    def test_default_presets_keep_existing_budgets(self):
+        from lib import context_defaults
+        self.assertEqual(context_defaults.CATEGORY_BUDGETS["contract"], 2)
+        self.assertEqual(context_defaults.PRIORITY["contract"], 0)
+        self.assertEqual(context_defaults.INTENT_PRECEDENCE[0], "incident")
+
+    def test_universal_guidance_has_no_backend_persona_or_output_template(self):
+        root = Path(__file__).resolve().parent.parent
+        text = (root / "agents/system-prompt.md").read_text(encoding="utf-8")
+        self.assertNotIn("You are a senior backend engineer", text)
+        self.assertNotIn("Structure every response as", text)
+        self.assertIn("Backend Implementation Workflow", text)
+        self.assertTrue((root / "agents/workflows/backend-implementation.md").is_file())
+
+    def test_adapter_document_does_not_override_compiler(self):
+        root = Path(__file__).resolve().parent.parent
+        text = (root / "agents/pipeline/README.md").read_text(encoding="utf-8")
+        self.assertNotIn("file này thắng", text)
+        self.assertIn("Compiler + artifact schema", text)
+
+
+class ManifestSchemaTests(unittest.TestCase):
+    def test_schema_accepts_authored_workstream_and_rejects_unknown_value(self):
+        import jsonschema
+        root = Path(__file__).resolve().parent.parent
+        schema = json.loads((root / "templates/pack.schema.json").read_text(encoding="utf-8"))
+        manifest = pack_loader.load_manifest(root / "packs/pack-product/pack.yaml")
+        jsonschema.Draft7Validator(schema).validate(manifest)
+        manifest["workstream"] = "invalid-domain"
+        with self.assertRaises(jsonschema.ValidationError):
+            jsonschema.Draft7Validator(schema).validate(manifest)
+
+    def test_new_pack_template_declares_workstream(self):
+        root = Path(__file__).resolve().parent.parent
+        text = (root / "templates/pack.yaml").read_text(encoding="utf-8")
+        self.assertIn("workstream: engineering", text)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
