@@ -2,8 +2,9 @@
 # -*- coding: utf-8 -*-
 """Runtime export renderer for contextd.
 
-Takes manifest + workspace knowledge and renders runtime-specific artifacts.
-Each runtime is a pure function: receives context dict, returns file content dict.
+Bootstrap adapters describe how to consume the canonical compiler artifacts.
+The explicit plain-workspace bundle reads source prose through shared safety
+helpers; it is not a task-context selection or a pure in-memory renderer.
 
 No external template engine — uses Python f-strings for formatting.
 """
@@ -19,7 +20,9 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 
 import cmd_resolve  # noqa: E402
-import cmd_bundle  # noqa: E402
+import pack_loader  # noqa: E402
+from lib import contextd_resolver  # noqa: E402
+from lib.context_security import read_safe_text, reject_unsafe_entry  # noqa: E402
 from lib.stdio import configure_stdio  # noqa: E402
 
 REPO_ROOT = SCRIPT_DIR.parent
@@ -44,58 +47,72 @@ def _load_manifest() -> Optional[Dict]:
 
 
 def _collect_workspace_files(wiki_root: Path, workspace: str) -> Dict[str, str]:
-    """Load all markdown content from a workspace."""
-    ws_dir = wiki_root / "workspaces" / workspace
-    if not ws_dir.is_dir():
-        return {}
-
-    files: Dict[str, str] = {}
-    for pattern in [
-        "platform/contracts/*.md",
-        "platform/patterns/*.md",
-        "projects/**/services/*.md",
-        "runbooks/*.md",
-        "domains/**/*.md",
-        "decisions/**/*.md",
-    ]:
-        for p in ws_dir.glob(pattern):
-            try:
-                files[str(p.relative_to(wiki_root))] = p.read_text(encoding="utf-8")
-            except (OSError, UnicodeDecodeError):
-                pass
+    """Bundle the workspace inventory without bypassing workspace isolation."""
+    wiki_root = wiki_root.resolve()
+    ws_dir = contextd_resolver.resolve_workspace_dir(wiki_root, workspace)
+    if ws_dir is None or not ws_dir.is_dir():
+        raise ValueError(f"Invalid or missing workspace: {workspace!r}")
+    paths = set()
+    for pattern in (
+        "platform/contracts/*.md", "platform/patterns/*.md",
+        "projects/**/services/*.md", "runbooks/*.md",
+        "domains/**/*.md", "decisions/**/*.md",
+    ):
+        paths.update(ws_dir.glob(pattern))
+    files = {}
+    for path in sorted(paths):
+        content = read_safe_text(path, ws_dir)
+        if content is not None:
+            files[path.relative_to(wiki_root).as_posix()] = content
     return files
 
 
 def _collect_engine_files(wiki_root: Path) -> Dict[str, str]:
-    """Load key engine markdown files."""
-    files: Dict[str, str] = {}
-    for rel in [
-        "agents/system-prompt.md",
-        "agents/constraints.md",
-        "agents/coding-rules.md",
-        "agents/cross-cutting-principles.md",
-    ]:
-        p = wiki_root / rel
-        if p.is_file():
-            files[rel] = p.read_text(encoding="utf-8")
+    """Load engine prose through the same safety boundary as other exports."""
+    files = {}
+    if (wiki_root / "agents").is_symlink():
+        return files
+    for rel in (
+        "agents/system-prompt.md", "agents/constraints.md",
+        "agents/coding-rules.md", "agents/cross-cutting-principles.md",
+    ):
+        content = read_safe_text(wiki_root / rel, wiki_root / "agents")
+        if content is not None:
+            files[rel] = content
     return files
 
 
 def _collect_pack_files(wiki_root: Path, pack_name: str) -> Dict[str, str]:
-    """Load key pack markdown files."""
-    pack_dir = wiki_root / "packs" / pack_name
-    if not pack_dir.is_dir():
+    """Bundle canonical v3 knowledge, or legacy v2 prose, never both."""
+    if (not pack_name or pack_name in {".", ".."}
+            or "/" in pack_name or "\\" in pack_name):
         return {}
-    files: Dict[str, str] = {}
-    for rel in [
-        "agents/constraints.md",
-        "agents/coding-rules.md",
-        "agents/common-pitfalls.md",
-        "README.md",
-    ]:
-        p = pack_dir / rel
-        if p.is_file():
-            files[str(p.relative_to(wiki_root))] = p.read_text(encoding="utf-8")
+    pack_dir = wiki_root / "packs" / pack_name
+    if (wiki_root / "packs").is_symlink() or pack_dir.is_symlink() or not pack_dir.is_dir():
+        return {}
+    manifest_text = read_safe_text(pack_dir / "pack.yaml", pack_dir)
+    if manifest_text is None:
+        return {}
+    manifest = pack_loader._parse_simple_yaml(manifest_text)
+    try:
+        version = int(manifest.get("manifest_version", 1))
+    except (TypeError, ValueError):
+        return {}
+    if version >= 3:
+        metadata = manifest.get("files") or {}
+        knowledge = metadata.get("knowledge") if isinstance(metadata, dict) else None
+        if not isinstance(knowledge, str) or reject_unsafe_entry(knowledge):
+            return {}
+        paths = ["pack.yaml", knowledge]
+    else:
+        paths = ["agents/constraints.md", "agents/coding-rules.md",
+                 "agents/common-pitfalls.md", "README.md"]
+    files = {}
+    for rel in paths:
+        path = pack_dir / rel
+        content = read_safe_text(path, pack_dir)
+        if content is not None:
+            files[path.relative_to(wiki_root).as_posix()] = content
     return files
 
 
@@ -210,7 +227,7 @@ def render_codex_plugin(manifest: Dict, workspace: str, wiki_root: Path,
         "## How to resolve workspace",
         "",
         '1. Look for `.contextd/config.json` in the current working directory or walk up the tree.',
-        "2. If missing, the project may not be set up yet. Ask the user to run `contextd setup`.",
+        "2. If missing, the project may not be set up yet. Ask the user to run `contextd init`.",
         '3. If found, read `workspace` and `knowledge_root` fields.',
         '4. Legacy `.claude/wiki.json` and `.Codex/wiki.json` remain supported adapters.',
         "",
@@ -344,75 +361,28 @@ def render_cursor(manifest: Dict, workspace: str, wiki_root: Path,
 
 def render_codex_instructions(manifest: Dict, workspace: str, wiki_root: Path,
                                 packs: List[str], include_engine: bool = False) -> Dict[str, str]:
-    """Render Codex .codex/instructions.md — project-level instructions file.
+    """Render the legacy instructions export as a compiler bootstrap only.
 
-    Codex CLI auto-reads this file from the project directory on every run.
+    This compatibility path is not a guarantee that a client auto-loads it.
+    It deliberately contains no independently selected source excerpts.
     """
-    lines: List[str] = [
-        "# contextd Workspace Instructions",
-        "",
-        f"You are working in workspace **{workspace}**.",
-        "",
-        "## Knowledge Priority (strict)",
-        "1. Contracts (highest priority — MUST follow)",
-        "2. Platform Patterns",
-        "3. Project Documentation",
-        "4. Domain Knowledge",
-        "",
-        "## Workspace Isolation",
-        "- NEVER mix knowledge between workspaces.",
-        "- Retrieval is scoped to active workspace ONLY.",
-        "",
+    lines = [
+        "# contextd Workspace Instructions", "",
+        f"Workspace: {workspace}",
+        f"Active packs: {', '.join(packs) if packs else '(none)'}", "",
+        "## Build task context", "",
+        "Use `contextd resolve` to confirm the active workspace.",
+        'Run `contextd context "<task>"` to build the canonical task artifact.',
+        "Read the artifact and its contextPack.compiledRef for compiled guidance.",
+        'Use `contextd explain "<task>" --text` to inspect selection and gaps.',
+        "Treat `contextd find` as advisory discovery, not authority over the artifact.", "",
+        "## Boundaries", "",
+        "Do not mix workspaces or invent missing contracts.",
+        "Report missing knowledge and respect required constraints and verification.",
+        "This adapter does not select, truncate, or embed workspace/pack source files.", "",
+        "---",
+        "Generated by contextd export --runtime codex-instructions. Do not edit manually.",
     ]
-
-    if packs:
-        lines.append("## Active Packs")
-        for pack_name in packs:
-            lines.append(f"- {pack_name}")
-        lines.append("")
-
-    lines.append("## Commands Reference")
-    for cmd in manifest.get("commands", [])[:15]:  # cap at 15 to avoid bloat
-        lines.append(f"- `{cmd['name']}`: {cmd.get('description', '')}")
-    lines.append("")
-
-    lines.append("## Agents")
-    for agent in manifest.get("agents", []):
-        lines.append(f"- `{agent['name']}`: {agent.get('description', '')}")
-    lines.append("")
-
-    # Key workspace contracts
-    ws_dir = wiki_root / "workspaces" / workspace
-    contracts_dir = ws_dir / "platform" / "contracts"
-    if contracts_dir.is_dir():
-        lines.append("## Key Contracts")
-        for p in sorted(contracts_dir.glob("*.md"))[:5]:
-            content = p.read_text(encoding="utf-8")[:800]
-            lines.append(f"### {p.stem}")
-            lines.append(content)
-            lines.append("")
-
-    # Key patterns
-    patterns_dir = ws_dir / "platform" / "patterns"
-    if patterns_dir.is_dir():
-        lines.append("## Key Patterns")
-        for p in sorted(patterns_dir.glob("*.md"))[:5]:
-            content = p.read_text(encoding="utf-8")[:800]
-            lines.append(f"### {p.stem}")
-            lines.append(content)
-            lines.append("")
-
-    # Engine system prompt excerpt
-    if include_engine:
-        system_prompt = wiki_root / "agents" / "system-prompt.md"
-        if system_prompt.is_file():
-            lines.append("## System Prompt")
-            lines.append(system_prompt.read_text(encoding="utf-8")[:1200])
-            lines.append("")
-
-    lines.append("---")
-    lines.append("_Generated by contextd for Codex CLI. Do not edit manually — regenerate with `contextd export --runtime codex-instructions`._")
-
     return {".codex/instructions.md": "\n".join(lines)}
 
 
@@ -454,6 +424,9 @@ def render(runtime: str, workspace: Optional[str] = None,
 
     if not ws:
         raise RuntimeError("No workspace resolved. Specify --workspace.")
+    ws_dir = contextd_resolver.resolve_workspace_dir(wiki_root, ws)
+    if ws_dir is None or not ws_dir.is_dir():
+        raise ValueError(f"Invalid or missing workspace: {ws!r}")
 
     # If workspace is overridden, read packs from that workspace's workspace.md
     if workspace and workspace != resolved_ws:

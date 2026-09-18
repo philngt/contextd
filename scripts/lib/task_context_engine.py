@@ -18,6 +18,7 @@ from typing import Dict, Iterable, List, Mapping, Optional, Tuple
 import pack_loader
 from . import context_policy, synapse_engine, decision_context
 from .atomic_write import atomic_write_text
+from .context_payload import compiled_sources
 from .context_security import block_reason, is_relative_to, redact_text, reject_unsafe_entry
 
 
@@ -1344,17 +1345,8 @@ def _finalize_budget_report(budget_report: Dict, referenced_docs: List[Dict],
 
     referenced_tokens, referenced_by_category = summarize(referenced_docs)
     static_tokens, static_by_category = summarize(static_docs)
-    compiled_docs: List[Dict] = []
-    seen: set[str] = set()
-    overlap = 0
-    for doc in static_docs + referenced_docs:
-        path = str(doc.get("path") or "")
-        if path and path in seen:
-            overlap += 1
-            continue
-        if path:
-            seen.add(path)
-        compiled_docs.append(doc)
+    compiled_docs = compiled_sources(static_docs, referenced_docs)
+    overlap = len(static_docs) + len(referenced_docs) - len(compiled_docs)
     total_tokens, total_by_category = summarize(compiled_docs)
 
     out = dict(budget_report)
@@ -1620,51 +1612,37 @@ def _build_context_pack(
     static_docs: Optional[List[Dict]] = None,
     decision_report: Optional[Mapping] = None,
 ) -> Dict:
-    static_docs = static_docs or []
-    pack_sources: List[Dict] = []
-    seen_paths: set[str] = set()
-    # Materialization uses the same order. Static guidance owns a duplicate
-    # path so the source manifest, budget report, and compiled markdown agree.
-    for doc in static_docs + docs:
-        path = str(doc.get("path") or "")
-        if not path or path in seen_paths:
-            continue
-        seen_paths.add(path)
-        pack_sources.append(doc)
-    static = [
-        {
-            "path": doc["path"],
-            "category": doc["category"],
-            "source_hash": doc["source_hash"],
-        }
-        for doc in pack_sources
-        if doc["category"] in {
-            "contract", "pattern", "project", "service", "domain", "workflow",
-            "architecture", "decision", "runbook", "product", "requirement",
-            "design", "quality", "evidence", "pitfalls", "common-pitfalls",
-            "workspace-profile", "engine-guidance", "engine-rule", "pack-rule",
-            "workspace-rule", "pack-metadata", "pack-knowledge",
-        }
-    ]
+    pack_sources = compiled_sources(static_docs or [], docs)
+    sources = sorted(
+        ({"path": doc["path"], "category": doc["category"],
+          "source_hash": doc["source_hash"]} for doc in pack_sources),
+        key=lambda item: item["path"],
+    )
     payload = {
+        "identity_version": 2,
         "workspace": workspace,
-        "packs": packs,
-        "sources": sorted(static, key=lambda x: x["path"]),
+        "packs": list(packs),
+        "sources": sources,
+        # Do not sort this list: output order is part of the projection.
+        "rendered_sources": [
+            {"path": doc["path"], "sections": doc["sections"],
+             "content_hash": _sha256_text(doc["content"])}
+            for doc in pack_sources
+        ],
+        "decision_report": decision_report,
     }
-    if decision_report is not None:
-        # Raw source hashes alone cannot distinguish different projections of
-        # the same file. Bind the selected content and normalized request too.
-        payload["decision_projection"] = decision_context.identity(decision_report, pack_sources)
     source_hash = _sha256_text(json.dumps(payload, sort_keys=True, ensure_ascii=False))
     return {
         "artifact_type": "context_pack_ref",
         "version": "1",
+        "identity_version": 2,
+        "packs": list(packs),
         "kind": "deterministic-static-context",
         "packKey": source_hash[:16],
         "ref": None,
         "compiledRef": None,
         "sourceHash": source_hash,
-        "sources": payload["sources"],
+        "sources": sources,
         "status": "not_materialized",
     }
 
@@ -1980,14 +1958,9 @@ def _pack_markdown(artifact: Dict) -> str:
         "",
     ]
     lines.extend(decision_context.render_report(artifact.get("decision_context")))
-    docs: List[Dict] = []
-    seen: set[str] = set()
-    for doc in artifact.get("static_context", []) + artifact.get("referenced_docs", []):
-        path = doc.get("path")
-        if not path or path in seen:
-            continue
-        seen.add(path)
-        docs.append(doc)
+    docs = compiled_sources(
+        artifact.get("static_context", []), artifact.get("referenced_docs", []),
+    )
     for doc in docs:
         lines.append("---")
         lines.append(f"## Source: {doc['path']}")
@@ -2070,17 +2043,21 @@ def materialize_context(
     if report is not None:
         if not isinstance(report, Mapping) or not isinstance(report.get("enabled_packs"), list):
             raise ValueError("Invalid decision projection report; materialization refused")
-        expected = _build_context_pack(
-            artifact["workspace"], report["enabled_packs"],
-            artifact.get("referenced_docs", []), artifact.get("static_context", []), report,
-        )
-        if any(artifact["contextPack"].get(key) != expected[key] for key in ("sourceHash", "packKey")):
-            raise ValueError("Decision context projection changed after build; materialization refused")
+    pack_ref = artifact.get("contextPack") or {}
+    packs = pack_ref.get("packs")
+    if pack_ref.get("identity_version") != 2 or not isinstance(packs, list):
+        raise ValueError("Unsupported context pack identity; rebuild with contextd context")
+    if report is not None and report["enabled_packs"] != packs:
+        raise ValueError("Decision context packs changed after build; materialization refused")
+    expected = _build_context_pack(
+        artifact["workspace"], packs, artifact.get("referenced_docs", []),
+        artifact.get("static_context", []), report,
+    )
+    if any(pack_ref.get(key) != expected[key] for key in ("sourceHash", "packKey", "sources")):
+        raise ValueError("Context projection changed after build; materialization refused")
     context_dir = project_dir / ".contextd" / "context"
     packs_dir = context_dir / "packs"
-    packs_dir.mkdir(parents=True, exist_ok=True)
     pack_path = packs_dir / f"{artifact['contextPack']['packKey']}.md"
-    atomic_write_text(pack_path, _pack_markdown(artifact))
 
     artifact = json.loads(json.dumps(artifact, ensure_ascii=False))
     rel_pack = pack_path.relative_to(project_dir).as_posix()
@@ -2090,6 +2067,7 @@ def materialize_context(
 
     synapse_ref = artifact.get("synapse") or {}
     synapse_path: Optional[Path] = None
+    snapshot_matches = False
     if synapse_snapshot is not None:
         snapshot_matches = (
             synapse_snapshot.get("artifact_type") == "contextd_synapse.v1"
@@ -2106,7 +2084,7 @@ def materialize_context(
             and _artifact_projection_matches_snapshot(artifact, synapse_snapshot)
         )
         if snapshot_matches:
-            synapse_path = synapse_engine.materialize_synapse(synapse_snapshot, project_dir)
+            synapse_path = context_dir / "synapse.json"
             synapse_ref["ref"] = synapse_path.relative_to(project_dir).as_posix()
             synapse_ref["status"] = "materialized"
         else:
@@ -2114,7 +2092,8 @@ def materialize_context(
             synapse_ref["status"] = "drifted"
             artifact.setdefault("warnings", []).append(
                 "Synapse snapshot does not match the context artifact; "
-                "materialization refused. Rerun contextd context."
+                "synapse.json will not be written; task artifacts remain available. "
+                "Rerun contextd context."
             )
     else:
         synapse_ref["ref"] = None
@@ -2129,8 +2108,21 @@ def materialize_context(
     }
     if synapse_path is not None:
         artifact["materialized"]["synapse"] = synapse_path.relative_to(project_dir).as_posix()
-    atomic_write_text(json_path, json.dumps(artifact, indent=2, ensure_ascii=False) + "\n")
-    atomic_write_text(md_path, render_markdown(artifact))
+    # Prepare every render before the first write. Files remain individually
+    # atomic; this is not a multi-file transaction or a concurrent-writer lock.
+    pack_text = _pack_markdown(artifact)
+    json_text = json.dumps(artifact, indent=2, ensure_ascii=False) + "\n"
+    markdown_text = render_markdown(artifact)
+    synapse_text = (
+        json.dumps(synapse_snapshot, indent=2, ensure_ascii=False) + "\n"
+        if snapshot_matches else None
+    )
+    packs_dir.mkdir(parents=True, exist_ok=True)
+    atomic_write_text(pack_path, pack_text)
+    if synapse_text is not None:
+        atomic_write_text(synapse_path, synapse_text)
+    atomic_write_text(json_path, json_text)
+    atomic_write_text(md_path, markdown_text)
     return artifact
 
 
