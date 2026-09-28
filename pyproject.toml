@@ -16,6 +16,7 @@ contextd-project = "scripts.cmd_graph_project:main"
 
 [project.optional-dependencies]
 test = ["jsonschema>=4.18,<5"]
+authoring = ["jsonschema>=4.18,<5"]
 
 [tool.setuptools]
 py-modules = []

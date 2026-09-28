@@ -1,0 +1,17 @@
+{
+  "artifact_type": "contextd_graph_baseline.v1",
+  "project_id": "order-demo",
+  "workspace": "default",
+  "ontology": {
+    "id": "product-software",
+    "version": "1"
+  },
+  "revision": "synthetic-owner-revision-1",
+  "nodes": [
+    {
+      "id": "action:cancel-order",
+      "type": "Action"
+    }
+  ],
+  "reserved_ids": []
+}

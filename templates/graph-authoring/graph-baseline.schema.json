@@ -1,0 +1,8 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["artifact_type","project_id","workspace","ontology","revision","nodes","reserved_ids"],
+  "properties": {"artifact_type": {"const": "contextd_graph_baseline.v1"},"project_id": {"type": "string","pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$","not": {"pattern": "\\s"}},"workspace": {"type": "string","pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$","not": {"pattern": "\\s"}},"ontology": {"type": "object","additionalProperties": false,"required": ["id","version"],"properties": {"id": {"type": "string","pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$","not": {"pattern": "\\s"}},"version": {"type": "string","minLength": 1,"maxLength": 8192}}},"revision": {"type": "string","minLength": 1,"maxLength": 8192},"nodes": {"type": "array","items": {"type": "object","additionalProperties": false,"required": ["id","type"],"properties": {"id": {"type": "string","pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$","not": {"pattern": "\\s"}},"type": {"type": "string","minLength": 1,"maxLength": 8192}}},"minItems": 0,"maxItems": 1000},"reserved_ids": {"type": "array","items": {"type": "string","pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$","not": {"pattern": "\\s"}},"minItems": 0,"maxItems": 1000}},
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Read-only graph identity snapshot supplied by the canonical owner; not the graph itself"
+}

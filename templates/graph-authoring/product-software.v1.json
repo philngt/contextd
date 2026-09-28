@@ -1,0 +1,47 @@
+{
+  "artifact_type": "contextd_ontology_profile.v1",
+  "id": "product-software",
+  "version": "1",
+  "node_types": {
+    "Problem": {"module":"content","description":"An unmet need or obstacle, not inferred user intent from code."},
+    "Feature": {"module":"content","description":"A product capability, not one screen or endpoint."},
+    "Spec": {"module":"content","description":"A scoped requirement or behavioral specification, not an entire source file."},
+    "Decision": {"module":"content","description":"A documented choice and rationale; an inferred choice is not approved."},
+    "Note": {"module":"content","description":"An exploratory note, question or hypothesis; not an authoritative rule."},
+    "Evidence": {"module":"content","description":"A source-backed record supporting a specific claim or relation."},
+    "Actor": {"module":"business","description":"A participating role or external agent, not an individual account."},
+    "DomainType": {"module":"business","description":"A domain concept/type, not automatically a table, DTO or ORM class."},
+    "Action": {"module":"business","description":"A meaningful business action, not every function."},
+    "Workflow": {"module":"business","description":"An arrangement of actions with outcome, order and conditions; membership is not sequence."},
+    "BusinessRule": {"module":"business","description":"A business policy, condition or invariant, not every conditional statement."},
+    "Screen": {"module":"experience-implementation","description":"A user interaction surface enabling actions, not necessarily a UI file."},
+    "Component": {"module":"experience-implementation","description":"An implementation unit with responsibility; does not imply a microservice."},
+    "Interface": {"module":"experience-implementation","description":"An interaction contract such as an API or protocol, not a screen."},
+    "AcceptanceCriterion": {"module":"experience-implementation","description":"An observable acceptance condition, not a test execution result."}
+  },
+  "evidence_type": "Evidence",
+  "edge_types": {
+    "addresses": [{"from":["Feature"],"to":["Problem"]}],
+    "specifies": [{"from":["Spec"],"to":["Feature"]}],
+    "constrains": [{"from":["Decision"],"to":["*"]},{"from":["BusinessRule"],"to":["DomainType"]}],
+    "annotates": [{"from":["Note"],"to":["*"]}],
+    "performs": [{"from":["Actor"],"to":["Action"]}],
+    "contains_action": [{"from":["Workflow"],"to":["Action"]}],
+    "realizes": [{"from":["Workflow"],"to":["Feature"]}],
+    "reads": [{"from":["Action"],"to":["DomainType"]}],
+    "changes": [{"from":["Action"],"to":["DomainType"]}],
+    "governed_by": [{"from":["Action","Workflow"],"to":["BusinessRule"]}],
+    "enables": [{"from":["Screen"],"to":["Action"]}],
+    "implements": [{"from":["Component"],"to":["Action","Interface"]}],
+    "exposes": [{"from":["Component"],"to":["Interface"]}],
+    "consumes": [{"from":["Component"],"to":["Interface"]}],
+    "verifies": [{"from":["AcceptanceCriterion"],"to":["Spec","Action","Workflow","BusinessRule"]}]
+  },
+  "principles": [
+    "This is an opt-in profile, not the universal contextd or Synapse vocabulary.",
+    "Model, verification, review and freshness are independent claim dimensions.",
+    "Workflow membership does not imply temporal order, branches, joins or executable semantics.",
+    "Source statements, target intent and observed implementation can differ without logical contradiction.",
+    "Only the owner of canonical knowledge may apply a reviewed proposal."
+  ]
+}
