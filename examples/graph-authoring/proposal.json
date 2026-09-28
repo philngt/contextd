@@ -1,0 +1,187 @@
+{
+  "artifact_type": "contextd_graph_proposal.v1",
+  "proposal_id": "proposal:cancel-order",
+  "project_id": "order-demo",
+  "workspace": "default",
+  "ontology": {
+    "id": "product-software",
+    "version": "1"
+  },
+  "base_revision": "synthetic-owner-revision-1",
+  "status": "pending",
+  "scope": {
+    "reviewed": [
+      "One cancellation behavior in three synthetic fixture files."
+    ],
+    "not_reviewed": [
+      "Production execution, refunds and authorization."
+    ]
+  },
+  "sources": [
+    {
+      "id": "src:code",
+      "kind": "code",
+      "locator": "sources/cancel.py",
+      "revision": "synthetic-fixture-v1",
+      "content_hash": "fa71db8065ec9d9efa2ac4d351f6bf759c93ec21d8fc5bfd7bf55356901848c7",
+      "reviewed_scope": "Complete two-line fixture file.",
+      "limitations": [
+        "Synthetic fixture; no production behavior demonstrated."
+      ]
+    },
+    {
+      "id": "src:spec",
+      "kind": "spec",
+      "locator": "sources/spec.md",
+      "revision": "synthetic-fixture-v1",
+      "content_hash": "7541aaf0c2176c9a85a1f8833c883666cbad8e56ea8a1089309137abbbc50f93",
+      "reviewed_scope": "Complete two-line fixture file.",
+      "limitations": [
+        "Synthetic fixture; no production behavior demonstrated."
+      ]
+    },
+    {
+      "id": "src:docs",
+      "kind": "docs",
+      "locator": "sources/manual.md",
+      "revision": "synthetic-fixture-v1",
+      "content_hash": "f943e5e5164ccfdb5aa5e1f87da166f286d0aa7eb5945a1cec9ea55cc6df81fd",
+      "reviewed_scope": "Complete two-line fixture file.",
+      "limitations": [
+        "Synthetic fixture; no production behavior demonstrated."
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "evidence:code",
+      "type": "Evidence",
+      "title": "code excerpt",
+      "source_id": "src:code",
+      "locator": "L1-L2",
+      "supports": "The code permits only NEW and PAID.",
+      "limitations": [
+        "No runtime execution was performed."
+      ]
+    },
+    {
+      "id": "evidence:spec",
+      "type": "Evidence",
+      "title": "spec excerpt",
+      "source_id": "src:spec",
+      "locator": "L1-L2",
+      "supports": "The requirement includes PACKED and excludes SHIPPED.",
+      "limitations": [
+        "No runtime execution was performed."
+      ]
+    },
+    {
+      "id": "evidence:docs",
+      "type": "Evidence",
+      "title": "docs excerpt",
+      "source_id": "src:docs",
+      "locator": "L1-L2",
+      "supports": "The manual describes cancellation of packed orders before shipping.",
+      "limitations": [
+        "No runtime execution was performed."
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "id": "rule:cancel-eligibility",
+      "type": "BusinessRule",
+      "title": "Cancellation eligibility",
+      "status": "draft",
+      "evidence_refs": [
+        "evidence:spec"
+      ],
+      "rationale": "Name the policy described by the requirement."
+    }
+  ],
+  "claims": [
+    {
+      "id": "claim:code",
+      "subject": "action:cancel-order",
+      "statement": "The code permits only NEW and PAID.",
+      "scope": "Order cancellation; synthetic fixture only.",
+      "model": "as-is",
+      "verification": "observed",
+      "review": "draft",
+      "freshness": "unknown",
+      "evidence_refs": [
+        "evidence:code"
+      ],
+      "rationale": "Record what this source states without promoting it to deployed behavior."
+    },
+    {
+      "id": "claim:spec",
+      "subject": "action:cancel-order",
+      "statement": "The requirement includes PACKED and excludes SHIPPED.",
+      "scope": "Order cancellation; synthetic fixture only.",
+      "model": "to-be",
+      "verification": "observed",
+      "review": "draft",
+      "freshness": "unknown",
+      "evidence_refs": [
+        "evidence:spec"
+      ],
+      "rationale": "Record what this source states without promoting it to deployed behavior."
+    },
+    {
+      "id": "claim:docs",
+      "subject": "action:cancel-order",
+      "statement": "The manual describes cancellation of packed orders before shipping.",
+      "scope": "Order cancellation; synthetic fixture only.",
+      "model": "reference",
+      "verification": "observed",
+      "review": "draft",
+      "freshness": "unknown",
+      "evidence_refs": [
+        "evidence:docs"
+      ],
+      "rationale": "Record what this source states without promoting it to deployed behavior."
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge:cancel-rule",
+      "kind": "governed_by",
+      "from": "action:cancel-order",
+      "to": "rule:cancel-eligibility",
+      "evidence_refs": [
+        "evidence:spec"
+      ],
+      "rationale": "The stated requirement constrains order cancellation.",
+      "qualifiers": {
+        "model": "to-be"
+      }
+    }
+  ],
+  "identity_matches": [
+    {
+      "candidate_id": "candidate:cancel",
+      "target_id": "action:cancel-order",
+      "basis": "explicit-id",
+      "evidence_refs": [
+        "evidence:spec"
+      ],
+      "rationale": "The fixture author supplied this baseline action ID; no similarity merge."
+    }
+  ],
+  "issues": [
+    {
+      "id": "issue:packed-gap",
+      "kind": "implementation-gap",
+      "subjects": [
+        "claim:code",
+        "claim:spec"
+      ],
+      "detail": "PACKED is requested but not implemented in the reviewed fixture. This is a current/target gap, not proof of contradictory truth.",
+      "evidence_refs": [
+        "evidence:code",
+        "evidence:spec"
+      ]
+    }
+  ]
+}

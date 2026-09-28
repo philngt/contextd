@@ -33,6 +33,7 @@ Quick lookup table for AI agents. Find the pattern name, follow the link, read b
 | `synapse-node-edge-schema` | Deterministic node/edge, lifecycle/freshness, workspace isolation, and task context projection invariants. PAIR with `synapse-context-projection`. | [platform/contracts/synapse-node-edge-schema.md](platform/contracts/synapse-node-edge-schema.md) |
 | `graph-projection` | Experimental read-only seed traversal, semantic roles, region boundaries and dependency-gap reporting. | [platform/contracts/graph-projection.md](platform/contracts/graph-projection.md) |
 | `decision-context` | Optional foundation/procedure projection that preserves decision guidance, constraints, and source identity. | [platform/contracts/decision-context.md](platform/contracts/decision-context.md) |
+| `graph-authoring` | Opt-in code/spec/docs to pending graph proposals; ontology profiles, evidence, baseline identity and candidate isolation. | [platform/contracts/graph-authoring.md](platform/contracts/graph-authoring.md) |
 
 ## Domain Workflows
 
