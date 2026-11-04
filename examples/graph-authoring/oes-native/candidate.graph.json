@@ -1,0 +1,97 @@
+{
+  "apiVersion": "oes.graph/v1",
+  "template": "software-system",
+  "metadata": {
+    "id": "graph:refund-workflow",
+    "workspace": "default",
+    "projectId": "refund-demo",
+    "ontologyVersion": "0.1.0",
+    "synthetic": true,
+    "contextdProposal": {
+      "id": "proposal:refund-receipts",
+      "status": "pending"
+    }
+  },
+  "nodes": [
+    {
+      "id": "source:refund-policy",
+      "type": "Source",
+      "properties": {
+        "uri": "rules/refund-receipts.md",
+        "kind": "spec",
+        "sha256": "f0f5c3ba44b0facbecbc1552ca3ce08729da3741563e744e3a7e799091905b86",
+        "revision": "synthetic-source-v1"
+      }
+    },
+    {
+      "id": "evidence:refund-inventory",
+      "type": "Evidence",
+      "properties": {
+        "sourceId": "source:refund-policy",
+        "locator": "L14",
+        "excerpt": "Inventory: refund-worker is the service responsible for issuing refunds."
+      }
+    },
+    {
+      "id": "service:refund-worker",
+      "type": "Service",
+      "properties": {
+        "label": "refund-worker"
+      },
+      "evidenceIds": [
+        "evidence:refund-inventory"
+      ]
+    },
+    {
+      "id": "evidence:receipt-policy",
+      "type": "Evidence",
+      "properties": {
+        "sourceId": "source:refund-policy",
+        "locator": "L15",
+        "excerpt": "Proposed policy: refund-worker must create an immutable receipt before sending a successful refund response."
+      }
+    },
+    {
+      "id": "rule:refund-receipt",
+      "type": "BusinessRule",
+      "properties": {
+        "statement": "Create an immutable receipt before sending a successful refund response.",
+        "status": "proposed",
+        "scope": "Synthetic refund workflow; a proposed policy without runtime verification.",
+        "model": "to-be",
+        "verification": "observed",
+        "review": "draft",
+        "freshness": "current"
+      },
+      "evidenceIds": [
+        "evidence:receipt-policy"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge:worker-documented",
+      "type": "documentedIn",
+      "from": "service:refund-worker",
+      "to": "source:refund-policy",
+      "assertionStatus": "asserted",
+      "evidenceIds": [
+        "evidence:refund-inventory"
+      ]
+    },
+    {
+      "id": "edge:worker-receipt-rule",
+      "type": "implementsRule",
+      "from": "service:refund-worker",
+      "to": "rule:refund-receipt",
+      "assertionStatus": "hypothesis",
+      "evidenceIds": [
+        "evidence:receipt-policy"
+      ],
+      "properties": {
+        "model": "to-be",
+        "rationale": "The specification proposes this behavior; implementation has not been demonstrated."
+      }
+    }
+  ]
+}

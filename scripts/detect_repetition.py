@@ -24,29 +24,54 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from lib.atomic_write import (  # noqa: E402
-    LockTimeout,
-    atomic_write_json,
-    with_advisory_lock,
-)
-from lib import contextd_resolver  # noqa: E402
-from lib.stdio import configure_stdio  # noqa: E402
-from lib.repetition import (  # noqa: E402
-    MIN_PROMPT_TOKENS,
-    Cluster,
-    Tunables,
-    assign_to_cluster,
-    build_hint,
-    cap_clusters_lru,
-    cluster_covered_by,
-    load_artifact_keywords,
-    normalize,
-    now_iso,
-    prompt_hash,
-    prune_old_clusters,
-    should_hint,
-)
+if not __package__:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+if __package__:
+    from .lib.atomic_write import (  # noqa: E402
+        LockTimeout,
+        atomic_write_json,
+        with_advisory_lock,
+    )
+    from .lib import contextd_resolver  # noqa: E402
+    from .lib.stdio import configure_stdio  # noqa: E402
+    from .lib.repetition import (  # noqa: E402
+        MIN_PROMPT_TOKENS,
+        Cluster,
+        Tunables,
+        assign_to_cluster,
+        build_hint,
+        cap_clusters_lru,
+        cluster_covered_by,
+        load_artifact_keywords,
+        normalize,
+        now_iso,
+        prompt_hash,
+        prune_old_clusters,
+        should_hint,
+    )
+else:  # Direct source scripts and legacy source-test imports.
+    from lib.atomic_write import (  # noqa: E402
+        LockTimeout,
+        atomic_write_json,
+        with_advisory_lock,
+    )
+    from lib import contextd_resolver  # noqa: E402
+    from lib.stdio import configure_stdio  # noqa: E402
+    from lib.repetition import (  # noqa: E402
+        MIN_PROMPT_TOKENS,
+        Cluster,
+        Tunables,
+        assign_to_cluster,
+        build_hint,
+        cap_clusters_lru,
+        cluster_covered_by,
+        load_artifact_keywords,
+        normalize,
+        now_iso,
+        prompt_hash,
+        prune_old_clusters,
+        should_hint,
+    )
 from datetime import timedelta  # noqa: E402
 
 SELF_BUDGET_MS = 800

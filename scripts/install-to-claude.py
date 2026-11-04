@@ -17,7 +17,10 @@ import sys
 from pathlib import Path
 from typing import Optional
 
-from lib.stdio import configure_stdio
+if __package__:
+    from .lib.stdio import configure_stdio
+else:  # Direct source scripts and legacy source-test imports.
+    from lib.stdio import configure_stdio
 
 
 def resolve_dir(raw: Optional[str], default: Path) -> Path:

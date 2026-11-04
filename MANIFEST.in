@@ -1,0 +1,10 @@
+# Inputs required to rebuild the same runtime resources from the sdist.
+include .contextd/manifest.schema.json
+include .claude/commands/*.md
+include .claude/agents/*.md
+include packs/*/pack.yaml
+include agents/pipeline/*.md
+recursive-include templates *.schema.json
+graft templates/graph-authoring
+include contextd.spec
+include scripts/frozen_entry.py

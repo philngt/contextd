@@ -4,7 +4,37 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## Unreleased — Decision-first context
+## [Unreleased]
+
+### Fixed — Task relevance and honest retrieval gaps
+
+- Require task-specific matches, explicit component routes, checked OES evidence,
+  or a relevant one-hop replacement before category and lifecycle ranking.
+- Permit zero referenced documents; report scoped knowledge and graph coverage
+  gaps, and include them in the compiled agent pack, identity and token estimate.
+- Add a no-knowledge golden task and a separate payment-project OES example.
+
+### Changed — OES-native graph authoring
+
+- New pending v2 proposals embed and export `oes.graph/v1`. OES supplies the
+  JSON Schema, ontology and exact excerpt checks; contextd retains owner revision,
+  workspace/project binding, additive changes and review workflow checks.
+- Share the OES validation transport between authoring and context compilation.
+  Explicitly pending authoring graphs cannot enter compiled context.
+- Keep legacy v1 validation and its profile for existing proposals. No automatic
+  semantic conversion or owner approval/apply operation is introduced.
+
+### Fixed — Python namespace and installed artifacts
+
+- Install the `contextd` Python package from distribution `philngt-contextd`,
+  replacing the generic top-level `scripts` package and unqualified imports.
+- Bundle canonical runtime resources and distinguish installed diagnostics from
+  source-checkout maintenance. Preserve direct source commands and binary builds.
+- Verify clean wheel/sdist installation, unrelated-package collisions and binary
+  behavior. Add an explicit manual PyPI publication workflow; publication still
+  requires an authorized project publisher and version tag.
+
+### Added — Decision-first context
 
 - Add an opt-in manifest-v3 decision-first profile with explicit Strategy/Judgment
   and on-demand Foundation/Procedure sections; required constraints stay core.
@@ -13,8 +43,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
   unprofiled behavior compatible and expose loaded/deferred selection reasons.
 - Upgrade pack-ui-ux to 0.4.0 and add regression/authoring coverage. No live model
   benchmark or autonomous executor is included.
-
-## [Unreleased]
 
 ### Fixed — Windows console encoding and keyword matching
 

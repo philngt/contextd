@@ -815,6 +815,7 @@ def test_manifest_v3_scopes_pack_knowledge_and_budget() -> None:
         assert budget["estimated_tokens_total"] <= (
             budget["estimated_tokens_referenced"]
             + budget["estimated_tokens_static"]
+            + budget["estimated_tokens_diagnostics"]
         ), budget
 
         report = pack_validation.validate_packs(root, ["pack-demo-v3"])
@@ -1375,7 +1376,7 @@ def test_thesis_hardening_docs_and_release_mapping() -> None:
         r"[0-9]+\.[0-9]+\.[0-9]+(?:[.-][0-9A-Za-z.-]+)?",
         project_version,
     ), project_version
-    for module in ("cmd_synapse", "lib.synapse_engine", "lib.frontmatter"):
+    for module in ("contextd.cmd_synapse", "contextd.lib.synapse_engine", "contextd.lib.frontmatter"):
         assert f"'{module}'" in spec, (module, spec)
     assert "'synapse_engine'" not in spec, "top-level lib module would create duplicate state"
     assert "'scripts/lib'" not in spec, "PyInstaller path exposes duplicate top-level modules"

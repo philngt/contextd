@@ -8,18 +8,27 @@ from pathlib import Path
 import sys
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-if str(SCRIPT_DIR) not in sys.path:
+if not __package__ and str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
-from lib.graph_projection import (  # noqa: E402
-    DEFAULT_EDGE_TYPES, EDGE_TYPES, ProjectionRequest, project_graph, render_text,
-)
+if __package__:
+    from .lib.graph_projection import (  # noqa: E402
+        DEFAULT_EDGE_TYPES, EDGE_TYPES, ProjectionRequest, project_graph, render_text,
+    )
+else:  # Direct source scripts and legacy source-test imports.
+    from lib.graph_projection import (  # noqa: E402
+        DEFAULT_EDGE_TYPES, EDGE_TYPES, ProjectionRequest, project_graph, render_text,
+    )
 
 
 def project_snapshot(snapshot, request: ProjectionRequest) -> dict:
     """Annotate only retained source records; never re-read canonical files."""
-    from lib import synapse_engine
-    from lib.frontmatter import split_frontmatter
+    if __package__:
+        from .lib import synapse_engine
+        from .lib.frontmatter import split_frontmatter
+    else:  # Direct source scripts and legacy source-test imports.
+        from lib import synapse_engine
+        from lib.frontmatter import split_frontmatter
 
     graph = snapshot.graph
     if graph.get("synapse_hash") != synapse_engine.compute_synapse_hash(graph):
@@ -38,9 +47,14 @@ def project_snapshot(snapshot, request: ProjectionRequest) -> dict:
 
 def main(argv: list[str] | None = None) -> int:
     # Lazy imports keep the pure projection engine independently testable.
-    import cmd_resolve
-    from lib import synapse_engine
-    from lib.stdio import configure_stdio
+    if __package__:
+        from . import cmd_resolve
+        from .lib import synapse_engine
+        from .lib.stdio import configure_stdio
+    else:  # Direct source scripts and legacy source-test imports.
+        import cmd_resolve
+        from lib import synapse_engine
+        from lib.stdio import configure_stdio
 
     configure_stdio()
     parser = argparse.ArgumentParser(

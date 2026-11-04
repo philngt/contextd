@@ -25,7 +25,10 @@ import sys
 from pathlib import Path
 from typing import Dict, List, Tuple
 
-from lib.stdio import configure_stdio
+if __package__:
+    from .lib.stdio import configure_stdio
+else:  # Direct source scripts and legacy source-test imports.
+    from lib.stdio import configure_stdio
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 WORKSPACES_DIR = REPO_ROOT / "workspaces"

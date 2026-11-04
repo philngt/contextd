@@ -1,7 +1,7 @@
 ---
 type: Contract
 title: "Contract: graph-authoring"
-description: "Opt-in source-to-proposal authority, identity and isolation boundary; does not replace Synapse or task context."
+description: "Native OES source-to-proposal authority, complete owner baseline and pending review isolation."
 status: draft
 node_id: contract.graph-authoring.v1
 freshness: unknown
@@ -9,12 +9,19 @@ freshness: unknown
 
 # Contract: graph-authoring
 
-The normative authoring rules are [GA-01 through GA-08](../../../../templates/graph-authoring/authoring-contract.md).
-The machine-readable [proposal](../../../../templates/graph-authoring/graph-proposal.schema.json),
-[baseline](../../../../templates/graph-authoring/graph-baseline.schema.json) and
-[product-software profile](../../../../templates/graph-authoring/product-software.v1.json)
-are the additive review-input contract. [The guide](../../../../docs/graph-authoring.md)
-describes capabilities, usage, limitations and later exit gates.
+New proposals follow [GA-01 through GA-08, v2](../../../../templates/graph-authoring/authoring-contract.md).
+The native [proposal](../../../../templates/graph-authoring/graph-proposal.v2.schema.json)
+and [baseline](../../../../templates/graph-authoring/graph-baseline.v2.schema.json)
+define the review envelope and binding metadata. Each embeds a complete
+`oes.graph/v1` snapshot; OES owns the graph schema, ontology vocabulary and
+structural/textual evidence checks. contextd owns additive baseline preservation,
+reserved IDs, identity-review candidates, issues and pending status.
+
+The [legacy v1 contract](../../../../templates/graph-authoring/authoring-contract-v1.md),
+schemas and product-software profile remain solely for existing v1 proposals.
+No automatic semantic migration to OES is provided.
+[The guide](../../../../docs/graph-authoring.md) describes native import/export,
+the runnable example and the remaining owner-review boundary.
 
 This contract is an opt-in authoring extension. It does not alter
 [synapse-node-edge-schema](synapse-node-edge-schema.md) or
@@ -22,5 +29,8 @@ This contract is an opt-in authoring extension. It does not alter
 into canonical workspace knowledge. Follow the source-isolation, reviewed-write and
 immutable-evidence boundaries of those existing contracts and engine rules.
 
-A new proposal is not a task-context artifact or a memory promotion record. Exact review
-and current owner revision checks are required outside this first-slice validator.
+A native export preserves the exact checked graph bytes and carries a pending
+proposal marker. The [OES consumer](oes-context.md) rejects that marker before
+source selection. It is a declaration rather than an authenticated approval
+receipt. Exact review, live owner revision/source checks and owner apply remain
+external; validation never authorizes promotion or code execution.

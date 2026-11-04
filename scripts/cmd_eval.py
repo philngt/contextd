@@ -12,11 +12,17 @@ from pathlib import Path
 from typing import Dict, List
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-sys.path.insert(0, str(SCRIPT_DIR))
+if not __package__:
+    sys.path.insert(0, str(SCRIPT_DIR))
 
-import cmd_resolve  # noqa: E402
-from lib import task_context_engine  # noqa: E402
-from lib.stdio import configure_stdio  # noqa: E402
+if __package__:
+    from . import cmd_resolve
+    from .lib import task_context_engine
+    from .lib.stdio import configure_stdio
+else:
+    import cmd_resolve  # noqa: E402
+    from lib import task_context_engine  # noqa: E402
+    from lib.stdio import configure_stdio  # noqa: E402
 
 
 def _load_fixture(path: Path) -> Dict | None:
@@ -61,6 +67,15 @@ def _score_fixture(fixture: Dict, artifact: Dict) -> Dict:
         if not _gaps_match(artifact.get("gaps") or [], str(expected)):
             errors.append(f"expected gap not found: {expected}")
 
+    if "expected_referenced_doc_count" in fixture:
+        expected_count = fixture["expected_referenced_doc_count"]
+        if type(expected_count) is not int or expected_count < 0:
+            errors.append("expected_referenced_doc_count must be a non-negative integer")
+        elif len(paths) != expected_count:
+            errors.append(
+                f"referenced doc count {len(paths)} != expected {expected_count}"
+            )
+
     expected_policy = fixture.get("policy_expectation")
     if expected_policy:
         actual_policy = (artifact.get("governance_report") or {}).get("status")
@@ -76,6 +91,8 @@ def _score_fixture(fixture: Dict, artifact: Dict) -> Dict:
         "selected_categories": sorted(categories),
         "governance_status": (artifact.get("governance_report") or {}).get("status"),
         "budget_report": artifact.get("budget_report") or {},
+        "gaps": artifact.get("gaps") or [],
+        "coverage": artifact.get("coverage") or {},
     }
 
 
@@ -105,6 +122,11 @@ def _render_text(report: Dict) -> str:
                 lines.append(f"- {error}")
         else:
             lines.append("- ok")
+        coverage = result.get("coverage") or {}
+        if coverage:
+            lines.append(f"- Coverage: {coverage.get('status')} (completeness is not established)")
+        for gap in result.get("gaps") or []:
+            lines.append(f"- Gap [{gap.get('category')}]: {gap.get('missing')}")
         lines.append("")
     return "\n".join(lines)
 
@@ -142,7 +164,10 @@ def run(golden: bool = False, workspace: str | None = None, fmt: str = "json",
             load_errors.append({"path": path.relative_to(wiki_root).as_posix(), "error": "invalid-json"})
             continue
         task = str(fixture.get("task") or "")
-        packs = [str(pack) for pack in fixture.get("packs") or default_packs]
+        fixture_packs = fixture.get("packs")
+        packs = [str(pack) for pack in (
+            default_packs if fixture_packs is None else fixture_packs
+        )]
         fixture_as_of = fixture.get("as_of")
         evaluation_date = (
             _parse_evaluation_date(fixture_as_of)

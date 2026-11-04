@@ -161,6 +161,30 @@
         "additionalProperties": true
       }
     },
+    "coverage": {
+      "type": "object",
+      "description": "Support present in selected context. Literal matches and graph routes never prove complete task coverage or corpus-wide absence.",
+      "required": ["status", "query_terms", "matched_terms", "unmatched_terms", "selected_paths", "graph", "complete"],
+      "properties": {
+        "status": { "enum": ["no_match", "lexical_match", "declared_route", "evidence_match", "unassessed"] },
+        "query_terms": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+        "matched_terms": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+        "unmatched_terms": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+        "selected_paths": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+        "graph": {
+          "type": "object",
+          "required": ["status", "matched_node_ids", "matched_edge_ids"],
+          "properties": {
+            "status": { "enum": ["not_requested", "no_match", "matched", "not_selected"] },
+            "matched_node_ids": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+            "matched_edge_ids": { "type": "array", "items": { "type": "string" }, "uniqueItems": true }
+          },
+          "additionalProperties": false
+        },
+        "complete": { "const": false }
+      },
+      "additionalProperties": false
+    },
     "gaps": {
       "type": "array",
       "items": {
@@ -491,7 +515,7 @@
     },
     "budget_report": {
       "type": "object",
-      "description": "Deterministic, model-neutral budget estimate for referenced, static, and deduplicated total context.",
+      "description": "Deterministic, model-neutral estimate for referenced, static, retrieval diagnostics, and deduplicated total context.",
       "properties": {
         "estimator": { "type": "string" },
         "max_docs": { "type": "integer" },
@@ -504,6 +528,7 @@
         "estimated_tokens_selected": { "type": "integer" },
         "estimated_tokens_referenced": { "type": "integer" },
         "estimated_tokens_static": { "type": "integer" },
+        "estimated_tokens_diagnostics": { "type": "integer", "minimum": 0 },
         "estimated_tokens_total": { "type": "integer" },
         "estimated_tokens_by_category": {
           "type": "object",
@@ -588,7 +613,12 @@
         "title": { "type": "string" },
         "statement": { "type": "string" },
         "summary": { "type": "string" },
-        "status": { "type": "string" }
+        "status": { "type": "string" },
+        "model": { "type": "string" },
+        "verification": { "type": "string" },
+        "scope": { "type": "string" },
+        "review": { "type": "string" },
+        "freshness": { "type": "string" }
       },
       "additionalProperties": false
     },

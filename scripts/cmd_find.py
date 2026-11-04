@@ -13,11 +13,17 @@ from pathlib import Path
 
 # Allow importing sibling command modules and the ``lib`` package.
 SCRIPT_DIR = Path(__file__).resolve().parent
-sys.path.insert(0, str(SCRIPT_DIR))
+if not __package__:
+    sys.path.insert(0, str(SCRIPT_DIR))
 
-import cmd_resolve  # noqa: E402
-from lib import find_engine  # noqa: E402
-from lib.stdio import configure_stdio  # noqa: E402
+if __package__:
+    from . import cmd_resolve  # noqa: E402
+    from .lib import find_engine  # noqa: E402
+    from .lib.stdio import configure_stdio  # noqa: E402
+else:  # Direct source scripts and legacy source-test imports.
+    import cmd_resolve  # noqa: E402
+    from lib import find_engine  # noqa: E402
+    from lib.stdio import configure_stdio  # noqa: E402
 
 
 def run(query: str, workspace: str | None = None, limit: int = 5, fmt: str = "text") -> int:

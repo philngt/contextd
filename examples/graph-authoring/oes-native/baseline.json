@@ -1,0 +1,63 @@
+{
+  "artifact_type": "contextd_graph_baseline.v2",
+  "workspace": "default",
+  "project_id": "refund-demo",
+  "revision": "synthetic-owner-revision-1",
+  "graph": {
+    "apiVersion": "oes.graph/v1",
+    "template": "software-system",
+    "metadata": {
+      "id": "graph:refund-workflow",
+      "workspace": "default",
+      "projectId": "refund-demo",
+      "ontologyVersion": "0.1.0",
+      "synthetic": true
+    },
+    "nodes": [
+      {
+        "id": "source:refund-policy",
+        "type": "Source",
+        "properties": {
+          "uri": "rules/refund-receipts.md",
+          "kind": "spec",
+          "sha256": "f0f5c3ba44b0facbecbc1552ca3ce08729da3741563e744e3a7e799091905b86",
+          "revision": "synthetic-source-v1"
+        }
+      },
+      {
+        "id": "evidence:refund-inventory",
+        "type": "Evidence",
+        "properties": {
+          "sourceId": "source:refund-policy",
+          "locator": "L14",
+          "excerpt": "Inventory: refund-worker is the service responsible for issuing refunds."
+        }
+      },
+      {
+        "id": "service:refund-worker",
+        "type": "Service",
+        "properties": {
+          "label": "refund-worker"
+        },
+        "evidenceIds": [
+          "evidence:refund-inventory"
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "id": "edge:worker-documented",
+        "type": "documentedIn",
+        "from": "service:refund-worker",
+        "to": "source:refund-policy",
+        "assertionStatus": "asserted",
+        "evidenceIds": [
+          "evidence:refund-inventory"
+        ]
+      }
+    ]
+  },
+  "reserved_ids": [
+    "retired:refund-rule"
+  ]
+}

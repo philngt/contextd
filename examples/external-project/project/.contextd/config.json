@@ -1,0 +1,6 @@
+{
+  "project": "payments-example",
+  "workspace": "payments",
+  "knowledge_root": "../knowledge",
+  "packs": []
+}

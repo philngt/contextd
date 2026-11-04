@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "OES-native graph authoring baseline v2; workflow envelope only",
+  "$comment": "The embedded graph is additionally validated against the selected OES installation's graph-envelope.schema.json and the real OES validator. This schema does not define ontology types or relations.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "artifact_type",
+    "workspace",
+    "project_id",
+    "graph",
+    "revision",
+    "reserved_ids"
+  ],
+  "properties": {
+    "artifact_type": {
+      "const": "contextd_graph_baseline.v2"
+    },
+    "workspace": {
+      "$ref": "#/$defs/id"
+    },
+    "project_id": {
+      "$ref": "#/$defs/id"
+    },
+    "graph": {
+      "type": "object",
+      "required": [
+        "metadata"
+      ],
+      "properties": {
+        "metadata": {
+          "type": "object",
+          "required": [
+            "id",
+            "workspace",
+            "projectId",
+            "ontologyVersion"
+          ],
+          "properties": {
+            "id": {
+              "$ref": "#/$defs/id"
+            },
+            "workspace": {
+              "$ref": "#/$defs/id"
+            },
+            "projectId": {
+              "$ref": "#/$defs/id"
+            },
+            "ontologyVersion": {
+              "$ref": "#/$defs/prose"
+            },
+            "contextdProposal": {
+              "type": "object",
+              "required": [
+                "id",
+                "status"
+              ],
+              "properties": {
+                "id": {
+                  "$ref": "#/$defs/id"
+                },
+                "status": {
+                  "const": "approved"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "revision": {
+      "$ref": "#/$defs/prose"
+    },
+    "reserved_ids": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/id"
+      },
+      "minItems": 0,
+      "maxItems": 1000,
+      "uniqueItems": true
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$",
+      "not": {
+        "pattern": "\\s"
+      }
+    },
+    "prose": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 8192
+    }
+  }
+}

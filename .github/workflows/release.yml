@@ -34,14 +34,16 @@ jobs:
       - name: Validate release version
         id: version
         shell: bash
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
         run: |
           if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
-            RAW_VERSION="${{ inputs.version }}"
+            RAW_VERSION="${INPUT_VERSION}"
           else
             RAW_VERSION="${GITHUB_REF_NAME}"
           fi
           VERSION="${RAW_VERSION#v}"
-          PROJECT_VERSION="$(python -c "from pathlib import Path; from scripts.lib.contextd_version import get_version; print(get_version(package_name='contextd-release-check', start_path=Path('.')))")"
+          PROJECT_VERSION="$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")"
           if [[ ! "${VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$ ]]; then
             echo "ERROR: invalid release version: ${VERSION}" >&2
             exit 1
@@ -73,6 +75,9 @@ jobs:
 
       - name: Compile Python sources
         run: python -m compileall -q scripts
+
+      - name: Verify wheel and source distribution
+        run: python scripts/test_distribution.py
 
       - name: Run test_lint_wiki
         run: python scripts/test_lint_wiki.py
@@ -155,14 +160,8 @@ jobs:
       - name: Install PyInstaller
         run: pip install "pyinstaller==${{ env.PYINSTALLER_VERSION }}"
 
-      - name: Generate version file
-        shell: bash
-        run: |
-          VERSION="${{ needs.release-metadata.outputs.version }}"
-          echo "__version__ = '${VERSION}'" > scripts/_version.py
-
-      - name: Generate manifest
-        run: python scripts/generate_manifest.py
+      - name: Install canonical package and runtime resources
+        run: python -m pip install --no-deps .
 
       - name: Build binary
         run: pyinstaller --clean contextd.spec
@@ -183,6 +182,11 @@ jobs:
               exit 1
               ;;
           esac
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            python scripts/test_distribution.py --binary dist/contextd.exe
+          else
+            python scripts/test_distribution.py --binary dist/contextd
+          fi
 
       - name: Stage artifact
         shell: bash

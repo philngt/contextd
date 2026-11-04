@@ -16,7 +16,10 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Dict, Iterable, List, Mapping, Optional, Tuple
 
-import pack_loader
+if __package__ == "lib":  # Legacy source-script imports.
+    import pack_loader
+else:
+    from .. import pack_loader
 from .context_defaults import (
     INTENT_KEYWORDS,
     WORKSTREAM_KEYWORDS,
@@ -30,7 +33,7 @@ from .context_defaults import (
     WORKSTREAM_PRECEDENCE,
 )
 from . import context_policy, synapse_engine, decision_context, oes_context
-from . import context_output
+from . import context_output, context_coverage
 from .context_output import render_markdown, _pack_markdown
 from .context_payload import (
     compiled_sources, build_pack_ref as _build_context_pack,
@@ -575,13 +578,17 @@ def _expand_replacement_candidates(
     gaps: List[Dict],
     warnings: List[str],
     source_records: Optional[Mapping[str, synapse_engine.SourceRecord]] = None,
+    task_keywords: Optional[List[str]] = None,
 ) -> List[Dict]:
     """Add active one-hop replacements for superseded/deprecated candidates."""
     expanded = list(candidates)
     existing_paths = {doc["path"] for doc in expanded}
+    by_path = {doc["path"]: doc for doc in expanded}
     for doc in list(expanded):
         state = doc.get("synapse") or {}
         if state.get("lifecycle") not in {"deprecated", "superseded"}:
+            continue
+        if task_keywords is not None and not _direct_relevance(doc, task_keywords)["basis"]:
             continue
         replacement_ids = lookups.replacements_by_target.get(
             state.get("node_id", ""),
@@ -589,7 +596,11 @@ def _expand_replacement_candidates(
         )
         for replacement_id in replacement_ids:
             replacement = lookups.nodes_by_id.get(replacement_id)
-            if not replacement or replacement["path"] in existing_paths:
+            if not replacement:
+                continue
+            expansion = {"reason": "active_replacement", "replaces": state.get("node_id")}
+            if replacement["path"] in existing_paths:
+                by_path[replacement["path"]].setdefault("synapse_expansion", expansion)
                 continue
             path = wiki_root / replacement["path"]
             category = _category_from_path(path, replacement["path"], replacement["kind"])
@@ -604,12 +615,10 @@ def _expand_replacement_candidates(
             if item is None:
                 continue
             item["synapse"] = _synapse_state(replacement)
-            item["synapse_expansion"] = {
-                "reason": "active_replacement",
-                "replaces": state.get("node_id"),
-            }
+            item["synapse_expansion"] = expansion
             expanded.append(item)
             existing_paths.add(item["path"])
+            by_path[item["path"]] = item
     return expanded
 
 
@@ -769,9 +778,30 @@ def _keywords(task: str, components: List[str]) -> List[str]:
     stop = {
         "the", "and", "for", "with", "this", "that", "into", "from", "contextd",
         "implement", "create", "build", "design", "review",
+        "add", "fix", "debug", "investigate", "please", "help", "need", "want",
+        "write", "enable", "support", "update", "change", "make", "using",
+        # These roles have unrelated meanings across ordinary engineering docs
+        # (for example an API consumer and a graph consumer). They cannot be
+        # the sole lexical anchor. Explicitly detected pack components below
+        # remain usable as declared, workspace-specific identities.
+        "consumer", "producer", "service", "system", "component", "module",
+        "agent", "task", "tool", "application", "project", "code",
     }
     words = [w for w in raw if w not in stop]
     return sorted(set(words + [c.lower() for c in components]))
+
+
+def _direct_relevance(doc: Dict, words: List[str]) -> Dict:
+    # Match the delivered sections, not text that section slicing will omit.
+    text = _slice_doc(doc)["content"].lower()
+    name = Path(doc["path"]).stem.lower()
+    matched = [word for word in words if _matches(word, name) or _matches(word, text)]
+    basis = ["lexical"] if matched else []
+    if doc.get("pack_retrieval_route"):
+        basis.append("pack_route")
+    if doc.get("oes_evidence"):
+        basis.append("oes")
+    return {"basis": basis, "matched_terms": matched}
 
 
 def _score(doc: Dict, words: List[str]) -> int:
@@ -842,6 +872,8 @@ def _trace_doc(doc: Dict, score: int, reason: str) -> Dict:
     if doc.get("oes_evidence"):
         item["oes_evidence"] = doc["oes_evidence"]
         item["oes_score_adjustment"] = OES_ROUTE_SCORE
+    if "relevance" in doc:
+        item["relevance"] = doc["relevance"]
     return item
 
 
@@ -849,6 +881,14 @@ def _rank_budget_trace(candidates: List[Dict], task: str, components: List[str],
                        workstream: str = "engineering",
                        max_docs: int = 7) -> Tuple[List[Dict], Dict, Dict]:
     words = _keywords(task, components)
+    candidates = [{**doc, "relevance": _direct_relevance(doc, words)} for doc in candidates]
+    relevant_nodes = {
+        (doc.get("synapse") or {}).get("node_id") for doc in candidates
+        if doc["relevance"]["basis"]
+    } - {None}
+    for doc in candidates:
+        if (doc.get("synapse_expansion") or {}).get("replaces") in relevant_nodes:
+            doc["relevance"]["basis"].append("replacement")
     scored = [(doc, _score(doc, words)) for doc in candidates]
     ranked = sorted(
         scored,
@@ -866,7 +906,9 @@ def _rank_budget_trace(candidates: List[Dict], task: str, components: List[str],
     for doc, score in ranked:
         category = doc["category"]
         reason = "selected"
-        if doc["path"] in seen:
+        if not doc["relevance"]["basis"]:
+            reason = "no_task_relevance"
+        elif doc["path"] in seen:
             reason = "duplicate_path"
         elif len(selected) >= max_docs:
             reason = "max_docs_exhausted"
@@ -972,6 +1014,8 @@ def _slice_doc(doc: Dict) -> Dict:
         out["synapse"] = doc["synapse"]
     if doc.get("synapse_expansion"):
         out["synapse_expansion"] = doc["synapse_expansion"]
+    if "relevance" in doc:
+        out["relevance"] = doc["relevance"]
     if doc.get("redacted"):
         out["redacted"] = True
         out["redaction_findings"] = doc.get("redaction_findings", [])
@@ -1056,7 +1100,7 @@ def _slice_pack_knowledge(doc: Dict, owned_components: Iterable[str],
 
 
 def _finalize_budget_report(budget_report: Dict, referenced_docs: List[Dict],
-                            static_docs: List[Dict]) -> Dict:
+                            static_docs: List[Dict], diagnostics: str = "") -> Dict:
     def summarize(docs: Iterable[Dict]) -> Tuple[int, Dict[str, int]]:
         total = 0
         by_category: Dict[str, int] = {}
@@ -1072,6 +1116,9 @@ def _finalize_budget_report(budget_report: Dict, referenced_docs: List[Dict],
     compiled_docs = compiled_sources(static_docs, referenced_docs)
     overlap = len(static_docs) + len(referenced_docs) - len(compiled_docs)
     total_tokens, total_by_category = summarize(compiled_docs)
+    diagnostics_tokens = _estimate_tokens(diagnostics)
+    if diagnostics_tokens:
+        total_by_category["retrieval-diagnostics"] = diagnostics_tokens
 
     out = dict(budget_report)
     out.update({
@@ -1084,7 +1131,8 @@ def _finalize_budget_report(budget_report: Dict, referenced_docs: List[Dict],
         "deduplicated_overlap_docs": overlap,
         "estimated_tokens_referenced": referenced_tokens,
         "estimated_tokens_static": static_tokens,
-        "estimated_tokens_total": total_tokens,
+        "estimated_tokens_diagnostics": diagnostics_tokens,
+        "estimated_tokens_total": total_tokens + diagnostics_tokens,
         "estimated_tokens_static_by_category": static_by_category,
         "estimated_tokens_total_by_category": total_by_category,
     })
@@ -1403,6 +1451,7 @@ def build_context_result(
         gaps,
         warnings_out,
         source_records=synapse_build.sources_by_path,
+        task_keywords=_keywords(task, components),
     )
     selected, selection_trace, budget_report = _rank_budget_trace(
         candidates, task, components, workstream=workstream,
@@ -1430,9 +1479,20 @@ def build_context_result(
     # A canonical knowledge file explicitly routed as a referenced document
     # must not leak a second, unsliced copy of its optional teaching/procedures.
     profiled_docs = {d["path"]: d for d in static_docs if "decision_support" in d}
-    docs = [profiled_docs.get(d["path"], d) for d in docs]
+    docs = [
+        {**profiled_docs[d["path"]], "relevance": d["relevance"]}
+        if d["path"] in profiled_docs else d for d in docs
+    ]
     _attach_synapse_metadata(static_docs, synapse_build.lookups)
-    budget_report = _finalize_budget_report(budget_report, docs, static_docs)
+    oes_metadata = oes_selection.metadata if oes_selection is not None else None
+    coverage, coverage_gaps = context_coverage.assess(
+        _keywords(task, components), docs, static_docs, selection_trace,
+        oes_metadata, _matches,
+    )
+    gaps.extend(coverage_gaps)
+    budget_report = _finalize_budget_report(
+        budget_report, docs, static_docs, context_coverage.render(coverage, gaps),
+    )
     warnings_out.extend(_selected_state_warnings(docs))
     for diagnostic in synapse.get("diagnostics", []):
         if diagnostic.get("severity") == "error":
@@ -1441,7 +1501,7 @@ def build_context_result(
             )
     context_pack = _build_context_pack(
         workspace, packs, docs, static_docs, decision_report,
-        oes_selection.metadata if oes_selection is not None else None,
+        oes_metadata, coverage, gaps,
     )
     source_hashes = {
         doc["path"]: doc["source_hash"]
@@ -1476,6 +1536,7 @@ def build_context_result(
         "referenced_docs": docs,
         "static_context": static_docs,
         "gaps": gaps,
+        "coverage": coverage,
         "warnings": warnings_out,
         "synapse": {
             "artifact_type": "contextd_synapse_ref.v1",

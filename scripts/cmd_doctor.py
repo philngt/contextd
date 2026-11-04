@@ -10,14 +10,25 @@ from pathlib import Path
 from typing import Dict, List
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-REPO_ROOT = SCRIPT_DIR.parent
-sys.path.insert(0, str(SCRIPT_DIR))
+if not __package__:
+    sys.path.insert(0, str(SCRIPT_DIR))
 
-import cmd_resolve  # noqa: E402
-import render_runtime  # noqa: E402
-from lib import pack_validation, synapse_engine, task_context_engine  # noqa: E402
-from lib.context_security import block_reason, reject_unsafe_entry  # noqa: E402
-from lib.stdio import configure_stdio  # noqa: E402
+if __package__:
+    from . import cmd_resolve  # noqa: E402
+    from . import render_runtime  # noqa: E402
+    from .lib import pack_validation, synapse_engine, task_context_engine  # noqa: E402
+    from .lib.context_security import block_reason, reject_unsafe_entry  # noqa: E402
+    from .lib.stdio import configure_stdio  # noqa: E402
+    from .lib.runtime_resources import resource_path, source_root  # noqa: E402
+else:  # Direct source scripts and legacy source-test imports.
+    import cmd_resolve  # noqa: E402
+    import render_runtime  # noqa: E402
+    from lib import pack_validation, synapse_engine, task_context_engine  # noqa: E402
+    from lib.context_security import block_reason, reject_unsafe_entry  # noqa: E402
+    from lib.stdio import configure_stdio  # noqa: E402
+    from lib.runtime_resources import resource_path, source_root  # noqa: E402
+
+REPO_ROOT = source_root()
 
 
 Issue = Dict[str, str]
@@ -45,12 +56,14 @@ def _validate_schema_files(issues: List[Issue]) -> None:
         "templates/run-trace.schema.json",
         ".contextd/manifest.schema.json",
         ".contextd/manifest.json",
-        "contextd.spec",
     ]
     for rel in required:
-        path = REPO_ROOT / rel
+        path = resource_path(rel)
         if not path.is_file():
-            issues.append(_issue("error", "schema-release-inputs", f"Missing required file: {rel}", rel))
+            issues.append(_issue("error", "runtime-resources", f"Missing runtime resource: {rel}", rel))
+    if REPO_ROOT is not None and not (REPO_ROOT / "contextd.spec").is_file():
+        issues.append(_issue("error", "schema-release-inputs",
+                             "Missing required file: contextd.spec", "contextd.spec"))
 
 
 def _validate_pack_retrieval_maps(root: Path, workspace: str, packs: List[str],
@@ -191,6 +204,8 @@ def _validate_generated_adapters(root: Path, workspace: str, packs: List[str],
 
 
 def _validate_checked_in_codex_agents(issues: List[Issue]) -> None:
+    if REPO_ROOT is None:
+        return  # Checked-in adapters are source-maintenance inputs.
     agents_dir = REPO_ROOT / ".codex" / "agents"
     if not agents_dir.is_dir():
         return

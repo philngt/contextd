@@ -17,13 +17,23 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-sys.path.insert(0, str(SCRIPT_DIR))
+if not __package__:
+    sys.path.insert(0, str(SCRIPT_DIR))
 
-import cmd_resolve  # noqa: E402
-import pack_loader  # noqa: E402
-from lib import contextd_resolver  # noqa: E402
-from lib.context_security import read_safe_text, reject_unsafe_entry  # noqa: E402
-from lib.stdio import configure_stdio  # noqa: E402
+if __package__:
+    from . import cmd_resolve  # noqa: E402
+    from . import pack_loader  # noqa: E402
+    from .lib import contextd_resolver  # noqa: E402
+    from .lib.context_security import read_safe_text, reject_unsafe_entry  # noqa: E402
+    from .lib.stdio import configure_stdio  # noqa: E402
+    from .lib.runtime_resources import resource_path  # noqa: E402
+else:  # Direct source scripts and legacy source-test imports.
+    import cmd_resolve  # noqa: E402
+    import pack_loader  # noqa: E402
+    from lib import contextd_resolver  # noqa: E402
+    from lib.context_security import read_safe_text, reject_unsafe_entry  # noqa: E402
+    from lib.stdio import configure_stdio  # noqa: E402
+    from lib.runtime_resources import resource_path  # noqa: E402
 
 REPO_ROOT = SCRIPT_DIR.parent
 
@@ -33,11 +43,7 @@ REPO_ROOT = SCRIPT_DIR.parent
 # ---------------------------------------------------------------------------
 
 def _load_manifest() -> Optional[Dict]:
-    # PyInstaller onefile bundle: resources extracted to sys._MEIPASS
-    if getattr(sys, '_MEIPASS', None):
-        p = Path(sys._MEIPASS) / ".contextd" / "manifest.json"
-    else:
-        p = REPO_ROOT / ".contextd" / "manifest.json"
+    p = resource_path(".contextd/manifest.json")
     if not p.is_file():
         return None
     try:

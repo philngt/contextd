@@ -1,8 +1,9 @@
-"""Opt-in graph proposal validation. Never extracts, applies, or builds task context.
+"""Opt-in graph proposal validation and pending OES import/export.
 
 The caller supplies an owner-produced baseline and explicit workspace/project binding.
-Source locators are inert strings: no network, source-code execution or source scanning.
-jsonschema is an optional authoring dependency, not a dependency of context compilation.
+Legacy v1 keeps its read-only vocabulary validator. New v2 uses native OES graphs
+and exact local source snapshots; neither path approves or applies a proposal.
+jsonschema is optional for authoring, not a dependency of context compilation.
 """
 from __future__ import annotations
 
@@ -49,6 +50,18 @@ def read_json(path: Path) -> Any:
         raise ValueError("Input exceeds 4 MiB")
     return json.loads(raw.decode("utf-8"), object_pairs_hook=_unique_object,
                       parse_constant=_nonfinite)
+
+
+def _read_cli_json(path: Path) -> Any:
+    """Canonicalize an explicitly selected parent, without following file links.
+
+    This permits platform aliases such as /var on macOS. The strict read_json
+    API and all graph/source descendant checks retain their symlink policy.
+    """
+    path = path.expanduser().absolute()
+    if path.is_symlink():
+        raise ValueError("Symlink input files are not supported")
+    return read_json(path.parent.resolve(strict=True) / path.name)
 
 
 def _profile(profile: Any) -> None:
@@ -241,27 +254,74 @@ def validate(proposal: Any, baseline: Any, profile: Any, *, workspace: str,
 
 
 def main(argv: list[str] | None = None, *, resources: Path) -> int:
-    parser = argparse.ArgumentParser(description="Validate an additive graph proposal; never apply it.")
-    parser.add_argument("--proposal", type=Path, required=True)
+    parser = argparse.ArgumentParser(description="Validate a pending proposal or import a native OES graph; never approve/apply.")
+    inputs = parser.add_mutually_exclusive_group(required=True)
+    inputs.add_argument("--proposal", type=Path, help="Pending v2 proposal; legacy v1 remains supported")
+    inputs.add_argument("--graph", type=Path, help="Import a complete oes.graph/v1 snapshot into a pending v2 proposal")
     parser.add_argument("--baseline", type=Path, required=True)
     parser.add_argument("--workspace", required=True, help="Explicit resolved workspace ID")
     parser.add_argument("--project", required=True, help="Canonical product/project ID, not a folder name")
-    parser.add_argument("--profile", type=Path, help="Optional versioned vocabulary JSON")
+    parser.add_argument("--profile", type=Path, help="Legacy v1 vocabulary only; native v2 obtains its template from OES")
     parser.add_argument("--strict", action="store_true", help="Exit 1 on warnings as well as errors")
+    parser.add_argument("--source-root", type=Path, help="Explicit local source snapshot root (required for native v2)")
+    parser.add_argument("--oes-cli", type=Path, help="Trusted OES bin/oes.mjs entrypoint; defaults to oes on PATH")
+    parser.add_argument("--oes-timeout", type=float, default=30.0, help="OES command timeout in seconds (default: %(default)s)")
+    parser.add_argument("--output-graph", type=Path, help="New file for the validated, pending-marked OES graph")
+    parser.add_argument("--output-proposal", type=Path, help="New file for the imported pending v2 proposal")
+    parser.add_argument("--proposal-id", help="Stable proposal ID for --graph import")
+    parser.add_argument("--reviewed", action="append", default=[], help="Explicit reviewed scope for --graph import; repeatable")
+    parser.add_argument("--not-reviewed", action="append", default=[], help="Explicit unread scope for --graph import; repeatable")
     args = parser.parse_args(argv)
     try:
-        result = validate(read_json(args.proposal), read_json(args.baseline),
-                          read_json(args.profile or resources / "product-software.v1.json"),
-                          workspace=args.workspace, project_id=args.project,
-                          schemas={key: read_json(resources / filename) for key, filename in (
-                              ("proposal", "graph-proposal.schema.json"),
-                              ("baseline", "graph-baseline.schema.json"))})
+        baseline = _read_cli_json(args.baseline)
+        proposal = _read_cli_json(args.proposal) if args.proposal is not None else None
+        if args.graph is not None or (isinstance(proposal, dict)
+                                     and proposal.get("artifact_type") == "contextd_graph_proposal.v2"):
+            if __package__:
+                from . import graph_authoring_oes as native
+                from .oes_validation import OESRequest
+            else:
+                import graph_authoring_oes as native
+                from oes_validation import OESRequest
+            if args.profile is not None or args.source_root is None:
+                parser.error("Native v2 requires --source-root and uses OES instead of --profile")
+            if args.graph is not None:
+                if not args.proposal_id or not args.reviewed or args.output_proposal is None:
+                    parser.error("Graph import requires --proposal-id, --reviewed and --output-proposal")
+                proposal = native.import_graph(
+                    _read_cli_json(args.graph), baseline=baseline, workspace=args.workspace,
+                    project_id=args.project, proposal_id=args.proposal_id,
+                    reviewed=args.reviewed, not_reviewed=args.not_reviewed,
+                )
+            elif args.output_proposal is not None or args.proposal_id or args.reviewed or args.not_reviewed:
+                parser.error("Import-only options require --graph")
+            checked = native.validate(
+                proposal, baseline, workspace=args.workspace, project_id=args.project,
+                schemas={key: read_json(resources / f"graph-{key}.v2.schema.json")
+                         for key in ("proposal", "baseline")},
+                request=OESRequest(cli=args.oes_cli, timeout_seconds=args.oes_timeout),
+                source_root=args.source_root,
+            )
+            result = checked.report
+            if result["valid"] and not (args.strict and result["warnings"]):
+                native.export(checked, graph_path=args.output_graph, proposal_path=args.output_proposal)
+        else:
+            if (args.source_root is not None or args.oes_cli is not None or args.oes_timeout != 30.0
+                    or args.output_graph is not None or args.output_proposal is not None
+                    or args.proposal_id or args.reviewed or args.not_reviewed):
+                parser.error("Native OES options cannot migrate a legacy v1 proposal")
+            result = validate(proposal, baseline,
+                              _read_cli_json(args.profile or resources / "product-software.v1.json"),
+                              workspace=args.workspace, project_id=args.project,
+                              schemas={key: read_json(resources / filename) for key, filename in (
+                                  ("proposal", "graph-proposal.schema.json"),
+                                  ("baseline", "graph-baseline.schema.json"))})
         print(json.dumps(result, sort_keys=True, indent=2, ensure_ascii=True))
     except ImportError:
         print('Graph authoring requires the optional jsonschema dependency. In an authorized '
               'environment install contextd with the [authoring] extra.', file=sys.stderr)
         return 2
-    except (OSError, ValueError, TypeError, RecursionError):
+    except (OSError, ValueError, TypeError, AttributeError, RuntimeError):
         # Do not echo untrusted file contents, paths, JSON fragments or exception messages.
         print("Invalid, unsafe or unreadable graph-authoring input; inspect the local files.", file=sys.stderr)
         return 2

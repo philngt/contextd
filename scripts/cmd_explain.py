@@ -9,11 +9,17 @@ import sys
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-sys.path.insert(0, str(SCRIPT_DIR))
+if not __package__:
+    sys.path.insert(0, str(SCRIPT_DIR))
 
-from lib import contextd_resolver  # noqa: E402
-from lib import task_context_engine, decision_context, oes_context  # noqa: E402
-from lib.stdio import configure_stdio  # noqa: E402
+if __package__:
+    from .lib import contextd_resolver  # noqa: E402
+    from .lib import task_context_engine, decision_context, oes_context  # noqa: E402
+    from .lib.stdio import configure_stdio  # noqa: E402
+else:  # Direct source scripts and legacy source-test imports.
+    from lib import contextd_resolver  # noqa: E402
+    from lib import task_context_engine, decision_context, oes_context  # noqa: E402
+    from lib.stdio import configure_stdio  # noqa: E402
 
 
 def _render_text(payload: dict) -> str:
@@ -40,7 +46,8 @@ def _render_text(payload: dict) -> str:
             "Budget: "
             f"{budget.get('selected_docs', 0)}/{budget.get('max_docs', 0)} docs, "
             f"~{budget.get('estimated_tokens_referenced', budget.get('estimated_tokens_selected', 0))} referenced + "
-            f"~{budget.get('estimated_tokens_static', 0)} static = "
+            f"~{budget.get('estimated_tokens_static', 0)} static + "
+            f"~{budget.get('estimated_tokens_diagnostics', 0)} diagnostics = "
             f"~{budget.get('estimated_tokens_total', budget.get('estimated_tokens_selected', 0))} total tokens"
         ),
         "",
@@ -106,6 +113,16 @@ def _render_text(payload: dict) -> str:
         lines.append(f"- ... {len(dropped) - 30} more")
 
     artifact = payload["artifact"]
+    coverage = artifact.get("coverage")
+    if coverage:
+        lines.extend([
+            "", "## Retrieval Coverage",
+            f"Support: {coverage['status']}",
+            f"Graph routes: {coverage['graph']['status']}",
+            "Matched literal terms: " + (", ".join(coverage["matched_terms"]) or "(none)"),
+            "Unmatched literal terms: " + (", ".join(coverage["unmatched_terms"]) or "(none)"),
+            "Complete: false (retrieval support does not prove task answerability)",
+        ])
     oes = artifact.get("oes")
     if oes:
         validation = oes["validation"]
@@ -121,7 +138,7 @@ def _render_text(payload: dict) -> str:
     lines.extend(decision_context.render_report(artifact.get("decision_context")))
     lines.extend(["", "## Gaps"])
     if not artifact.get("gaps"):
-        lines.append("- (none)")
+        lines.append("- No retrieval gap detected; task coverage is not proven complete.")
     for gap in artifact.get("gaps") or []:
         lines.append(
             f"- [{gap.get('category')}] {gap.get('missing')} "

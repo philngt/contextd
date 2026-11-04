@@ -34,6 +34,8 @@ def build_pack_ref(
     static_docs: Optional[List[Dict]] = None,
     decision_report: Optional[Mapping] = None,
     oes_report: Optional[Mapping] = None,
+    coverage: Optional[Mapping] = None,
+    gaps: Optional[List[Dict]] = None,
 ) -> Dict:
     pack_sources = compiled_sources(static_docs or [], docs)
     sources = sorted(
@@ -71,6 +73,8 @@ def build_pack_ref(
         payload["oes_evidence"] = evidence
     if oes_report is not None:
         payload["oes_report"] = oes_report
+    if coverage is not None or gaps:
+        payload["retrieval_diagnostics"] = {"coverage": coverage, "gaps": gaps or []}
     source_hash = _sha256_text(json.dumps(payload, sort_keys=True, ensure_ascii=False))
     return {
         "artifact_type": "context_pack_ref",

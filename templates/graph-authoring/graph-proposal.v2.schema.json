@@ -1,0 +1,222 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "OES-native graph authoring proposal v2; workflow envelope only",
+  "$comment": "The embedded graph is additionally validated against the selected OES installation's graph-envelope.schema.json and the real OES validator. This schema does not define ontology types or relations.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "artifact_type",
+    "workspace",
+    "project_id",
+    "graph",
+    "proposal_id",
+    "base_revision",
+    "status",
+    "scope",
+    "identity_matches",
+    "issues"
+  ],
+  "properties": {
+    "artifact_type": {
+      "const": "contextd_graph_proposal.v2"
+    },
+    "workspace": {
+      "$ref": "#/$defs/id"
+    },
+    "project_id": {
+      "$ref": "#/$defs/id"
+    },
+    "graph": {
+      "type": "object",
+      "required": [
+        "metadata"
+      ],
+      "properties": {
+        "metadata": {
+          "type": "object",
+          "required": [
+            "id",
+            "workspace",
+            "projectId",
+            "ontologyVersion",
+            "contextdProposal"
+          ],
+          "properties": {
+            "id": {
+              "$ref": "#/$defs/id"
+            },
+            "workspace": {
+              "$ref": "#/$defs/id"
+            },
+            "projectId": {
+              "$ref": "#/$defs/id"
+            },
+            "ontologyVersion": {
+              "$ref": "#/$defs/prose"
+            },
+            "contextdProposal": {
+              "type": "object",
+              "required": [
+                "id",
+                "status"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "$ref": "#/$defs/id"
+                },
+                "status": {
+                  "const": "pending"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "proposal_id": {
+      "$ref": "#/$defs/id"
+    },
+    "base_revision": {
+      "$ref": "#/$defs/prose"
+    },
+    "status": {
+      "const": "pending"
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "reviewed",
+        "not_reviewed"
+      ],
+      "properties": {
+        "reviewed": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/prose"
+          },
+          "minItems": 1,
+          "maxItems": 1000
+        },
+        "not_reviewed": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/prose"
+          },
+          "minItems": 0,
+          "maxItems": 1000
+        }
+      }
+    },
+    "identity_matches": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "candidate_id",
+          "target_id",
+          "basis",
+          "evidence_refs",
+          "rationale"
+        ],
+        "properties": {
+          "candidate_id": {
+            "$ref": "#/$defs/id"
+          },
+          "target_id": {
+            "$ref": "#/$defs/id"
+          },
+          "basis": {
+            "enum": [
+              "explicit-id",
+              "reviewed-mapping",
+              "suggested"
+            ]
+          },
+          "evidence_refs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/id"
+            },
+            "minItems": 1,
+            "maxItems": 1000,
+            "uniqueItems": true
+          },
+          "rationale": {
+            "$ref": "#/$defs/prose"
+          }
+        }
+      },
+      "minItems": 0,
+      "maxItems": 1000
+    },
+    "issues": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "kind",
+          "subjects",
+          "detail",
+          "evidence_refs"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/$defs/id"
+          },
+          "kind": {
+            "enum": [
+              "implementation-gap",
+              "source-conflict",
+              "temporal-difference",
+              "scope-difference",
+              "unresolved-identity",
+              "missing-evidence"
+            ]
+          },
+          "subjects": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/id"
+            },
+            "minItems": 1,
+            "maxItems": 1000,
+            "uniqueItems": true
+          },
+          "detail": {
+            "$ref": "#/$defs/prose"
+          },
+          "evidence_refs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/$defs/id"
+            },
+            "minItems": 0,
+            "maxItems": 1000,
+            "uniqueItems": true
+          }
+        }
+      },
+      "minItems": 0,
+      "maxItems": 1000
+    }
+  },
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$",
+      "not": {
+        "pattern": "\\s"
+      }
+    },
+    "prose": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 8192
+    }
+  }
+}

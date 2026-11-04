@@ -48,9 +48,14 @@ import sys
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 
-from lib import contextd_resolver
-from lib.frontmatter import parse_yaml_subset, split_frontmatter
-from lib.stdio import configure_stdio
+if __package__:
+    from .lib import contextd_resolver
+    from .lib.frontmatter import parse_yaml_subset, split_frontmatter
+    from .lib.stdio import configure_stdio
+else:  # Direct source scripts and legacy source-test imports.
+    from lib import contextd_resolver
+    from lib.frontmatter import parse_yaml_subset, split_frontmatter
+    from lib.stdio import configure_stdio
 
 # Markdown inline link: [text](target)
 # - Skips images (preceding '!') by using a negative lookbehind.

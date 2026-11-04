@@ -19,7 +19,10 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
-from lib.stdio import configure_stdio  # noqa: E402
+if __package__:
+    from .lib.stdio import configure_stdio  # noqa: E402
+else:  # Direct source scripts and legacy source-test imports.
+    from lib.stdio import configure_stdio  # noqa: E402
 
 
 PACKS_DIR = REPO_ROOT / "packs"
