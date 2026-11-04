@@ -1,0 +1,57 @@
+{
+  "apiVersion": "oes.graph/v1",
+  "template": "software-system",
+  "metadata": {
+    "id": "consumer-recovery",
+    "ontologyVersion": "0.1.0",
+    "workspace": "default",
+    "synthetic": true
+  },
+  "nodes": [
+    {
+      "id": "ingest-worker",
+      "type": "Service",
+      "properties": {
+        "label": "Telemetry ingestion worker"
+      }
+    },
+    {
+      "id": "persist-before-ack",
+      "type": "BusinessRule",
+      "properties": {
+        "statement": "Persist the record before acknowledging delivery; retain failures for retry.",
+        "status": "accepted"
+      }
+    },
+    {
+      "id": "recovery-decision-source",
+      "type": "Source",
+      "properties": {
+        "uri": "decisions/consumer-write-recovery.md",
+        "kind": "markdown",
+        "sha256": "cda221c798d0316799513ab9f395667cd5a1d81bf6c29d2c215f285f98362d7b"
+      }
+    },
+    {
+      "id": "persist-before-ack-evidence",
+      "type": "Evidence",
+      "properties": {
+        "sourceId": "recovery-decision-source",
+        "locator": "L22-L23",
+        "excerpt": "The telemetry ingestion worker must persist each accepted record before acknowledging delivery.\nIf persistence fails, the worker must retain the record for retry and report the failure."
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "worker-implements-recovery",
+      "type": "implementsRule",
+      "from": "ingest-worker",
+      "to": "persist-before-ack",
+      "evidenceIds": [
+        "persist-before-ack-evidence"
+      ],
+      "assertionStatus": "asserted"
+    }
+  ]
+}

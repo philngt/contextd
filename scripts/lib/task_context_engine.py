@@ -29,7 +29,7 @@ from .context_defaults import (
     INTENT_PRECEDENCE,
     WORKSTREAM_PRECEDENCE,
 )
-from . import context_policy, synapse_engine, decision_context
+from . import context_policy, synapse_engine, decision_context, oes_context
 from . import context_output
 from .context_output import render_markdown, _pack_markdown
 from .context_payload import (
@@ -54,6 +54,10 @@ SYNAPSE_SCORE_ADJUSTMENTS = {
 PACK_ROUTE_BASE_SCORE = 2
 PACK_ROUTE_DIRECT_SCORE = 12
 PACK_ROUTE_ORDER_SCORE = 4
+
+# A validated ontology route contributes once per document. More assertions or
+# evidence entries must not multiply its influence over normal context budgets.
+OES_ROUTE_SCORE = 12
 
 
 def _now() -> str:
@@ -791,6 +795,8 @@ def _score(doc: Dict, words: List[str]) -> int:
             0,
             PACK_ROUTE_ORDER_SCORE - int(route.get("entry_index", 0)),
         )
+    if doc.get("oes_evidence"):
+        score += OES_ROUTE_SCORE
     score += _synapse_score_adjustment(doc)
     return score
 
@@ -811,12 +817,18 @@ def _estimate_tokens(text: str) -> int:
 
 
 def _trace_doc(doc: Dict, score: int, reason: str) -> Dict:
+    estimated_content = doc.get("content_full", "")
+    if doc.get("oes_evidence"):
+        estimated_content = (
+            estimated_content.rstrip() + "\n\n"
+            + oes_context.render_evidence(doc["oes_evidence"])
+        )
     item = {
         "path": doc["path"],
         "category": doc["category"],
         "selection_score": score,
         "selection_reason": reason,
-        "estimated_tokens": _estimate_tokens(doc.get("content_full", "")),
+        "estimated_tokens": _estimate_tokens(estimated_content),
         "source_hash": doc["source_hash"],
         "redacted": bool(doc.get("redacted")),
     }
@@ -827,6 +839,9 @@ def _trace_doc(doc: Dict, score: int, reason: str) -> Dict:
         item["synapse_expansion"] = doc["synapse_expansion"]
     if doc.get("pack_retrieval_route"):
         item["pack_retrieval_route"] = doc["pack_retrieval_route"]
+    if doc.get("oes_evidence"):
+        item["oes_evidence"] = doc["oes_evidence"]
+        item["oes_score_adjustment"] = OES_ROUTE_SCORE
     return item
 
 
@@ -960,7 +975,18 @@ def _slice_doc(doc: Dict) -> Dict:
     if doc.get("redacted"):
         out["redacted"] = True
         out["redaction_findings"] = doc.get("redaction_findings", [])
+    if doc.get("oes_evidence"):
+        out = _with_oes_evidence(out, doc["oes_evidence"])
     return out
+
+
+def _with_oes_evidence(doc: Dict, citations: List[Dict]) -> Dict:
+    """Keep evidence in the exact content that rendering, budgets and keys use."""
+    return {
+        **doc,
+        "oes_evidence": citations,
+        "content": doc["content"].rstrip() + "\n\n" + oes_context.render_evidence(citations),
+    }
 
 
 def _slice_pack_manifest(doc: Dict, manifest: Mapping,
@@ -1300,6 +1326,7 @@ def build_context_result(
     synapse_as_of: Optional[date] = None,
     *,
     support_request: Optional[Mapping] = None,
+    oes_request: Optional[oes_context.OESRequest] = None,
 ) -> BuildResult:
     """Build a retained result with trace separate from the public artifact.
 
@@ -1338,6 +1365,36 @@ def build_context_result(
         warnings=warnings_out,
         source_records=synapse_build.sources_by_path,
     )
+    oes_selection = None
+    if oes_request is not None:
+        oes_selection = oes_context.load_selection(
+            oes_request,
+            wiki_root=wiki_root,
+            workspace=workspace,
+            task=task,
+            keywords=_keywords(task, components),
+            source_records=synapse_build.sources_by_path,
+        )
+        for relative, citations in sorted(oes_selection.citations_by_path.items()):
+            matching = [doc for doc in candidates if doc["path"] == relative]
+            if not matching:
+                path = wiki_root / relative
+                node = synapse_build.lookups.nodes_by_path.get(relative, {})
+                category = _category_from_path(path, relative, node.get("kind", "project"))
+                item = _doc(
+                    path, category, wiki_root, gaps=gaps, warnings=warnings_out,
+                    source_records=synapse_build.sources_by_path,
+                )
+                if item is not None:
+                    candidates.append(item)
+                    matching.append(item)
+            for doc in matching:
+                doc["oes_evidence"] = citations
+        if candidates:
+            empty_message = f"No candidate docs for intent={intent_type} workspace={workspace}"
+            gaps = [gap for gap in gaps if not (
+                gap.get("category") == "retrieval" and gap.get("missing") == empty_message
+            )]
     _attach_synapse_metadata(candidates, synapse_build.lookups)
     candidates = _expand_replacement_candidates(
         candidates,
@@ -1359,6 +1416,16 @@ def build_context_result(
         source_records=synapse_build.sources_by_path,
         support_request=request,
     )
+    # Static context owns duplicate paths in the compiled pack. Keep citations
+    # on that emitted copy as well, without changing which static guidance loads.
+    selected_evidence = {
+        doc["path"]: doc["oes_evidence"] for doc in docs if doc.get("oes_evidence")
+    }
+    static_docs = [
+        _with_oes_evidence(doc, selected_evidence[doc["path"]])
+        if doc["path"] in selected_evidence else doc
+        for doc in static_docs
+    ]
     decision_report = decision_context.report_for(static_docs, packs, request)
     # A canonical knowledge file explicitly routed as a referenced document
     # must not leak a second, unsliced copy of its optional teaching/procedures.
@@ -1372,7 +1439,10 @@ def build_context_result(
             warnings_out.append(
                 f"Synapse {diagnostic['code']}: {diagnostic['message']}"
             )
-    context_pack = _build_context_pack(workspace, packs, docs, static_docs, decision_report)
+    context_pack = _build_context_pack(
+        workspace, packs, docs, static_docs, decision_report,
+        oes_selection.metadata if oes_selection is not None else None,
+    )
     source_hashes = {
         doc["path"]: doc["source_hash"]
         for doc in docs + static_docs
@@ -1436,6 +1506,8 @@ def build_context_result(
     }
     if decision_report is not None:
         artifact["decision_context"] = decision_report
+    if oes_selection is not None:
+        artifact["oes"] = oes_selection.metadata
     artifact["governance_report"] = context_policy.evaluate_artifact(
         artifact,
         wiki_root,
@@ -1450,12 +1522,14 @@ def build_context_snapshot(
     project_dir: Optional[Path] = None, warnings: Optional[List[str]] = None,
     include_selection_trace: bool = False, synapse_as_of: Optional[date] = None,
     *, support_request: Optional[Mapping] = None,
+    oes_request: Optional[oes_context.OESRequest] = None,
 ) -> Tuple[Dict, Dict]:
     """Compatibility tuple API; new callers use build_context_result()."""
     result = build_context_result(
         task, wiki_root, workspace, packs, project_dir=project_dir,
         warnings=warnings, synapse_as_of=synapse_as_of,
         support_request=support_request,
+        oes_request=oes_request,
     )
     artifact = result.artifact
     if include_selection_trace:
@@ -1474,6 +1548,7 @@ def build_context_artifact(
     synapse_as_of: Optional[date] = None,
     *,
     support_request: Optional[Mapping] = None,
+    oes_request: Optional[oes_context.OESRequest] = None,
 ) -> Dict:
     """Build the canonical JSON context artifact without exposing build state."""
     artifact, _ = build_context_snapshot(
@@ -1486,6 +1561,7 @@ def build_context_artifact(
         include_selection_trace=include_selection_trace,
         synapse_as_of=synapse_as_of,
         support_request=support_request,
+        oes_request=oes_request,
     )
     return artifact
 
@@ -1499,6 +1575,7 @@ def build_context_explanation(
     warnings: Optional[List[str]] = None,
     *,
     support_request: Optional[Mapping] = None,
+    oes_request: Optional[oes_context.OESRequest] = None,
 ) -> Dict:
     """Build a human/debug-oriented explanation around the canonical artifact."""
     result = build_context_result(
@@ -1509,6 +1586,7 @@ def build_context_explanation(
         project_dir=project_dir,
         warnings=warnings,
         support_request=support_request,
+        oes_request=oes_request,
     )
     artifact = result.artifact
     trace = result.selection_trace
@@ -1534,9 +1612,12 @@ def build_context_explanation(
 
 
 def build_task_context(task: str, wiki_root: Path, workspace: str,
-                       packs: List[str]) -> str:
+                       packs: List[str], *,
+                       oes_request: Optional[oes_context.OESRequest] = None) -> str:
     """Legacy API: return rendered Markdown."""
-    artifact = build_context_artifact(task, wiki_root, workspace, packs)
+    artifact = build_context_artifact(
+        task, wiki_root, workspace, packs, oes_request=oes_request,
+    )
     return render_markdown(artifact)
 
 

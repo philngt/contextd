@@ -116,6 +116,11 @@
           "synapse": {
             "$ref": "#/definitions/synapseState"
           },
+          "oes_evidence": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "$ref": "#/definitions/oesEvidence" }
+          },
           "synapse_expansion": {
             "type": "object",
             "properties": {
@@ -146,7 +151,12 @@
             "type": "string",
             "pattern": "^[a-f0-9]{64}$"
           },
-          "synapse": { "$ref": "#/definitions/synapseState" }
+          "synapse": { "$ref": "#/definitions/synapseState" },
+          "oes_evidence": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "$ref": "#/definitions/oesEvidence" }
+          }
         },
         "additionalProperties": true
       }
@@ -167,6 +177,41 @@
     "warnings": {
       "type": "array",
       "items": { "type": "string" }
+    },
+    "oes": {
+      "type": "object",
+      "description": "Optional task-scoped selection from an OES graph validated against the retained workspace source snapshot.",
+      "required": [
+        "graph_path", "graph_hash", "graph_id", "template", "ontology_version",
+        "validation", "matched_node_ids", "matched_edge_ids"
+      ],
+      "properties": {
+        "graph_path": { "type": "string", "minLength": 1 },
+        "graph_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "graph_id": { "type": "string", "minLength": 1 },
+        "template": { "type": "string", "minLength": 1 },
+        "ontology_version": { "type": ["string", "null"] },
+        "matched_node_ids": {
+          "type": "array", "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "matched_edge_ids": {
+          "type": "array", "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "validation": {
+          "type": "object",
+          "required": ["structural", "evidence", "checked", "skipped"],
+          "properties": {
+            "structural": { "const": "passed" },
+            "evidence": { "const": "passed" },
+            "checked": { "type": "integer", "minimum": 0 },
+            "skipped": { "const": 0 }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": true
     },
     "synapse": {
       "type": "object",
@@ -532,6 +577,58 @@
     }
   },
   "definitions": {
+    "oesNode": {
+      "type": "object",
+      "required": ["id", "type"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "type": { "type": "string", "minLength": 1 },
+        "label": { "type": "string" },
+        "name": { "type": "string" },
+        "title": { "type": "string" },
+        "statement": { "type": "string" },
+        "summary": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "oesEvidence": {
+      "type": "object",
+      "description": "Preserved OES assertion and evidence identity; a matched source excerpt does not establish the assertion's truth.",
+      "required": [
+        "graph_id", "graph_hash", "template", "edge_id", "relation",
+        "from_node", "to_node", "assertion_status", "matched_node_ids",
+        "evidence_id", "source_id", "source_path", "source_hash", "locator",
+        "excerpt", "evidence_check"
+      ],
+      "properties": {
+        "graph_id": { "type": "string", "minLength": 1 },
+        "graph_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "template": { "type": "string", "minLength": 1 },
+        "edge_id": { "type": "string", "minLength": 1 },
+        "relation": { "type": "string", "minLength": 1 },
+        "relation_properties": { "type": "object", "additionalProperties": true },
+        "from_node": { "$ref": "#/definitions/oesNode" },
+        "to_node": { "$ref": "#/definitions/oesNode" },
+        "assertion_status": { "enum": ["asserted", "verified", "inferred", "hypothesis"] },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "valid_from": { "type": "string" },
+        "valid_to": { "type": "string" },
+        "matched_node_ids": {
+          "type": "array", "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "evidence_id": { "type": "string", "minLength": 1 },
+        "source_id": { "type": "string", "minLength": 1 },
+        "source_path": { "type": "string", "minLength": 1 },
+        "source_hash": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "locator": { "type": "string", "pattern": "^L[1-9][0-9]*(-L[1-9][0-9]*)?$" },
+        "excerpt": { "type": "string", "minLength": 1 },
+        "evidence_check": { "const": "matched" },
+        "redacted": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
     "synapseState": {
       "type": "object",
       "required": [

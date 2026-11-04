@@ -194,7 +194,7 @@ def materialize_context(
         raise ValueError("Decision context packs changed after build; materialization refused")
     expected = _build_context_pack(
         artifact["workspace"], packs, artifact.get("referenced_docs", []),
-        artifact.get("static_context", []), report,
+        artifact.get("static_context", []), report, artifact.get("oes"),
     )
     if any(pack_ref.get(key) != expected[key] for key in ("sourceHash", "packKey", "sources")):
         raise ValueError("Context projection changed after build; materialization refused")

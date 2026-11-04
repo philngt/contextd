@@ -1,0 +1,2 @@
+# The OES demo binds the exact raw source bytes with SHA-256.
+workspaces/default/decisions/consumer-write-recovery.md text eol=lf
