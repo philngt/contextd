@@ -25,13 +25,22 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from lib.atomic_write import (  # noqa: E402
-    LockTimeout,
-    atomic_write_json,
-    with_advisory_lock,
-)
-from lib.stdio import configure_stdio  # noqa: E402
+if not __package__:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+if __package__:
+    from .lib.atomic_write import (  # noqa: E402
+        LockTimeout,
+        atomic_write_json,
+        with_advisory_lock,
+    )
+    from .lib.stdio import configure_stdio  # noqa: E402
+else:  # Direct source scripts and legacy source-test imports.
+    from lib.atomic_write import (  # noqa: E402
+        LockTimeout,
+        atomic_write_json,
+        with_advisory_lock,
+    )
+    from lib.stdio import configure_stdio  # noqa: E402
 
 ALLOWED_SUBAGENTS = {
     "contextd-planner",

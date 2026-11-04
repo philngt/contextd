@@ -9,29 +9,22 @@ from __future__ import annotations
 from dataclasses import dataclass
 import hashlib
 import json
-import math
 from pathlib import Path, PurePosixPath
 import re
-import shutil
+# Retain this module import for callers that patch the subprocess boundary.
 import subprocess
-import tempfile
 from typing import Dict, Iterable, Mapping, Optional
 
 from .context_security import block_reason, is_relative_to, redact_text
+from .oes_validation import (
+    DEFAULT_TIMEOUT_SECONDS, OESRequest, validate_snapshot, validator_command,
+)
 from .synapse_engine import SourceRecord, resolve_workspace_dir
 
 
-DEFAULT_TIMEOUT_SECONDS = 30.0
 MAX_GRAPH_BYTES = 5 * 1024 * 1024
 MAX_SNAPSHOT_BYTES = 50 * 1024 * 1024
 NODE_TEXT_FIELDS = ("label", "name", "title", "statement", "summary")
-
-
-@dataclass(frozen=True)
-class OESRequest:
-    graph: Optional[Path] = None
-    cli: Optional[Path] = None
-    timeout_seconds: float = DEFAULT_TIMEOUT_SECONDS
 
 
 @dataclass(frozen=True)
@@ -110,6 +103,11 @@ def _graph_snapshot(request: OESRequest, root: Path, workspace_dir: Path):
         raise ValueError("OES graph metadata.workspace must match the active workspace")
     if not isinstance(metadata.get("id"), str) or not metadata["id"].strip():
         raise ValueError("OES graph metadata.id must be a nonempty string")
+    if "contextdProposal" in metadata:
+        proposal = metadata["contextdProposal"]
+        if (not isinstance(proposal, dict) or proposal.get("status") != "approved"
+                or not isinstance(proposal.get("id"), str) or not proposal["id"].strip()):
+            raise ValueError("OES authoring graph is a pending review candidate; owner approval is required")
     if not isinstance(graph.get("template"), str) or not graph["template"].strip():
         raise ValueError("OES graph template must be a nonempty string")
     if metadata.get("ontologyVersion") is not None and not isinstance(metadata["ontologyVersion"], str):
@@ -166,81 +164,12 @@ def _source_snapshots(graph: Dict, root: Path, workspace_dir: Path,
 
 
 def _validator_command(request: OESRequest) -> list:
-    if request.cli is not None:
-        cli = Path(request.cli).expanduser().resolve()
-        if not cli.is_file():
-            raise ValueError("OES CLI entrypoint does not exist; pass --oes-cli /path/to/bin/oes.mjs")
-        node = shutil.which("node")
-        if node is None:
-            raise ValueError("OES graph input requires Node.js 20+ on PATH")
-        return [node, str(cli)]
-    installed = shutil.which("oes")
-    if installed is None:
-        raise ValueError("OES CLI not found; pass --oes-cli /path/to/oes/bin/oes.mjs")
-    return [installed]
+    return validator_command(request)
 
 
 def _validate(request: OESRequest, graph_bytes: bytes, payloads: Dict,
               evidence_count: int) -> Dict:
-    if (
-        not isinstance(request.timeout_seconds, (int, float))
-        or isinstance(request.timeout_seconds, bool)
-        or not math.isfinite(request.timeout_seconds)
-        or request.timeout_seconds <= 0
-    ):
-        raise ValueError("OES timeout must be a finite positive number")
-    command = _validator_command(request)
-    try:
-        with tempfile.TemporaryDirectory(prefix="contextd-oes-") as temp:
-            snapshot = Path(temp)
-            source_root = snapshot / "sources"
-            source_root.mkdir()
-            for uri, payload in payloads.items():
-                target = source_root.joinpath(*PurePosixPath(uri).parts)
-                target.parent.mkdir(parents=True, exist_ok=True)
-                target.write_bytes(payload)
-            graph_path = snapshot / "graph.json"
-            graph_path.write_bytes(graph_bytes)
-            result = subprocess.run(
-                command + [
-                    "check-graph", str(graph_path), "--with-evidence",
-                    "--source-root", str(source_root), "--warnings-as-errors", "--json",
-                ],
-                capture_output=True, text=True, encoding="utf-8", errors="replace",
-                timeout=request.timeout_seconds, check=False,
-            )
-    except subprocess.TimeoutExpired as exc:
-        raise ValueError("OES validator timed out; context build refused") from exc
-    except OSError as exc:
-        raise ValueError("Cannot execute OES validator or prepare its source snapshot") from exc
-    try:
-        report = json.loads(result.stdout)
-    except (TypeError, json.JSONDecodeError) as exc:
-        raise ValueError(
-            "OES validator must support check-graph --with-evidence --json; "
-            "update the OES checkout"
-        ) from exc
-    if not isinstance(report, dict):
-        raise ValueError("OES returned an invalid validation report")
-    evidence = report.get("evidence")
-    diagnostics = report.get("diagnostics")
-    if (
-        result.returncode != 0 or report.get("passed") is not True
-        or report.get("command") != "check-graph"
-        or diagnostics != [] or not isinstance(evidence, dict)
-        or evidence.get("checked") != evidence_count or evidence.get("skipped") != 0
-        or evidence_count == 0
-    ):
-        codes = sorted({
-            str(item.get("code", "validation-error"))
-            for item in diagnostics if isinstance(item, dict)
-        }) if isinstance(diagnostics, list) else []
-        detail = ", ".join(codes[:10]) or "incomplete structural/evidence validation report"
-        raise ValueError("OES validation failed: " + redact_text(detail)[0])
-    return {
-        "structural": "passed", "evidence": "passed",
-        "checked": evidence_count, "skipped": 0,
-    }
+    return validate_snapshot(request, graph_bytes, payloads, evidence_count)
 
 
 def _matches(keyword: str, text: str) -> bool:
@@ -251,7 +180,7 @@ def _matches(keyword: str, text: str) -> bool:
 def _node_ref(node: Dict) -> Dict:
     props = node.get("properties") or {}
     result = {"id": node["id"], "type": node["type"]}
-    for field in (*NODE_TEXT_FIELDS, "status"):
+    for field in (*NODE_TEXT_FIELDS, "status", "model", "verification", "scope", "review", "freshness"):
         if isinstance(props.get(field), str):
             result[field] = props[field]
     return result

@@ -36,8 +36,12 @@ import sys
 from pathlib import Path
 from typing import Callable, Dict, List, Optional
 
-from lib import contextd_resolver
-from lib.context_security import read_safe_text
+if __package__:
+    from .lib import contextd_resolver
+    from .lib.context_security import read_safe_text
+else:  # Direct source scripts and legacy source-test imports.
+    from lib import contextd_resolver
+    from lib.context_security import read_safe_text
 
 
 # ---------------------------------------------------------------------------
@@ -357,7 +361,10 @@ def pack_workstream(pack_name: str, manifest: Optional[Dict] = None) -> Optional
     Known legacy names without the field retain their historical behavior.
     Explicit invalid values fail rather than silently changing classification.
     """
-    from lib.context_defaults import LEGACY_PACK_WORKSTREAMS, WORKSTREAM_PRIORITY
+    if __package__:
+        from .lib.context_defaults import LEGACY_PACK_WORKSTREAMS, WORKSTREAM_PRIORITY
+    else:  # Direct source scripts and legacy source-test imports.
+        from lib.context_defaults import LEGACY_PACK_WORKSTREAMS, WORKSTREAM_PRIORITY
     manifest = manifest or {}
     if "workstream" not in manifest:
         return LEGACY_PACK_WORKSTREAMS.get(pack_name)

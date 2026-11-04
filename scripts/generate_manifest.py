@@ -22,9 +22,14 @@ from typing import Dict, List, Optional
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent
-sys.path.insert(0, str(SCRIPT_DIR))
-import pack_loader  # noqa: E402
-from lib.stdio import configure_stdio  # noqa: E402
+if not __package__:
+    sys.path.insert(0, str(SCRIPT_DIR))
+if __package__:
+    from . import pack_loader  # noqa: E402
+    from .lib.stdio import configure_stdio  # noqa: E402
+else:  # Direct source scripts and legacy source-test imports.
+    import pack_loader  # noqa: E402
+    from lib.stdio import configure_stdio  # noqa: E402
 
 
 def _parse_frontmatter(text: str) -> Optional[Dict[str, str]]:

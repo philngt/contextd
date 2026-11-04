@@ -169,7 +169,8 @@ class PackCognitionTests(unittest.TestCase):
         self.assertEqual(static, budget["estimated_tokens_static"])
         self.assertEqual(sum(budget["estimated_tokens_static_by_category"].values()), static)
         self.assertLessEqual(budget["estimated_tokens_total"],
-                             static + budget["estimated_tokens_referenced"])
+                             static + budget["estimated_tokens_referenced"]
+                             + budget["estimated_tokens_diagnostics"])
 
     def test_multi_pack_determinism_budget_and_workspace_isolation(self) -> None:
         args = (self.root, "Review keyboard navigation and rules of hooks",

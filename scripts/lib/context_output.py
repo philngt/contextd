@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 from typing import Callable, Dict, List, Mapping, Optional
 
-from . import decision_context, synapse_engine
+from . import decision_context, synapse_engine, context_coverage
 from .atomic_write import atomic_write_text
 from .context_payload import (
     compiled_sources, build_pack_ref as _build_context_pack,
@@ -45,7 +45,8 @@ def render_markdown(artifact: Dict) -> str:
         lines.append(
             "- **Estimated Context**: "
             f"~{budget.get('estimated_tokens_referenced', 0)} referenced + "
-            f"~{budget.get('estimated_tokens_static', 0)} static = "
+            f"~{budget.get('estimated_tokens_static', 0)} static + "
+            f"~{budget.get('estimated_tokens_diagnostics', 0)} diagnostics = "
             f"~{budget.get('estimated_tokens_total', 0)} total tokens"
         )
     lines.extend(decision_context.render_report(artifact.get("decision_context")))
@@ -70,13 +71,9 @@ def render_markdown(artifact: Dict) -> str:
         lines.append(doc.get("content", "").strip())
         lines.append("")
 
-    if artifact.get("gaps"):
-        lines.append("## Knowledge Gaps")
-        lines.append("")
-        for gap in artifact["gaps"]:
-            marker = "blocking" if gap.get("blocking_hint") else "non-blocking"
-            lines.append(f"- [{marker}] {gap['category']}: {gap['missing']}")
-        lines.append("")
+    diagnostics = context_coverage.render(artifact.get("coverage"), artifact.get("gaps", []))
+    if diagnostics:
+        lines.extend([diagnostics, ""])
 
     if artifact.get("warnings"):
         lines.append("## Warnings")
@@ -98,6 +95,9 @@ def _pack_markdown(artifact: Dict) -> str:
         f"Source hash: {artifact['contextPack']['sourceHash']}",
         "",
     ]
+    diagnostics = context_coverage.render(artifact.get("coverage"), artifact.get("gaps", []))
+    if diagnostics:
+        lines.extend([diagnostics, ""])
     lines.extend(decision_context.render_report(artifact.get("decision_context")))
     docs = compiled_sources(
         artifact.get("static_context", []), artifact.get("referenced_docs", []),
@@ -195,6 +195,7 @@ def materialize_context(
     expected = _build_context_pack(
         artifact["workspace"], packs, artifact.get("referenced_docs", []),
         artifact.get("static_context", []), report, artifact.get("oes"),
+        artifact.get("coverage"), artifact.get("gaps", []),
     )
     if any(pack_ref.get(key) != expected[key] for key in ("sourceHash", "packKey", "sources")):
         raise ValueError("Context projection changed after build; materialization refused")

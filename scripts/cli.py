@@ -11,30 +11,54 @@ from dataclasses import dataclass
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-sys.path.insert(0, str(SCRIPT_DIR))
+if not __package__:
+    sys.path.insert(0, str(SCRIPT_DIR))
 
-from lib.contextd_version import get_version  # noqa: E402
-from lib.stdio import configure_stdio  # noqa: E402
+if __package__:
+    from .lib.contextd_version import get_version  # noqa: E402
+    from .lib.stdio import configure_stdio  # noqa: E402
+else:  # Direct source scripts and legacy source-test imports.
+    from lib.contextd_version import get_version  # noqa: E402
+    from lib.stdio import configure_stdio  # noqa: E402
 
 __version__ = get_version(start_path=SCRIPT_DIR.parent)
 
-import cmd_resolve  # noqa: E402
-import cmd_find  # noqa: E402
-import cmd_bundle  # noqa: E402
-from lib import decision_context, oes_context
-import cmd_task_context  # noqa: E402
-import cmd_synapse  # noqa: E402
-import cmd_contract_path  # noqa: E402
-import cmd_migrate_config  # noqa: E402
-import cmd_doctor  # noqa: E402
-import cmd_explain  # noqa: E402
-import cmd_pack_validate  # noqa: E402
-import cmd_policy_check  # noqa: E402
-import cmd_eval  # noqa: E402
-import cmd_mcp_config  # noqa: E402
-from lib import contextd_resolver  # noqa: E402
-import mcp_server  # noqa: E402
-import render_runtime  # noqa: E402
+if __package__:
+    from . import cmd_resolve  # noqa: E402
+    from . import cmd_find  # noqa: E402
+    from . import cmd_bundle  # noqa: E402
+    from .lib import decision_context, oes_context
+    from . import cmd_task_context  # noqa: E402
+    from . import cmd_synapse  # noqa: E402
+    from . import cmd_contract_path  # noqa: E402
+    from . import cmd_migrate_config  # noqa: E402
+    from . import cmd_doctor  # noqa: E402
+    from . import cmd_explain  # noqa: E402
+    from . import cmd_pack_validate  # noqa: E402
+    from . import cmd_policy_check  # noqa: E402
+    from . import cmd_eval  # noqa: E402
+    from . import cmd_mcp_config  # noqa: E402
+    from .lib import contextd_resolver  # noqa: E402
+    from . import mcp_server  # noqa: E402
+    from . import render_runtime  # noqa: E402
+else:  # Direct source scripts and legacy source-test imports.
+    import cmd_resolve  # noqa: E402
+    import cmd_find  # noqa: E402
+    import cmd_bundle  # noqa: E402
+    from lib import decision_context, oes_context
+    import cmd_task_context  # noqa: E402
+    import cmd_synapse  # noqa: E402
+    import cmd_contract_path  # noqa: E402
+    import cmd_migrate_config  # noqa: E402
+    import cmd_doctor  # noqa: E402
+    import cmd_explain  # noqa: E402
+    import cmd_pack_validate  # noqa: E402
+    import cmd_policy_check  # noqa: E402
+    import cmd_eval  # noqa: E402
+    import cmd_mcp_config  # noqa: E402
+    from lib import contextd_resolver  # noqa: E402
+    import mcp_server  # noqa: E402
+    import render_runtime  # noqa: E402
 
 
 @dataclass(frozen=True)

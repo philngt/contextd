@@ -9,7 +9,10 @@ from datetime import date
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional
 
-import pack_loader
+if __package__ == "lib":  # Legacy source-script imports.
+    import pack_loader
+else:
+    from .. import pack_loader
 from . import task_context_engine, decision_context
 from .context_security import reject_unsafe_entry
 

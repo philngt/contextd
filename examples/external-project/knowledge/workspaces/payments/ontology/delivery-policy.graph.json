@@ -1,0 +1,57 @@
+{
+  "apiVersion": "oes.graph/v1",
+  "template": "software-system",
+  "metadata": {
+    "id": "payments-delivery-policy",
+    "ontologyVersion": "0.1.0",
+    "workspace": "payments",
+    "synthetic": true
+  },
+  "nodes": [
+    {
+      "id": "payment-worker",
+      "type": "Service",
+      "properties": {
+        "label": "Kafka payment consumer"
+      }
+    },
+    {
+      "id": "delivery-idempotency",
+      "type": "BusinessRule",
+      "properties": {
+        "statement": "Idempotency requires durable duplicate suppression before acknowledgement.",
+        "status": "accepted"
+      }
+    },
+    {
+      "id": "delivery-policy-source",
+      "type": "Source",
+      "properties": {
+        "uri": "decisions/delivery-policy.md",
+        "kind": "markdown",
+        "sha256": "d4387c6cdfbeceb7319b704d2aa13f8ad287b97216de263908cc9524df10ccf5"
+      }
+    },
+    {
+      "id": "delivery-policy-evidence",
+      "type": "Evidence",
+      "properties": {
+        "sourceId": "delivery-policy-source",
+        "locator": "L18-L20",
+        "excerpt": "Record each delivery identifier in the same durable transaction as its payment write.\nIf that identifier is already recorded, leave the payment unchanged and acknowledge the delivery.\nAcknowledge a new delivery only after the transaction commits."
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "worker-implements-idempotency",
+      "type": "implementsRule",
+      "from": "payment-worker",
+      "to": "delivery-idempotency",
+      "evidenceIds": [
+        "delivery-policy-evidence"
+      ],
+      "assertionStatus": "asserted"
+    }
+  ]
+}

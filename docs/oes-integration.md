@@ -10,6 +10,10 @@ It uses the existing document ranking, category budgets, lifecycle metadata,
 source hashes and Markdown pack output. A normal build without `--oes-graph`
 has no Node.js or OES dependency.
 
+For a project outside contextd's own default workspace, start with the
+[separate payment application](../examples/external-project/README.md). It
+demonstrates a missing route and a successful evidence route for the same task.
+
 ## Runnable example
 
 Use Python 3.10+ and Node.js 20+. These commands assume you are in a source
@@ -88,10 +92,32 @@ The source graph and workspace documents are not modified by the build.
 6. The compiler keeps citation metadata and appends its rendered form to the
    selected document. This makes evidence visible to agent adapters and
    includes it in token estimates and context-pack identity.
+7. It reports the support actually selected. No category score can make an
+   unrelated document eligible. Coverage and actionable gaps enter both the
+   task artifact and compiled pack, and are bound to its identity and budget.
 
 The manual precheck is useful for inspecting the graph independently. contextd
 always revalidates the exact snapshot used for the build; it does not trust a
 previous command's exit status or an unbound “validated” flag in JSON.
+
+## Coverage and Missing Routes
+
+`coverage.status` is `evidence_match` when selected context contains checked
+evidence for a matched graph assertion. Without that route it may instead be a
+`declared_route`, `lexical_match`, `no_match` or `unassessed` query. General static
+guidance does not count as task-specific support. A no-support build may select
+zero referenced documents and emits a `knowledge-coverage` gap.
+
+The independent `coverage.graph.status` is `matched`, `no_match`, `not_selected`
+or `not_requested`. A valid supplied graph with no evidenced match emits an
+`oes-coverage` gap scoped to that graph. Matching assertions omitted by document
+budgets yield `not_selected`, rather than pretending the assertions were absent.
+The report preserves matched node and edge IDs in either case.
+
+`coverage.complete` is always false. Matched literal terms are retrieval signals,
+and unmatched terms can have aliases. Neither a small graph nor an empty gap
+list establishes complete knowledge or semantic entailment. These distinctions
+also appear in `explain --text` and the actual agent context pack.
 
 ## Supported input contract
 
@@ -143,6 +169,13 @@ remain visible, as do rejected or superseded claim states.
 
 OES graph input does not replace Synapse or automatically promote contextd
 [graph-authoring proposals](graph-authoring.md) into canonical knowledge.
+New authoring proposals embed the same `oes.graph/v1` model and delegate ontology
+and source checks to OES. Their contextd envelope carries review workflow and
+owner revision data, not a separate ontology. The exported graph retains
+`metadata.contextdProposal.status: pending`; consumption rejects this marker and
+malformed markers. Approval is an external owner responsibility, and a marker is
+a declaration rather than authenticated approval proof. Legacy v1 proposals are
+explicitly separate compatibility inputs and cannot be silently converted.
 Source documents remain authoritative inputs; the resulting context is a
 derived artifact. No claim approval, workspace write, graph merge or inference
 step is performed by this integration.
@@ -154,6 +187,8 @@ Install the test extra and point the dedicated suite at a real OES checkout:
 ```bash
 python3 -m pip install -e ".[test]"
 OES_CLI="$(pwd)/../oes/bin/oes.mjs" python3 scripts/test_oes_context.py
+OES_CLI="$(pwd)/../oes/bin/oes.mjs" python3 scripts/test_task_coverage.py
+OES_CLI="$(pwd)/../oes/bin/oes.mjs" python3 scripts/test_graph_authoring_oes.py
 ```
 
 The suite compares baseline and graph-assisted selection, runs the real OES

@@ -33,8 +33,9 @@ Quick lookup table for AI agents. Find the pattern name, follow the link, read b
 | `synapse-node-edge-schema` | Deterministic node/edge, lifecycle/freshness, workspace isolation, and task context projection invariants. PAIR with `synapse-context-projection`. | [platform/contracts/synapse-node-edge-schema.md](platform/contracts/synapse-node-edge-schema.md) |
 | `graph-projection` | Experimental read-only seed traversal, semantic roles, region boundaries and dependency-gap reporting. | [platform/contracts/graph-projection.md](platform/contracts/graph-projection.md) |
 | `decision-context` | Optional foundation/procedure projection that preserves decision guidance, constraints, and source identity. | [platform/contracts/decision-context.md](platform/contracts/decision-context.md) |
-| `graph-authoring` | Opt-in code/spec/docs to pending graph proposals; ontology profiles, evidence, baseline identity and candidate isolation. | [platform/contracts/graph-authoring.md](platform/contracts/graph-authoring.md) |
+| `graph-authoring` | Native OES code/spec/docs to pending graph proposals; exact evidence, complete owner baseline and candidate isolation, with legacy v1 compatibility. | [platform/contracts/graph-authoring.md](platform/contracts/graph-authoring.md) |
 | `oes-context` | Opt-in OES ontology/evidence input, exact source validation, workspace isolation, and evidence-preserving task-context selection. | [platform/contracts/oes-context.md](platform/contracts/oes-context.md) |
+| `retrieval-coverage` | Task-specific eligibility, scoped gaps, and coverage diagnostics in the compiled agent pack. | [platform/contracts/retrieval-coverage.md](platform/contracts/retrieval-coverage.md) |
 
 ## Domain Workflows
 

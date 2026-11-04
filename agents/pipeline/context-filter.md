@@ -2,7 +2,26 @@
 
 ## Purpose
 
-Trim the retrieved doc list to the 5–7 most relevant, rank them by priority, and slice each doc to only the sections the agent needs. This is the most critical stage — it prevents context overload and enforces the priority order.
+Select zero to seven task-relevant documents, rank eligible candidates by
+priority, and slice each document to the sections the agent needs. Seven is a
+ceiling, not a target to fill with unrelated guidance.
+
+## Eligibility Before Ranking
+
+An eligible candidate has a specific query-term match in its delivered sections
+or name, an explicit component retrieval route, checked OES evidence for a
+matched assertion, or a one-hop replacement route from a relevant historical
+document. Generic actions such as `add` and software-role nouns such as `consumer`
+or `service` do not establish relevance alone. Explicit component identities
+detected from configured packs remain valid routes. `coverage.query_terms`
+records the effective terms after this filter, not every token in the task.
+Category and lifecycle scores rank eligible documents; they do not make a
+document eligible. Explain traces label rejected filler `no_task_relevance`.
+
+No selected support produces a `knowledge-coverage` gap. A requested graph with
+no selected evidence produces a scoped `oes-coverage` gap. Literal matches and
+declared routes are retrieval signals; they do not establish complete knowledge.
+Coverage and gaps enter the agent pack, its identity and its token estimate.
 
 ## Baseline Static Docs
 

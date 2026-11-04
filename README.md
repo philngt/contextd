@@ -3,25 +3,46 @@
 
 contextd compiles workspace knowledge, packs, contracts, and policies into deterministic context artifacts for Claude, Codex, Cursor, and MCP.
 
+Its core loop is **resolve a workspace → select task support → report gaps →
+compile an agent context pack**. A build may select zero task documents. General
+guidance remains available, and a failed retrieval match becomes an explicit
+gap in the pack the agent receives.
+
 [OES](https://github.com/philngt/oes) is the **ontology and evidence layer of the
 contextd ecosystem**. OES defines and validates semantic models, assertions and
 their source evidence; contextd consumes those graphs to select workspace
 documents and build task context with traceable citations. The integration is
 optional: ordinary contextd builds do not require OES or Node.js.
 
+## Core and Optional Extensions
+
+| Part | Role | Activation |
+|---|---|---|
+| Core runtime | Workspace resolution, governed source snapshots, task selection, gaps, hashes, budgets, context artifacts and explanation | `contextd context`, `contextd explain` |
+| OES | Shared `oes.graph/v1` ontology, assertions and exact source evidence | Explicit graph and trusted OES validator |
+| Domain packs | Component-specific knowledge and declared retrieval routes | Workspace or project pack list; `packs: []` disables them |
+| Agent pipelines and adapters | Prompt workflows, host exports and MCP delivery | Explicit export/connect or MCP command |
+| Knowledge maintenance | Authoring, lint, evaluation and team workflows | Separate commands; they are not stages of every context build |
+
+The Python runtime and repository content have separate delivery boundaries:
+packs and agent workflow documents remain optional inputs. They are still
+maintained in this repository; independently versioned extension distributions
+are future work. Start with the core loop and add only the extensions your
+project needs.
+
 ## What contextd Does in One Task
 
 contextd turns team knowledge into a build artifact an agent can actually consume:
 
 ```mermaid
-flowchart LR
-  Config["Project config<br/>.contextd/config.json"]
-  Knowledge["Workspace knowledge<br/>contracts, patterns, project docs"]
-  Static["Shared inputs<br/>packs, engine policies"]
-  Synapse["Synapse<br/>lifecycle nodes + typed edges"]
-  Build["Build<br/>contextd context &quot;task&quot;"]
-  Artifact["Artifact<br/>current-task.json"]
-  Agents["Agents<br/>Claude, Codex, Cursor, MCP"]
+flowchart TD
+  Config["Project config"]
+  Knowledge["Governed workspace documents"]
+  Static["Optional packs and shared guidance"]
+  Synapse["Source snapshot and lifecycle index"]
+  Build["Select support and report gaps"]
+  Artifact["Task JSON and context pack"]
+  Agents["Agent adapters"]
 
   Config --> Build
   Knowledge --> Synapse
@@ -47,8 +68,12 @@ Selected Docs
 Dropped Docs
 - <candidate excluded by budget or policy> [category]
 
+Retrieval Coverage
+- <lexical_match, declared_route, evidence_match, no_match, or unassessed>
+- Complete: false
+
 Gaps
-- <missing knowledge, or (none)>
+- <scoped retrieval gaps; absence of a gap does not prove complete knowledge>
 
 Warnings
 - <lifecycle, freshness, configuration, or safety warning, if any>
@@ -58,6 +83,20 @@ This is an abbreviated output shape rather than a golden result: selected docume
 change when governed knowledge changes. For the same task, `--format json` includes
 selected and dropped docs, warning count, budget report, synapse projection, and
 `source_hashes` for reproducibility.
+
+### Start With a Separate Project
+
+The [external-project example](examples/external-project/README.md) uses a payment
+application and its own knowledge root. It starts with the task
+`add idempotency to kafka consumer`: without a relevant route, contextd selects
+zero task documents and reports the miss. Supplying a checked OES graph routes
+the task to the project's delivery-policy decision with exact source evidence.
+The example writes the task artifact inside that application, rather than
+requiring the application to be contextd itself.
+
+Matching still has limits. Literal terms are a deterministic fallback; a graph
+match is a bounded traversal through authored assertions. Neither implies that
+all task requirements are covered. See [effectiveness and non-claims](docs/effectiveness.md).
 
 
 ## Onboarding
@@ -80,8 +119,9 @@ selected and dropped docs, warning count, budget report, synapse projection, and
 4. **Runtime-neutral core, adapter-specific surfaces**
    `.contextd/config.json` and the CLI are canonical. Claude Code slash commands, Codex skills, Cursor rules, and plain bundles consume the same workspace knowledge through adapters.
 
-5. **Deterministic knowledge priority**  
-   Contracts > Platform Patterns > Project Documentation > Domain Knowledge.
+5. **Relevance before deterministic priority**
+   Only eligible task documents are ranked: Contracts > Platform Patterns >
+   Project Documentation > Domain Knowledge. Category scores never fill a miss.
 
 6. **Old knowledge remains inspectable**
    Synapse lifecycle and freshness metadata lower stale guidance during context
@@ -184,6 +224,19 @@ OES validation proves graph conformance and excerpt integrity; it does not
 prove the assertion true or approve a pending proposal. Read the
 [runnable integration guide](docs/oes-integration.md) for prerequisites, input
 boundaries, the baseline comparison and verification commands.
+
+The graph also makes misses observable: if it has no task-matched assertion with
+source evidence, the artifact reports `coverage.graph.status: no_match` and an
+`oes-coverage` gap scoped to that graph. This does not assert that the entire
+workspace lacks knowledge. `coverage.complete` remains false even on a match.
+
+New graph-authoring proposals embed the same OES format in a pending v2 review
+envelope. The authoring CLI imports and exports `oes.graph/v1`, checks OES's JSON
+Schema and runs OES's validator; contextd adds workspace/project binding, owner
+revision and additive-change checks. Exported candidates retain a pending marker
+and are refused as context input until the canonical owner completes its review.
+The old v1 profile remains an explicit compatibility path; it is not silently
+translated into a different ontology. See [graph authoring](docs/graph-authoring.md).
 
 ## Works With Code Intelligence Tools
 
@@ -324,25 +377,44 @@ These install prebuilt `contextd` binaries from GitHub Releases. Users do not ne
 | Windows x86_64 | Installs `contextd-windows-x86_64.exe` via PowerShell. |
 | Source checkout | `pip install -e .` works anywhere Python >= 3.10 and Git are available. |
 
+The Python distribution is named **`philngt-contextd`**; its import package and
+CLI remain `contextd`. The PyPI name `contextd` belongs to a different project.
+Use the source installation or GitHub binaries until this distribution has a
+published release. See [Python packaging and publication](docs/python-distribution.md)
+for artifact checks and the remaining publisher setup.
+
 The macOS/Linux installer requires `bash` plus `curl` or `wget`. The Windows
 installer requires PowerShell and `Invoke-WebRequest`; use Git Bash or WSL only
 when running the shell installer. Global config is written to `~/.contextd/`,
 while optional Claude Code adapters write to `~/.claude/`.
 
-### Try the default demo in 2 minutes
+### Try a Separate Application
 
-The release installer installs the CLI. Clone this repo as a sample `knowledge_root` to try the bundled default workspace:
+The release installer installs the CLI. Clone the examples, then run from the
+sample payment application's source directory. Its project config points to its
+own `payments` knowledge workspace:
 
 ```bash
 git clone https://github.com/philngt/contextd.git ~/contextd
 cd ~/contextd
-contextd init
+python -m pip install -e .
+cd ~/contextd/examples/external-project/project/src
 contextd check
-contextd context "prepare agent context for product requirements" --preview
-contextd explain "prepare agent context for product requirements" --text
+contextd explain "add idempotency to kafka consumer" --text
 ```
 
-Expected signal: a clean check report, a `contextd_task_context.v1` artifact, focused selected docs, explicit gaps or `(none)`, a budget estimate, and source hashes in JSON output. Maintainers can run `contextd eval --golden --workspace default --text` when validating retrieval quality.
+Expected signal: zero referenced documents, `coverage.status: no_match`, and an
+actionable `knowledge-coverage` gap. Next, follow the
+[example guide](examples/external-project/README.md) to supply the OES graph:
+the same task selects one delivery-policy decision with its exact excerpt and
+source hash. `coverage.complete` remains false in both runs.
+
+Use the source install above until a GitHub binary release includes this
+coverage behavior; older binaries do not implement the new report.
+
+The repository's `default` workspace is also available as a seed/self-demo.
+Maintainers can run `contextd eval --golden --workspace default --text` from the
+repository root to check its positive and negative retrieval fixtures.
 
 ### Secure install (verify SHA256 before run)
 

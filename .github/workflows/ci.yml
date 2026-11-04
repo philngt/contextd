@@ -42,6 +42,9 @@ jobs:
       - name: Compile Python sources
         run: python -m compileall -q scripts
 
+      - name: Verify wheel and source distribution
+        run: python scripts/test_distribution.py
+
       - name: Run test_lint_wiki
         run: python scripts/test_lint_wiki.py
 
@@ -61,6 +64,11 @@ jobs:
         env:
           OES_CLI: ${{ github.workspace }}/.test-dependencies/oes/bin/oes.mjs
         run: python scripts/test_oes_context.py
+
+      - name: Verify retrieval misses and the external-project evidence flow
+        env:
+          OES_CLI: ${{ github.workspace }}/.test-dependencies/oes/bin/oes.mjs
+        run: python scripts/test_task_coverage.py
 
       - name: Validate generated artifacts against schemas
         run: python scripts/test_artifact_schemas.py

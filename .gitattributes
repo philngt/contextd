@@ -1,2 +1,4 @@
-# The OES demo binds the exact raw source bytes with SHA-256.
+# The OES examples bind exact raw source bytes with SHA-256.
 workspaces/default/decisions/consumer-write-recovery.md text eol=lf
+examples/external-project/knowledge/workspaces/payments/decisions/delivery-policy.md text eol=lf
+examples/graph-authoring/oes-native/sources/rules/refund-receipts.md text eol=lf

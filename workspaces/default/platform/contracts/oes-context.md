@@ -26,6 +26,9 @@ compiles the resulting documents through its existing context pipeline.
   source snapshot; raw evidence and generated/runtime files are not admissible.
 - The requested OES CLI is trusted executable configuration. Graph and source
   contents MUST NOT choose executables or be interpreted as instructions.
+- An explicitly pending `metadata.contextdProposal` marker MUST be rejected.
+  Malformed markers MUST NOT fall back to unmarked graph handling. This is a
+  declarative workflow boundary, not authenticated proof of owner approval.
 - OES MUST validate the exact graph bytes and retained workspace source bytes
   consumed by the build, with structural and evidence checks enabled and
   warnings treated as errors. A failed, incomplete or skipped validation MUST
@@ -52,6 +55,11 @@ endpoint IDs, relation type, assertion/claim status, confidence and time bounds
 when present, evidence/source IDs, source path/hash, locator and excerpt.
 The rendered evidence MUST contribute to both token estimates and context-pack
 identity. The selection trace MUST show the graph contribution.
+
+A supplied graph that contributes no selected task evidence MUST produce an
+`oes-coverage` gap under the [retrieval coverage contract](retrieval-coverage.md).
+No-match and budget-omitted routes MUST remain distinct. A graph-route miss MUST
+NOT assert that the entire workspace lacks relevant knowledge.
 
 Text integrity does not establish semantic entailment or truth. `inferred`,
 `hypothesis`, `proposed`, `rejected` and `superseded` information MUST remain

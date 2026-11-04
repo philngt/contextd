@@ -1,0 +1,19 @@
+{
+  "id": "kafka-idempotency-no-task-support",
+  "task": "add idempotency to kafka consumer",
+  "workspace": "default",
+  "as_of": "2026-08-20",
+  "packs": [],
+  "expected_docs": [],
+  "expected_categories": [],
+  "expected_referenced_doc_count": 0,
+  "forbidden_docs": [
+    "workspaces/default/platform/contracts/source-yaml-schema.md",
+    "workspaces/default/platform/contracts/citation-format.md",
+    "workspaces/default/platform/patterns/citation-rule.md",
+    "workspaces/default/platform/patterns/redaction-post-pass.md",
+    "workspaces/default/projects/agent-context-demo/knowledge-map.md"
+  ],
+  "expected_gaps": ["No task-specific document matched"],
+  "policy_expectation": "ok"
+}

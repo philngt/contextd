@@ -19,6 +19,8 @@
     "synapse-node-edge-schema": "synapse-node-edge-schema.md",
     "synapse-node-edge-schema.v1": "synapse-node-edge-schema.md",
     "oes-context": "oes-context.md",
-    "oes-context.v1": "oes-context.md"
+    "oes-context.v1": "oes-context.md",
+    "retrieval-coverage": "retrieval-coverage.md",
+    "retrieval-coverage.v1": "retrieval-coverage.md"
   }
 }
