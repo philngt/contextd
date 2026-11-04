@@ -3,6 +3,12 @@
 
 contextd compiles workspace knowledge, packs, contracts, and policies into deterministic context artifacts for Claude, Codex, Cursor, and MCP.
 
+[OES](https://github.com/philngt/oes) is the **ontology and evidence layer of the
+contextd ecosystem**. OES defines and validates semantic models, assertions and
+their source evidence; contextd consumes those graphs to select workspace
+documents and build task context with traceable citations. The integration is
+optional: ordinary contextd builds do not require OES or Node.js.
+
 ## What contextd Does in One Task
 
 contextd turns team knowledge into a build artifact an agent can actually consume:
@@ -144,6 +150,40 @@ For the deeper model, see [docs/build-system-model.md](docs/build-system-model.m
 - contextd is not a code graph indexer or AST/LSP analysis engine.
 - MCP is optional. contextd does not require an MCP SDK, remote MCP server, or orchestrator runtime.
 - contextd does not replace the coding agent; it builds scoped, auditable inputs for the agent.
+
+## OES: Ontology and Evidence Input
+
+The two repositories own complementary parts of the same workflow:
+
+| Layer | Owner | Responsibility |
+|---|---|---|
+| Semantic model and evidence | [OES](https://github.com/philngt/oes) | Define ontology templates, preserve assertion uncertainty and source provenance, validate graph structure and exact local excerpts. |
+| Agent context build | contextd | Resolve the active workspace, use validated assertions to find documents, apply lifecycle/ranking/budgets, and emit context artifacts for agent adapters. |
+
+The shipped integration accepts an OES `oes.graph/v1` graph through
+`--oes-graph`. contextd runs the real OES validator over retained graph and
+source snapshots, then follows task-matched assertions to their evidence
+documents. The output includes assertion/evidence IDs, status, exact source
+locators and hashes in JSON and the compiled Markdown pack.
+
+With a checkout of OES beside this repository, try the synthetic example:
+
+```bash
+contextd context "Investigate ingest-worker lost writes" \
+  --oes-graph workspaces/default/ontology/consumer-recovery.graph.json \
+  --oes-cli ../oes/bin/oes.mjs --preview
+
+contextd explain "Investigate ingest-worker lost writes" \
+  --oes-graph workspaces/default/ontology/consumer-recovery.graph.json \
+  --oes-cli ../oes/bin/oes.mjs --text
+```
+
+The graph connects the `ingest-worker` entity to a persistence rule and routes
+the task to a decision document that the ordinary task route does not select.
+OES validation proves graph conformance and excerpt integrity; it does not
+prove the assertion true or approve a pending proposal. Read the
+[runnable integration guide](docs/oes-integration.md) for prerequisites, input
+boundaries, the baseline comparison and verification commands.
 
 ## Works With Code Intelligence Tools
 

@@ -12,7 +12,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 
 from lib import contextd_resolver  # noqa: E402
-from lib import task_context_engine, decision_context  # noqa: E402
+from lib import task_context_engine, decision_context, oes_context  # noqa: E402
 from lib.stdio import configure_stdio  # noqa: E402
 
 
@@ -51,6 +51,11 @@ def _render_text(payload: dict) -> str:
         lines.append("- (none)")
     for doc in selected:
         redacted = " redacted=true" if doc.get("redacted") else ""
+        oes_note = (
+            f" oes_adjustment={doc['oes_score_adjustment']}"
+            f" oes_evidence={len(doc['oes_evidence'])}"
+            if doc.get("oes_evidence") else ""
+        )
         state = doc.get("synapse") or {}
         state_note = ""
         if state:
@@ -61,8 +66,19 @@ def _render_text(payload: dict) -> str:
         lines.append(
             f"- {doc['path']} [{doc['category']}] "
             f"score={doc['selection_score']} reason={doc['selection_reason']}"
-            f"{state_note}{redacted}"
+            f"{state_note}{oes_note}{redacted}"
         )
+        for citation in doc.get("oes_evidence") or []:
+            reference = f"{citation['source_path']}:{citation['locator']}"
+            confidence = (
+                f" confidence={citation['confidence']}" if "confidence" in citation else ""
+            )
+            lines.append(
+                f"  - OES source={json.dumps(reference, ensure_ascii=False)} "
+                f"edge={json.dumps(citation['edge_id'], ensure_ascii=False)} "
+                f"relation={json.dumps(citation['relation'], ensure_ascii=False)} "
+                f"assertion_status={citation['assertion_status']}{confidence}"
+            )
 
     dropped = trace.get("dropped_docs") or []
     lines.extend(["", "## Dropped Docs"])
@@ -71,6 +87,11 @@ def _render_text(payload: dict) -> str:
     for doc in dropped[:30]:
         state = doc.get("synapse") or {}
         state_note = ""
+        oes_note = (
+            f" oes_adjustment={doc['oes_score_adjustment']}"
+            f" oes_evidence={len(doc['oes_evidence'])}"
+            if doc.get("oes_evidence") else ""
+        )
         if state:
             state_note = (
                 f" lifecycle={state.get('lifecycle')} freshness={state.get('freshness')}"
@@ -79,12 +100,24 @@ def _render_text(payload: dict) -> str:
         lines.append(
             f"- {doc['path']} [{doc['category']}] "
             f"score={doc['selection_score']} reason={doc['selection_reason']}"
-            f"{state_note}"
+            f"{state_note}{oes_note}"
         )
     if len(dropped) > 30:
         lines.append(f"- ... {len(dropped) - 30} more")
 
     artifact = payload["artifact"]
+    oes = artifact.get("oes")
+    if oes:
+        validation = oes["validation"]
+        lines.extend([
+            "", "## OES Selection",
+            f"Graph: {oes['graph_path']} (sha256: {oes['graph_hash']})",
+            f"Validation: structural={validation['structural']} "
+            f"evidence={validation['evidence']} "
+            f"checked={validation['checked']} skipped={validation['skipped']}",
+            f"Matched nodes: {', '.join(oes['matched_node_ids']) or '(none)'}",
+            f"Matched assertions: {', '.join(oes['matched_edge_ids']) or '(none)'}",
+        ])
     lines.extend(decision_context.render_report(artifact.get("decision_context")))
     lines.extend(["", "## Gaps"])
     if not artifact.get("gaps"):
@@ -110,6 +143,7 @@ def run(
     cwd: str | None = None,
     fmt: str = "json",
     support_request: dict | None = None,
+    oes_request: oes_context.OESRequest | None = None,
 ) -> int:
     if not task.strip():
         print("Error: Empty task", file=sys.stderr)
@@ -134,6 +168,7 @@ def run(
             project_dir=project_dir,
             warnings=resolved.get("warnings") or [],
             support_request=support_request,
+            oes_request=oes_request,
         )
     except ValueError as exc:
         print(f"Error: {exc}", file=sys.stderr)
@@ -155,9 +190,11 @@ def main() -> None:
     parser.add_argument("--cwd", default=None, help="Start directory (default: current)")
     parser.add_argument("--format", choices=["text", "json"], default="json")
     decision_context.add_arguments(parser)
+    oes_context.add_arguments(parser)
     args = parser.parse_args()
     sys.exit(run(args.task, workspace=args.workspace, cwd=args.cwd, fmt=args.format,
-                 support_request=decision_context.request_from_args(args)))
+                 support_request=decision_context.request_from_args(args),
+                 oes_request=oes_context.request_from_args(args)))
 
 
 if __name__ == "__main__":

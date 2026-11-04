@@ -33,6 +33,7 @@ def build_pack_ref(
     docs: List[Dict],
     static_docs: Optional[List[Dict]] = None,
     decision_report: Optional[Mapping] = None,
+    oes_report: Optional[Mapping] = None,
 ) -> Dict:
     pack_sources = compiled_sources(static_docs or [], docs)
     sources = sorted(
@@ -53,6 +54,23 @@ def build_pack_ref(
         ],
         "decision_report": decision_report,
     }
+    # JSON consumers see both lists, even when a static source owns a duplicate
+    # path in Markdown. Bind their evidence separately so an inconsistent
+    # duplicate cannot be substituted after the build.
+    evidence = {
+        "referenced_docs": [
+            {"path": doc["path"], "citations": doc["oes_evidence"]}
+            for doc in docs if doc.get("oes_evidence")
+        ],
+        "static_context": [
+            {"path": doc["path"], "citations": doc["oes_evidence"]}
+            for doc in static_docs or [] if doc.get("oes_evidence")
+        ],
+    }
+    if evidence["referenced_docs"] or evidence["static_context"]:
+        payload["oes_evidence"] = evidence
+    if oes_report is not None:
+        payload["oes_report"] = oes_report
     source_hash = _sha256_text(json.dumps(payload, sort_keys=True, ensure_ascii=False))
     return {
         "artifact_type": "context_pack_ref",
